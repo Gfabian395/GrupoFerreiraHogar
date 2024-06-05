@@ -1,0 +1,148 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+   min-height: 100vh; 
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+header {
+  display: flex;
+  margin: 3px;
+
+  position: relative;
+  padding: 1.3rem ;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100; 
+}
+
+.logo {
+  font-size: 2rem;
+  color: black;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.navbar a {
+  font-size: 1.15rem;
+  color: black;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 2.5rem;
+}
+
+#check {
+  display: none;
+}
+
+.icons {
+  position: relative;
+/*   right: 5%; */
+  font-size: 2.8rem;
+  color: black;
+  cursor: pointer;
+  display: none;
+}
+
+.bx-cart{
+  position: relative;
+  font-size: 2.8rem;
+  color: black;
+  cursor: pointer;
+/*   display: none;
+ */}
+
+/* BREAKPOINTS */
+@media (max-width: 992px) {
+  .header {
+    padding: 1.3rem 5%;
+  }
+}
+
+@media (max-width: 768px) {
+  .icons {
+    display: inline-flex;
+  }
+
+  #check:checked~.icons #menu-icon {
+    display: none;
+  }
+
+  .icons #close-icon {
+    display: none;
+  }
+
+  #check:checked~.icons #close-icon {
+    display: block;
+  }
+
+  .navbar {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 0;
+    background: rgba(0, 0, 0, .1);
+    backdrop-filter: blur(50px);
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .1);
+    overflow: hidden;
+    transition: .3s ease;
+  }
+
+  #check:checked~.navbar {
+    height: 10rem;
+  }
+
+  /* .bx-cart{
+    display: none;
+  } */
+
+  .navbar a {
+    display: block;
+    font-size: 1.1rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    transform: translateY(-50px);
+    opacity: 0;
+    transition: .3s ease;
+  }
+
+  #check:checked~.navbar a {
+    transform: translateY(0);
+    opacity: 1;
+    transition-delay: calc(.15s * var(--i));
+  }
+}
+
+main {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+/*   min-height: 100vh; */
+  margin: 3px;
+}
+
+aside {
+  margin: 5px;
+  padding: 10px;
+}
+
+footer {
+  text-align: center;
+  align-items: center;
+  align-content: center;
+  margin: 3px;
+  border: solid 1px black;
+  color: black;
+  background: rgba(0, 0, 0, .4);
+  backdrop-filter: blur(60px);
+}

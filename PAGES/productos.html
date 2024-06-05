@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupo Fereira | Inicio</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../CSS/productos.css">
+</head>
+
+<body>
+    <header>
+        <a href="../index.html" class="logo">Ferreira Hogar</a>
+        <i class='bx bx-cart cart-icon'><span class="cart-count">0</span></i>
+        
+        <input type="checkbox" id="check">
+        <label for="check" class="icons">
+            <i class='bx bx-menu' id="menu-icon"></i>
+            <i class='bx bx-x' id="close-icon"></i>
+        </label>
+        
+        <nav class="navbar">
+            <a href="../index.html" style="--i:0;">Inicio</a>
+            <a href="./productos.html" style="--i:1;">Productos</a>
+            <a href="" style="--i:3;">Cuotas</a>
+        </nav>
+    </header>
+
+    <main>
+        <aside class="flex">
+            <div class="carta">
+                <img src="../asset/COCINAS/COCINAS.png" alt="">
+                <h2>Cocinas</h2>
+                <a href="../PAGES/cocinas.html" class="button">Ver Mas +</a>
+            </div>
+
+            <div class="carta">
+                <img src="../asset/HELADERAS/HELADERAS.png" alt="">
+                <h2>Heladeras</h2>
+                <a href="../PAGES/heladeras.html" class="button">Ver Mas +</a>
+            </div>
+
+            <div class="carta">
+                <img src="../asset/SMART-TV/SMART TV.png" alt="">
+                <h2>Smart Tv</h2>
+                <a href="../PAGES/smart-tv.html" class="button">Ver Mas +</a>
+            </div>
+        </aside>
+
+        <aside class="cart">
+            <h2>Tu Carrito</h2>
+            <ul class="cart-list"></ul>
+            <br>
+            <p class="total">Total de la compra: <b>$ <span>0.00</span></b></p>
+            <button class="clear-cart">Limpiar Carrito</button>
+        </aside>
+    </main>
+
+    <footer>
+        <p>Grupo Ferreira Hogar© 2024. Todos los derechos reservados. | by: BullScript.</p>
+    </footer>
+
+    <script src="../JAVASCRIPT/productos.js"></script>
+</body>
+
+</html>

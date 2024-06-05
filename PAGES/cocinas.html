@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupo Fereira | Inicio</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../CSS/productos.css">
+</head>
+
+<body>
+    <header>
+        <a href="../index.html" class="logo">Ferreira Hogar</a>
+        <i class='bx bx-cart cart-icon'><span class="cart-count">0</span></i>
+        
+        <input type="checkbox" id="check">
+        <label for="check" class="icons">
+            <i class='bx bx-menu' id="menu-icon"></i>
+            <i class='bx bx-x' id="close-icon"></i>
+        </label>
+        
+        <nav class="navbar">
+            <a href="../index.html" style="--i:0;">Inicio</a>
+            <a href="../PAGES/productos.html" style="--i:1;">Productos</a>
+            <a href="../PAGES/cuotas.html" style="--i:3;">Cuotas</a>
+        </nav>
+    </header>
+
+    <main>
+        <aside class="product-container">
+            <div class="product" data-id="cocina1" data-name="Cocina Usman" data-price="490000">
+                <img src="../asset/COCINAS/COCINAS.png" class="img" alt="...">
+                <h3>Cocina Usman 4 Hornallas</h3>
+                <p class="texto-carta">Some quick example text to build on the card title and make up the bulk of the
+                    card's content.</p>
+                <p class="price"><b>$490.000</b></p>
+                <ul class="lista-cuotas">
+                    <li class="list-group-item">2 Cuotas</li>
+                    <li class="list-group-item">4 Cuotas</li>
+                    <li class="list-group-item">6 Cuotas</li>
+                    <li class="list-group-item">9 Cuotas</li>
+                    <li class="list-group-item">12 Cuotas</li>
+                </ul>
+                <div class="botones">
+                    <button class="add-to-cart"> + carrito</button>
+                </div>
+            </div>
+
+            <div class="product" data-id="cocina2" data-name="Cocina Usman Carliplancha" data-price="850000">
+                <img src="../asset/COCINAS/Carli-4-1-PV-RA-FRENTE.png" class="img" alt="...">
+                <h3>Cocina Usman Carliplancha</h3>
+                <p class="texto-carta">Some quick example text to build on the card title and make up the bulk of the
+                    card's content.</p>
+                <p class="price"><b>$850.000</b></p>
+                <ul class="lista-cuotas">
+                    <li class="list-group-item">2 Cuotas</li>
+                    <li class="list-group-item">4 Cuotas</li>
+                    <li class="list-group-item">6 Cuotas</li>
+                    <li class="list-group-item">9 Cuotas</li>
+                    <li class="list-group-item">12 Cuotas</li>
+                </ul>
+                <div class="botones">
+                    <button class="add-to-cart"> + carrito</button>
+                </div>
+            </div>
+
+            <div class="product" data-id="cocina3" data-name="Cocina Usman 6 Hornallas" data-price="800000">
+                <img src="../asset/COCINAS/RED-WINE-900-FRENTE.png" class="img" alt="...">
+                <h3>Cocina Usman 6 Hornallas</h3>
+                <p class="texto-carta">Some quick example text to build on the card title and make up the bulk of the
+                    card's content.</p>
+                <p class="price"><b>$800.000</b></p>
+                <ul class="lista-cuotas">
+                    <li class="list-group-item">2 Cuotas</li>
+                    <li class="list-group-item">4 Cuotas</li>
+                    <li class="list-group-item">6 Cuotas</li>
+                    <li class="list-group-item">9 Cuotas</li>
+                    <li class="list-group-item">12 Cuotas</li>
+                </ul>
+                <div class="botones">
+                    <button class="add-to-cart"> + carrito</button>
+                </div>
+            </div>
+        </aside>
+
+        <aside class="cart">
+            <h2>Tu Carrito</h2>
+            <ul class="cart-list"></ul>
+            <br>
+            <p class="total">Total de la compra: <b>$ <span>0.00</span></b></p>
+            <button class="clear-cart">Limpiar Carrito</button>
+        </aside>
+    </main>
+
+    <footer>
+        <p>Grupo Ferreira Hogar© 2024. Todos los derechos reservados. | by: BullScript.</p>
+    </footer>
+
+    <script src="../JAVASCRIPT/productos.js"></script>
+</body>
+
+</html>

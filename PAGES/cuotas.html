@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grupo Fereira | Inicio</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="../CSS/cuotas.css">
+    <link rel="stylesheet" href="../CSS/productos.css">
+</head>
+
+<body>
+    <header>
+        <a href="../index.html" class="logo">Ferreira Hogar</a>
+        <i class='bx bx-cart cart-icon'><span class="cart-count">0</span></i>
+        
+        <input type="checkbox" id="check">
+        <label for="check" class="icons">
+            <i class='bx bx-menu' id="menu-icon"></i>
+            <i class='bx bx-x' id="close-icon"></i>
+        </label>
+        
+        <nav class="navbar">
+            <a href="../index.html" style="--i:0;">Inicio</a>
+            <a href="../PAGES/productos.html" style="--i:1;">Productos</a>
+            <a href="./PAGES/cuotas.html" style="--i:3;">Cuotas</a>
+        </nav>
+    </header>
+
+    <main>
+        <aside class="calcu-flex">
+            <div class="calculadora-flex">
+                <h1 clas>Calculadora de Cuotas</h1>
+                <div class="calculadora">
+                    <label for="monto" class="label-calc">Monto</label>
+                    <input type="number" id="monto" min="0" class="input-calc">
+                    <label for="cuotas" class="label-calc">Cuotas</label>
+                    <select id="cuotas">
+                        <option value="2">2 Meses</option>
+                        <option value="4">4 Meses</option>
+                        <option value="6">6 Meses</option>
+                        <option value="9">9 Meses</option>
+                        <option value="12">12 Meses</option>
+                    </select>
+                    <button onclick="CalcularCuota()" class="boton-calc">Calcular</button>
+                    <h2>Resultado</h2>
+                    <p id="resultado"></p>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer>
+        <p>Grupo Ferreira Hogar© 2024. Todos los derechos reservados. | by: BullScript.</p>
+    </footer>
+
+    <script src="../JAVASCRIPT/productos.js"></script>
+    <script src="../JAVASCRIPT/cuotas.js"></script>
+</body>
+
+</html>
