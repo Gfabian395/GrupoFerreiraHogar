@@ -16,13 +16,13 @@ function iniciasSesion() {
         }
 
         if (usuario === 'fabian gonzalez' && contraseña === "coderhouse") {
-            alert("Bienvenida Vanesa");
+            alert("Bienvenido Fabian");
             break;
         } else {
             intentos++;
             if (intentos === maxIntentos) {
                 alert("Usted ha echo demasiados intentos, sera redirigido a la pagina principal");
-                window.location.href = '../index.html';
+                window.location.href = './index.html';
             } else {
                 alert("Usuario o contraseña incorrectos. intento " + " " + intentos + " " + 'de' + " " + maxIntentos + '.');
             }
