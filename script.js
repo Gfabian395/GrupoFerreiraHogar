@@ -15,7 +15,7 @@ function iniciasSesion() {
             continue;
         }
 
-        if (usuario === 'vane davis' && contraseña === "031285") {
+        if (usuario === 'fabian gonzalez' && contraseña === "coderhouse") {
             alert("Bienvenida Vanesa");
             break;
         } else {
