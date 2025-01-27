@@ -1,0 +1,102 @@
+/* src/components/Header.css */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    width: 100%;
+}
+
+.brand {
+    font-size: 25px;
+    font-weight: bold;
+    color: #000;
+    text-decoration: none;
+}
+
+.nav-icons {
+    display: flex;
+    gap: 1rem;
+}
+
+.icon {
+    position: relative;
+    cursor: pointer;
+}
+
+.icon i {
+    font-size: 1.5rem;
+}
+
+.badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    background-color: #dc3545;
+    color: white;
+    border-radius: 50%;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.menu {
+    position: fixed;
+    top: 0;
+    right: -350px; /* Empieza fuera de la vista */
+    width: 350px;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    transition: right 0.3s ease-in-out;
+    z-index: 1000;
+}
+
+.menu.open {
+    right: 0; /* Se mueve a la vista */
+}
+
+.menu-header {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem;
+}
+
+.close-menu {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 1rem;
+    width: 100%;
+}
+
+.menu li {
+    padding: 1rem 0;
+    width: 100%;
+}
+
+.menu li a {
+    text-decoration: none;
+    color: white;
+    font-size: 1.2rem;
+    display: block;
+    width: 100%;
+}
+
+.menu li a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
