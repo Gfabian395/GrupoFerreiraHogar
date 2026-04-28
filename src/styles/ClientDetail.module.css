@@ -96,14 +96,14 @@
 
 .saleSection h4 {
   margin-bottom: 0.5rem;
-  color: #38bdf8;
+  color: black;
   font-size: 1rem;
 }
 
 .saleSection p,
 .saleSection li {
   font-size: 0.8rem;
-  color: #e5e7eb;
+  color: black;
   margin: 0.2rem 0;
 }
 
@@ -117,7 +117,7 @@
   display: inline-block;
   padding: 0.2rem 0.5rem;
   border-radius: 0.5rem;
-  color: #38bdf8;
+  color: black;
   font-size: 0.75rem;
   font-weight: 500;
   margin-right: 0.3rem;
@@ -136,7 +136,7 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.8rem;
   cursor: pointer;
-  color: #e5e7eb;
+  color: black;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -163,12 +163,12 @@
 
 .payments header h4 {
   font-size: 1rem;
-  color: #e5e7eb;
+  color: black;
 }
 
 .payments header button {
   background: linear-gradient(135deg, #38bdf8, #60a5fa);
-  color: #020617;
+  color: black;
   border: none;
   border-radius: 0.7rem;
   padding: 0.45rem 0.75rem;
@@ -202,14 +202,17 @@
 
 .row.head {
   font-weight: 600;
+  color: black;
 }
 
 .row.paid {
   background: rgba(34, 197, 94, 0.15);
+    color: black;
 }
 
 .row.late {
   background: rgba(239, 68, 68, 0.15);
+    color: black;
 }
 
 /* ================= ADD PAYMENT ROW ================= */
@@ -347,10 +350,12 @@ h3 {
 
   .identity h3 {
     font-size: 1rem;
+    color: black;
   }
 
   .identity span {
     font-size: 0.7rem;
+    color: black;
   }
 
   .saleInfo {
