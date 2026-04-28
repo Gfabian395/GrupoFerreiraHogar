@@ -1,0 +1,313 @@
+/* =========================
+   CARD PRINCIPAL
+========================= */
+.card {
+  width: 260px;
+  min-height: 600px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: all 0.35s ease;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.15), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+.card img {
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+  border-radius: 16px;
+  transition: transform 0.4s ease;
+}
+
+.card:hover img {
+  transform: scale(1.08);
+}
+
+.card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 4px 0 0;
+}
+
+.price {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* =========================
+   INCLUYE
+========================= */
+.includes {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.includes li {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e5e7eb;
+  opacity: 0.9;
+}
+
+.badge {
+  background: rgba(56, 189, 248, 0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* =========================
+   ACTIONS (BOTONES VERTICALES)
+========================= */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.actions button {
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+/* =========================
+   BOTÓN COMPRAR COMBO
+========================= */
+.actions button:first-child {
+  background: linear-gradient(135deg, #22d3ee, #3b82f6);
+  color: #020617;
+  box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4);
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
+.actions button:first-child:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(56, 189, 248, 0.6);
+}
+
+/* =========================
+   BOTÓN COMPRAR SEPARADO
+========================= */
+.actions button:nth-child(2) {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+}
+
+.actions button:nth-child(2):hover {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+/* =========================
+   BOTÓN ELIMINAR
+========================= */
+.delete {
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: translateY(-2px);
+}
+
+/* =========================
+   OVERLAY
+========================= */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.25s ease;
+}
+
+/* =========================
+   MODAL
+========================= */
+.modal {
+  width: 92%;
+  max-width: 420px;
+  max-height: 90vh;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(18px);
+  border-radius: 22px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* =========================
+   MODAL HEADER
+========================= */
+.modalHeader {
+  height: 56px;
+  padding: 0 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalHeader h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.modalHeader button {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-size: 16px;
+  color: #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.modalHeader button:hover {
+  background: rgba(56, 189, 248, 0.25);
+  transform: rotate(90deg);
+}
+
+/* =========================
+   MODAL CONTENT
+========================= */
+.modalContent {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* =========================
+   ALERTA SIN STOCK
+========================= */
+.alertBroken {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.alertBroken ul {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 4px;
+}
+
+.mpButton {
+  background: #003399;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 14px;
+  font-weight: 600;
+  height: 46px;
+  transition: background 0.25s ease;
+}
+.mpButton:hover {
+  background: #0055cc;
+}
+
+/* =========================
+   ANIMACIONES
+========================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 15px 45px rgba(56, 189, 248, 0.7);
+  }
+
+  100% {
+    box-shadow: 0 10px 25px rgba(56, 189, 248, 0.4);
+  }
+}

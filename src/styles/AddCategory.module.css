@@ -1,0 +1,373 @@
+/* ===============================
+   OVERLAY CON BLUR + SCROLL
+================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+  overflow-y: auto;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ===============================
+   FORM / MODAL BASE
+================================ */
+.productForm,
+.categoryForm,
+.form {
+  width: 420px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #1f293a;
+  padding: 18px;
+  border-radius: 22px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #404040;
+  position: relative;
+  animation: slideUp 0.25s ease;
+}
+
+/* ===============================
+   BOTÓN CERRAR
+================================ */
+.close,
+.closeButton {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f1f1f1;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #666;
+  transition: background 0.2s ease;
+}
+
+.close:hover,
+.closeButton:hover {
+  background: #e5e5e5;
+}
+
+/* ===============================
+   TITULOS
+================================ */
+.productForm h2,
+.categoryForm h2,
+.form h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* ===============================
+   LABELS
+================================ */
+.productForm label,
+.categoryForm label,
+.form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+/* ===============================
+   INPUTS / SELECT / TEXTAREA
+================================ */
+.productForm input,
+.productForm select,
+.categoryForm input,
+.categoryForm textarea,
+.form input {
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid #dddddd;
+  font-size: 0.9rem;
+  background: #fafafa;
+  transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.productForm textarea,
+.categoryForm textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.productForm input:focus,
+.productForm select:focus,
+.categoryForm input:focus,
+.categoryForm textarea:focus,
+.form input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: #7d5fff;
+  box-shadow: 0 0 0 3px rgba(125, 95, 255, 0.25);
+}
+
+/* FILE */
+input[type="file"] {
+  padding: 6px;
+  font-size: 0.8rem;
+}
+
+/* ===============================
+   FIELDSET
+================================ */
+.productForm fieldset,
+.form fieldset {
+  border: 1px dashed #dddddd;
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.productForm legend,
+.form legend {
+  padding: 0 10px;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+/* ===============================
+   ITEMS INTERNOS
+================================ */
+.item,
+.itemRow,
+.itemCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+/* ===============================
+   BOTONES PRINCIPALES
+================================ */
+.productForm button,
+.form button,
+.actions button {
+  padding: 13px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #7d5fff, #5f3cff);
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.productForm button:hover,
+.form button:hover,
+.actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(125, 95, 255, 0.55);
+}
+
+.productForm button:active,
+.form button:active,
+.actions button:active {
+  transform: translateY(0);
+}
+
+/* ===============================
+   BOTONES SECUNDARIOS
+================================ */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.actions button[type="button"] {
+  background: #f0f0f0;
+  color: #404040;
+}
+
+.actions button[type="button"]:hover {
+  background: #e4e4e4;
+}
+
+/* ===============================
+   BOTÓN ELIMINAR
+================================ */
+.remove {
+  background: linear-gradient(135deg, #ff5c5c, #e64545);
+}
+
+.remove:hover {
+  box-shadow: 0 10px 26px rgba(255, 92, 92, 0.55);
+}
+
+/* ===============================
+   DISABLED
+================================ */
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 480px) {
+
+  /* ===============================
+     OVERLAY
+  ================================ */
+  .overlay {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  /* ===============================
+     FORM / MODAL
+  ================================ */
+  .productForm,
+  .categoryForm,
+  .form {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    border-radius: 18px;
+    padding: 16px 14px 18px;
+    gap: 14px;
+    animation: slideUpMobile 0.25s ease;
+  }
+
+  /* ===============================
+     BOTÓN CERRAR
+  ================================ */
+  .close,
+  .closeButton {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+  }
+
+  /* ===============================
+     TÍTULOS
+  ================================ */
+  .productForm h2,
+  .categoryForm h2,
+  .form h2 {
+    font-size: 1.2rem;
+    padding-right: 32px;
+    /* espacio para el botón cerrar */
+  }
+
+  /* ===============================
+     LABELS
+  ================================ */
+  .productForm label,
+  .categoryForm label,
+  .form label {
+    font-size: 0.8rem;
+  }
+
+  /* ===============================
+     INPUTS / SELECT / TEXTAREA
+  ================================ */
+  .productForm input,
+  .productForm select,
+  .categoryForm input,
+  .categoryForm textarea,
+  .form input {
+    font-size: 0.9rem;
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .productForm textarea,
+  .categoryForm textarea {
+    min-height: 80px;
+  }
+
+  /* ===============================
+     FIELDSET
+  ================================ */
+  .productForm fieldset,
+  .form fieldset {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .productForm legend,
+  .form legend {
+    font-size: 0.75rem;
+  }
+
+  /* ===============================
+     ITEMS INTERNOS
+  ================================ */
+  .item,
+  .itemRow,
+  .itemCard {
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    gap: 8px;
+  }
+
+  /* ===============================
+     BOTONES
+  ================================ */
+  .productForm button,
+  .form button,
+  .actions button {
+    padding: 14px;
+    font-size: 0.95rem;
+    border-radius: 14px;
+  }
+
+  /* ===============================
+     ACCIONES (BOTONES DOBLES)
+  ================================ */
+  .actions {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* ===============================
+     FILE INPUT
+  ================================ */
+  input[type="file"] {
+    font-size: 0.75rem;
+  }
+}
+
+/* ===============================
+   ANIMACIONES
+================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUpMobile {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

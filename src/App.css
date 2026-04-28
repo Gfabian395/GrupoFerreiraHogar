@@ -1,0 +1,31 @@
+@import url("https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400..700;1,400..700&display=swap");
+
+.layout {
+  margin-left: 90px;
+}
+
+body {
+  min-height: 100vh;
+  color: #fef3c7;
+  overflow-x: hidden;
+}
+
+/* LOGO DE FONDO GRANDE CENTRADO */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  background: url("../public/Logo---Otoño.png") center / 40% no-repeat;
+
+  opacity: 0.30;
+  /* ajustá a gusto */
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* App y sidebar arriba del fondo */
+#root {
+  position: relative;
+  z-index: 1;
+}

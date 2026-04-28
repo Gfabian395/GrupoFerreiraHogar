@@ -1,0 +1,407 @@
+/* ================= PAYMENT WRAPPER ================= */
+.paymentWrapper {
+  display: grid;
+  gap: 1.5rem;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* ================= PAYMENT CARD ================= */
+.paymentCard {
+  backdrop-filter: blur(14px);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.paymentCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 28px 55px rgba(0, 0, 0, 0.3);
+}
+
+/* ================= CLIENT HEADER ================= */
+.clientHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.clientHeader img {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 2px solid #38bdf8;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.clientHeader img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.identity {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.identity span {
+  font-size: 0.8rem;
+  color: black;
+}
+
+.identity .address {
+  font-size: 0.75rem;
+  color: black;
+}
+
+/* ================= STATUS ================= */
+.status {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-align: center;
+  min-width: 55px;
+}
+
+.ok {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.blocked {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+/* ================= SALE INFO CARD ================= */
+.saleInfoCard {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Secciones internas */
+.saleSection {
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+}
+
+.saleSection h4 {
+  margin-bottom: 0.5rem;
+  color: #38bdf8;
+  font-size: 1rem;
+}
+
+.saleSection p,
+.saleSection li {
+  font-size: 0.8rem;
+  color: #e5e7eb;
+  margin: 0.2rem 0;
+}
+
+.saleSection ul {
+  list-style: inside disc;
+  padding-left: 1rem;
+}
+
+/* BADGES para datos importantes */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  color: #38bdf8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: 0.3rem;
+}
+
+/* ================= ACTIONS ================= */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button {
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #e5e7eb;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.actions .danger {
+  color: #dc2626;
+}
+
+/* ================= PAYMENTS TABLE ================= */
+.payments {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.payments header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payments header h4 {
+  font-size: 1rem;
+  color: #e5e7eb;
+}
+
+.payments header button {
+  background: linear-gradient(135deg, #38bdf8, #60a5fa);
+  color: #020617;
+  border: none;
+  border-radius: 0.7rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.payments header button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* TABLE */
+.table {
+  display: grid;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  padding: 0.55rem 0.6rem;
+  font-size: 0.8rem;
+  align-items: center;
+  gap: 0.3rem;
+  transition: background 0.2s ease;
+  color: #e5e7eb;
+}
+
+.row.head {
+  font-weight: 600;
+}
+
+.row.paid {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.row.late {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* ================= ADD PAYMENT ROW ================= */
+.addPagoRow input {
+  padding: 0.35rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e5e7eb;
+  font-size: 0.75rem;
+  width: 100%;
+  transition: border 0.3s ease, box-shadow 0.3s ease;
+}
+
+.addPagoRow input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35);
+  outline: none;
+}
+
+.addPagoRow button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  color: #020617;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.addPagoRow button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* ================= PAGOS COMPLETAMENTE PAGADOS ================= */
+.paidSummary {
+  margin-top: 2rem;
+}
+
+.paidSummary h4 {
+  font-size: 1rem;
+  margin-bottom: 0.8rem;
+  color: #166534;
+  font-weight: 600;
+  border-left: 4px solid #16a34a;
+  padding-left: 0.5rem;
+}
+
+.paidItemsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.paidItem {
+  /* Verde muy suave */
+  color: #166534;
+  /* Verde oscuro */
+  font-size: 0.85rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.paidItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+
+.destacado {
+  animation: flash 3s ease;
+  border: 2px solid #4caf50;
+}
+
+h3 {
+  color: black;
+}
+
+@keyframes flash {
+  0% {
+    background-color: #d4edda;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+
+/* Tablets (560px - 900px) */
+@media (max-width: 900px) {
+  .paymentWrapper {
+    width: 90vw;
+  }
+
+  .saleInfo {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .row {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 0.4rem;
+  }
+
+  .row span:nth-child(3),
+  .row span:nth-child(4),
+  .row span:nth-child(5),
+  .row span:nth-child(6) {
+    grid-column: span 2;
+    font-size: 0.75rem;
+  }
+}
+
+/* Smartphones (menos de 560px) */
+@media (max-width: 560px) {
+  .paymentWrapper {
+    width: 96vw;
+    padding: 0.5rem 0;
+  }
+
+  .paymentCard {
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .clientHeader {
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+  }
+
+  .identity h3 {
+    font-size: 1rem;
+  }
+
+  .identity span {
+    font-size: 0.7rem;
+  }
+
+  .saleInfo {
+    grid-template-columns: 1fr;
+    font-size: 0.75rem;
+  }
+
+  .saleSection {
+    padding: 0.6rem;
+  }
+
+  .saleSection h4 {
+    font-size: 0.9rem;
+  }
+
+  .payments header h4 {
+    font-size: 0.9rem;
+  }
+
+  .row {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  .row span:nth-child(3),
+  .row span:nth-child(4),
+  .row span:nth-child(5),
+  .row span:nth-child(6) {
+    grid-column: span 2;
+    font-size: 0.7rem;
+  }
+
+  .addPagoRow input,
+  .addPagoRow button {
+    font-size: 0.7rem;
+    padding: 0.3rem;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .paidItemsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.4rem;
+  }
+
+  .paidItem {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+}

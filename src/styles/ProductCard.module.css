@@ -1,0 +1,377 @@
+/* =========================
+   WRAPPER
+========================= */
+.productWrapper {
+  width: 250px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* =========================
+   CARD
+========================= */
+.productCard {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  backdrop-filter: blur(14px);
+  border-radius: 1.5rem;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.productCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================
+   ACTIONS (EDIT / DELETE)
+========================= */
+.productActions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+}
+
+.edit,
+.delete {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.edit {
+  color: #38bdf8;
+}
+
+.edit:hover {
+  transform: scale(1.1);
+}
+
+.delete {
+  color: #ff3b30;
+}
+
+.delete:hover {
+  transform: scale(1.1);
+}
+
+/* =========================
+   IMAGE
+========================= */
+figure {
+  width: 100%;
+  height: 220px;
+  margin: 0;
+  position: relative;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+figure img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.productCard:hover figure img {
+  transform: scale(1.05);
+}
+
+/* =========================
+   BADGES
+========================= */
+.badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(56, 189, 248, 0.8);
+  color: black;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+/* =========================
+   INFO
+========================= */
+.info {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: black;
+}
+
+/* =========================
+   VARIANTS
+========================= */
+.options {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.options legend {
+  font-size: 12px;
+  padding: 0 6px;
+  color: black;
+}
+
+/* =========================
+   VARIANT NEON SELECTOR
+========================= */
+
+.options label {
+  position: relative;
+  padding: 3px;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+/* variante seleccionada */
+.options label:has(input:checked) {
+  box-shadow:
+    0 0 12px rgba(56, 189, 248, 0.75),
+    0 0 24px rgba(56, 189, 248, 0.45),
+    inset 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+/* =========================
+   VARIANT TEXT FIX
+========================= */
+
+.variantText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  color: black;
+}
+
+.variantName {
+  display: block;
+  font-weight: 600;
+}
+
+.variantPrice {
+  display: block;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+/* =========================
+   CUOTAS
+========================= */
+.toggleCuotas {
+  width: 100%;
+  height: 36px;
+  border-radius: 12px;
+  border: none;
+  background: black;
+  font-size: 13px;
+  cursor: pointer;
+  color: white;
+}
+
+.cuotasInline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cuota {
+  background: black;
+  color:white;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* =========================
+   STOCK
+========================= */
+.stock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+
+.ok {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.low {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.out {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.stockControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stockControls button {
+  width: 28px;
+  height: 28px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  color: black;
+  transition: transform 0.2s ease;
+}
+
+.stockControls button:hover {
+  transform: scale(1.1);
+}
+
+.stockControls strong {
+  width: 20px;
+  text-align: center;
+  color: black;
+}
+
+/* =========================
+   CART MINI
+========================= */
+.cartMini {
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  border: none;
+  background: black;
+  color: black;
+  cursor: pointer;
+}
+
+.cartMini:disabled {
+  background-color: black;
+  cursor: not-allowed;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.cardButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-direction: column;
+  padding: 5px;
+  margin: 5px;
+}
+
+.whatsapp,
+.share {
+  flex: 1;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.whatsapp {
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: black;
+}
+
+.whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 211, 102, 0.4);
+}
+
+.share {
+  background: rgba(255, 255, 255, 0.1);
+  color: black;
+}
+
+.share:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.25);
+}
+
+/* Botón oficial Mercado Pago azul */
+.mpButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #3483FA; /* azul oficial */
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  border: none;
+  border-radius: 6px;
+  padding: 0 20px;
+  height: 60px; /* botón más grande */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.mpButton:hover:not(:disabled) {
+  background-color: #2968c8; /* azul más oscuro al hover */
+}
+
+.mpButton:disabled {
+  background-color: #a3c4f5; /* azul claro para deshabilitado */
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.mpButtonIcon {
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+}

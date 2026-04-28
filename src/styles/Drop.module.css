@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
+
+.box {
+    position: fixed;
+    bottom: 90px;
+    right: 24px;
+    width: 60px;
+    z-index: 1000;
+}
+
+/* BOTON */
+
+.dropdown {
+    position: relative;
+    width: 60px;
+    height: 60px;
+
+    background: #7f0099;
+    color: #fff;
+
+    font-size: 22px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    border-radius: 6px;
+    cursor: pointer;
+
+    box-shadow: 0 6px 14px rgba(0, 0, 0, .25);
+
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+
+/* SUBIR CUANDO ABRE */
+
+.active .dropdown {
+    transform: translateY(-12px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, .35);
+}
+
+/* FLECHAS */
+
+.leftIcon,
+.rightIcon {
+    position: absolute;
+    bottom: 8px;
+    width: 14px;
+    height: 4px;
+    background: #fff;
+    border-radius: 10px;
+    transition: .35s;
+}
+
+.leftIcon {
+    left: 18px;
+    transform: rotate(45deg);
+}
+
+.rightIcon {
+    right: 18px;
+    transform: rotate(-45deg);
+}
+
+.active .leftIcon {
+    transform: rotate(135deg);
+}
+
+.active .rightIcon {
+    transform: rotate(-135deg);
+}
+
+/* MENU */
+
+.items {
+    position: absolute;
+    right: 0;
+    top: -270px;
+
+    width: 230px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+
+    transition: .25s ease;
+}
+
+.active .items {
+    opacity: 1;
+    transform: translateY(-10px);
+    pointer-events: auto;
+}
+
+/* ITEMS */
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+
+    background: #fff;
+    color: #7f0099;
+
+    font-size: 16px;
+
+    border: none;
+    border-radius: 6px;
+
+    padding: 10px 14px;
+
+    cursor: pointer;
+
+    position: relative;
+    overflow: hidden;
+
+    transition: .25s;
+}
+
+.item span {
+    position: absolute;
+    inset: 0;
+
+    background: #bb00e0;
+
+    transform: translateX(100%);
+    transition: .3s;
+
+    z-index: -1;
+}
+
+.item:hover span {
+    transform: translateX(0);
+}

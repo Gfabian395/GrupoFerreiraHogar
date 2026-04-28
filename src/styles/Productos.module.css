@@ -1,0 +1,376 @@
+/* ===============================
+   OVERLAY – NEON HUD (BASE)
+================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+
+  background:
+    radial-gradient(circle at 50% 20%, rgba(0, 255, 255, 0.12), transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.12), transparent 60%),
+    rgba(5, 8, 14, 0.88);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 14px;
+  z-index: 999;
+}
+
+/* ===============================
+   SELECTOR – CYBERPUNK NEON
+================================ */
+.selector {
+  position: relative;
+  z-index: 10000;
+
+  width: 100%;
+  max-width: 420px;
+
+  padding: 20px 18px 22px;
+  border-radius: 22px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  text-align: center;
+
+  background:
+    linear-gradient(180deg, rgba(20, 30, 50, 0.95), rgba(10, 15, 30, 0.95));
+
+  border: 1px solid rgba(0, 255, 255, 0.28);
+
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 20px rgba(0, 255, 255, 0.25),
+    0 0 40px rgba(255, 0, 255, 0.15),
+    inset 0 0 20px rgba(0, 0, 0, 0.6);
+
+  animation: hudIn 0.35s cubic-bezier(.16, .84, .44, 1);
+}
+
+/* HUD HANDLE */
+.selector::before {
+  content: "";
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  margin: 0 auto 10px;
+
+  background: linear-gradient(90deg,
+      #00ffff,
+      #ff00ff,
+      #00ffff);
+
+  box-shadow:
+    0 0 8px rgba(0, 255, 255, 0.8),
+    0 0 16px rgba(255, 0, 255, 0.6);
+}
+
+/* ===============================
+   BUTTONS – NEON ACTIONS
+================================ */
+.selector button {
+  position: relative;
+  overflow: hidden;
+
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+
+  background:
+    linear-gradient(180deg, rgba(15, 25, 45, 0.95), rgba(5, 10, 25, 0.95));
+
+  color: #e8faff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.25),
+    inset 0 0 10px rgba(0, 0, 0, 0.7);
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+/* Glow sweep */
+.selector button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(120deg,
+      transparent 20%,
+      rgba(0, 255, 255, 0.25),
+      transparent 80%);
+
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.selector button:hover {
+  transform: translateY(-1px);
+  border-color: #00ffff;
+
+  box-shadow:
+    0 0 18px rgba(0, 255, 255, 0.7),
+    0 0 28px rgba(255, 0, 255, 0.45);
+}
+
+.selector button:hover::after {
+  opacity: 1;
+}
+
+.selector button:active {
+  transform: translateY(0);
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.4),
+    inset 0 0 16px rgba(0, 0, 0, 0.85);
+}
+
+/* ===============================
+   CONTAINER
+================================ */
+.container {
+  padding: 0.75rem;
+  position: relative;
+}
+
+/* ===============================
+   GRID – BASE (DESKTOP/TABLET)
+================================ */
+.grid {
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ===============================
+   FLOATING ACTION BUTTON – NEON
+================================ */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #0ef;
+  background: radial-gradient(circle at top left,
+      #0ef,
+      #2563eb);
+  color: #1f293a;
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 18px rgba(0, 238, 255, 0.6),
+    0 12px 30px rgba(0, 0, 0, 0.35);
+  z-index: 999;
+  transition: all 0.25s ease;
+}
+
+.fab:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 12px rgba(0, 238, 255, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.fab:hover {
+  transform: scale(1.1) rotate(6deg);
+  box-shadow:
+    0 0 28px rgba(0, 238, 255, 0.9),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.fab::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 238, 255, 0.4);
+  opacity: 0;
+  animation: pulseGlow 2.5s infinite;
+}
+
+@keyframes pulseGlow {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.searchWrapper {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.neonSearch {
+  width: 100%;
+  max-width: 420px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #0b0b0b;
+  color: #00fff7;
+  font-size: 15px;
+  border: 2px solid #00fff7;
+  outline: none;
+  box-shadow:
+    0 0 8px rgba(0, 255, 247, 0.6),
+    0 0 20px rgba(0, 255, 247, 0.4);
+  transition: all 0.25s ease;
+}
+
+.neonSearch::placeholder {
+  color: rgba(0, 255, 247, 0.6);
+}
+
+.neonSearch:focus {
+  box-shadow:
+    0 0 12px rgba(0, 255, 247, 0.9),
+    0 0 35px rgba(0, 255, 247, 0.8);
+  transform: scale(1.02);
+}
+
+/* ===============================
+   MOBILE RESPONSIVE (SMARTPHONES)
+================================ */
+@media (max-width: 480px) {
+
+  .overlay {
+    align-items: center;
+    padding-bottom: 8vh;
+  }
+
+  .selector {
+    max-width: 100%;
+    border-radius: 20px;
+  }
+
+  .grid {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fab {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+}
+
+.eyeFab {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  right: calc(16px + env(safe-area-inset-right));
+
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 0, 255, 0.5);
+
+  background:
+    radial-gradient(circle at 30% 30%, #ff00ff, #1a0a2f);
+
+  color: #0a0014;
+  font-size: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 0 16px rgba(255, 0, 255, 0.8),
+    0 0 32px rgba(255, 0, 255, 0.6);
+
+  z-index: 999;
+  transition: transform 0.15s ease, box-shadow 0.25s ease;
+}
+
+.eyeFab:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 24px rgba(255, 0, 255, 1),
+    0 0 40px rgba(255, 0, 255, 0.8);
+}
+
+.eyeFab:active {
+  transform: translateY(0);
+  box-shadow:
+    0 0 12px rgba(255, 0, 255, 0.5),
+    inset 0 0 12px rgba(0, 0, 0, 0.8);
+}
+
+.eyeFab i {
+  font-size: 24px;
+  filter: drop-shadow(0 0 6px rgba(255, 0, 255, 0.9));
+}
+
+.downloadOverlay{
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.85);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+
+  pointer-events: all;
+}
+
+.downloadText{
+  margin-top: 18px;
+  color: #00fff7;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 0 10px #00fff7;
+}
+
+/* ===============================
+   HUD ANIMATION
+================================ */
+@keyframes hudIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.94);
+    filter: blur(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}

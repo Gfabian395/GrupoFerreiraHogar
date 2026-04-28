@@ -1,0 +1,425 @@
+.addClientBtn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #0ef;
+  background: radial-gradient(circle at top left,
+      #0ef,
+      #2563eb);
+  color: #1f293a;
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 18px rgba(0, 238, 255, 0.6),
+    0 12px 30px rgba(0, 0, 0, 0.35);
+  z-index: 999;
+  transition: all 0.25s ease;
+}
+
+.addClientBtn:hover {
+  transform: scale(1.1) rotate(6deg);
+  box-shadow:
+    0 0 28px rgba(0, 238, 255, 0.9),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.addClientBtn:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 12px rgba(0, 238, 255, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.addClientBtn::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 238, 255, 0.4);
+  opacity: 0;
+  animation: pulseGlow 2.5s infinite;
+}
+
+@keyframes pulseGlow {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ===============================
+   HEADER
+=============================== */
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin: 20px 0 30px;
+}
+
+/* ===============================
+   BUSCADOR NEON
+=============================== */
+.searchInput {
+  width: 420px;
+  max-width: 90%;
+  padding: 14px 18px;
+
+  font-size: 1rem;
+  color: #eaffff;
+  background: #0b0f14;
+
+  border-radius: 14px;
+  border: 2px solid rgba(0, 255, 255, 0.4);
+  outline: none;
+
+  box-shadow:
+    0 0 8px rgba(0, 255, 255, 0.5),
+    0 0 18px rgba(0, 255, 255, 0.3),
+    inset 0 0 6px rgba(0, 255, 255, 0.2);
+
+  transition: all 0.25s ease;
+}
+
+/* placeholder */
+.searchInput::placeholder {
+  color: rgba(180, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+}
+
+/* focus glow */
+.searchInput:focus {
+  border-color: #00ffff;
+
+  box-shadow:
+    0 0 12px rgba(0, 255, 255, 0.9),
+    0 0 28px rgba(0, 255, 255, 0.7),
+    0 0 50px rgba(0, 255, 255, 0.5),
+    inset 0 0 10px rgba(0, 255, 255, 0.3);
+
+  transform: scale(1.02);
+}
+
+/* ===============================
+   EMPTY STATE
+=============================== */
+.empty {
+  text-align: center;
+  color: #88ffff;
+  opacity: 0.8;
+  margin-top: 40px;
+}
+
+/* ============================= */
+/* CLIENTES VENCIDOS */
+/* ============================= */
+
+.vencidosContainer {
+  margin-bottom: 20px;
+  max-height: 250px;
+  overflow-y: auto;
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.vencidosTitle {
+  color: #ff4d4d;
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.vencidosTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vencidosTable thead tr {
+  background: #111;
+  color: #fff;
+}
+
+.vencidosTable th {
+  padding: 6px;
+  font-weight: 500;
+}
+
+.vencidosRow {
+  text-align: center;
+  transition: background 0.2s ease;
+}
+
+.vencidosRow:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.clickableCell {
+  padding: 6px;
+  cursor: pointer;
+  color: #4da6ff;
+}
+
+.clickableCell:hover {
+  text-decoration: underline;
+}
+
+.diasCell {
+  padding: 6px;
+  font-weight: bold;
+}
+
+/* Semáforo */
+
+.yellow {
+  color: #ffd11a;
+}
+
+.orange {
+  color: #ff944d;
+}
+
+.red {
+  color: #ff1a1a;
+}
+
+.cliente-destacado {
+  border: 2px solid #ffd11a;
+  box-shadow: 0 0 15px #ffd11a;
+  animation: parpadeo 1s ease-in-out 3;
+}
+
+/* Clientes.module.css */
+.productColumn {
+  max-width: 150px;
+  /* ajusta a lo que quieras */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes parpadeo {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ===============================
+   FILTRO
+=============================== */
+.filterContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 15px 0;
+  color: #88ffff;
+}
+
+.filterContainer select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #00ffff;
+  background: #111;
+  color: #eaffff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ===============================
+   CLIENTES VENCIDOS
+=============================== */
+.vencidosContainer {
+  margin-bottom: 20px;
+  max-height: 300px;
+  /* mayor altura para scroll */
+  overflow-y: auto;
+  background: #1a1a1a;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.vencidosTitle {
+  color: #ff4d4d;
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Tabla */
+
+.checkColumn {
+  min-width: 24px;
+  /* suficiente para un check */
+}
+
+.vencidosTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vencidosTable thead tr {
+  background: #111;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.vencidosTable th {
+  padding: 6px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.vencidosRow {
+  text-align: center;
+  transition: background 0.2s ease;
+}
+
+.vencidosRow:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.clickableCell {
+  padding: 6px;
+  cursor: pointer;
+  color: #4da6ff;
+}
+
+.clickableCell:hover {
+  text-decoration: underline;
+}
+
+.diasCell {
+  padding: 6px;
+  font-weight: bold;
+}
+
+/* Semáforo */
+.yellow {
+  color: #ffd11a;
+}
+
+.orange {
+  color: #ff944d;
+}
+
+.red {
+  color: #ff1a1a;
+}
+
+/* Producto columna más chica */
+.productColumn {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cliente destacado */
+.cliente-destacado {
+  border: 2px solid #ffd11a;
+  box-shadow: 0 0 15px #ffd11a;
+  animation: parpadeo 1s ease-in-out 3;
+}
+
+/* Animación */
+@keyframes parpadeo {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Scroll table */
+.vencidosContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.vencidosContainer::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.vencidosContainer::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* ===============================
+   RESPONSIVE PARA SMARTPHONES
+=============================== */
+@media (max-width: 600px) {
+  .vencidosTable {
+    font-size: 10px;
+    /* texto más pequeño */
+  }
+
+  .vencidosTable th,
+  .vencidosTable td {
+    padding: 4px;
+    /* menos padding para que quepan más columnas */
+  }
+
+  .productColumn {
+    max-width: 80px;
+    /* producto más pequeño */
+  }
+
+  .vencidosTitle {
+    font-size: 14px;
+    /* título más pequeño */
+  }
+
+  .filterContainer select {
+    font-size: 11px;
+    /* dropdown más pequeño */
+    padding: 4px 6px;
+  }
+
+  .vencidosContainer {
+    padding: 5px;
+    /* menos padding en el contenedor */
+  }
+}

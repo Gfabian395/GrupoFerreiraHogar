@@ -1,0 +1,133 @@
+/* =============================== CONTAINER =============================== */
+.container {
+  padding: 20px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: black;
+}
+
+/* =============================== TITULOS =============================== */
+h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: black;
+}
+
+section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  color: black;
+}
+
+/* =============================== SECTIONS =============================== */
+section {
+  margin-bottom: 30px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 16px;/* 
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
+              0 0 28px rgba(255, 0, 255, 0.15); */
+}
+
+/* =============================== TABLE WRAPPER =============================== */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto; /* scroll horizontal en móviles */
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(8px);/* 
+  box-shadow: 0 0 12px rgba(0,255,255,0.25),
+              0 0 18px rgba(255,0,255,0.15); */
+  padding: 4px;
+}
+
+/* =============================== TABLAS =============================== */
+.table, .table-small {
+  width: 100%;
+  min-width: 600px; /* fuerza scroll si no cabe en pantalla */
+  border-collapse: collapse;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.table th, .table td,
+.table-small th, .table-small td {
+  border: 1px solid black;
+  padding: 10px 12px;
+  text-align: left;
+  color: black;
+}
+
+.table th, .table-small th {
+  font-weight: 600;
+}
+
+.table td div, .table-small td div {
+  margin-bottom: 5px;
+}
+
+/* =============================== TABLE-SMALL (50% width desktop) =============================== */
+.table-small {
+  min-width: 400px;
+}
+
+/* =============================== HOVER =============================== */
+/* .table tr:hover, .table-small tr:hover {
+  box-shadow: 0 0 12px rgba(0,255,255,0.25) inset;
+} */
+
+/* =============================== RESPONSIVE =============================== */
+@media (max-width: 900px) {
+  .table-small {
+    width: 100%;
+  }
+  
+  section {
+    padding: 12px;
+  }
+  
+  h1 {
+    font-size: 1.6rem;
+  }
+  
+  section h2 {
+    font-size: 1.2rem;
+  }
+  
+  .table th, .table td,
+  .table-small th, .table-small td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+/* =============================== MINI MOBILE =============================== */
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  section h2 {
+    font-size: 1rem;
+  }
+
+  .table-wrapper {
+    padding: 2px;
+  }
+
+  .table th, .table td,
+  .table-small th, .table-small td {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  section {
+    border-radius: 12px;
+    padding: 10px;
+  }
+}

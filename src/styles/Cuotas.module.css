@@ -1,0 +1,64 @@
+.cuotasContainer {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-width: 400px;
+  margin: 0 auto;
+  font-family: sans-serif;
+}
+
+.title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.inputGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.inputGroup label {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: #64748B;
+}
+
+.inputGroup input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 1rem;
+}
+
+.inputGroup button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #2563EB;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.inputGroup button:hover {
+  background: #3B82F6;
+}
+
+.resultados {
+  margin-top: 12px;
+}
+
+.resultados p {
+  font-size: 0.9rem;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
