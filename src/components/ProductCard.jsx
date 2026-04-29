@@ -280,7 +280,7 @@ export default function ProductCard({ producto, onEdit, onDelete, fromCombo = fa
 
               return (
                 <div key={sucursal} className={`${styles.branch} ${clase}`}>
-                  <span>🏬 {sucursal}</span>
+                  <span>🏬 {sucursal}</span> 
                   <div className={styles.stockControls}>
                     {esJefe && (
                       <>
