@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "../styles/Cuotas.module.css";
 
-// Configuración de cuotas e intereses
 const configuracionCuotas = [
   { cuotas: 2, interes: 15 },
   { cuotas: 3, interes: 25 },
@@ -13,9 +12,11 @@ const configuracionCuotas = [
   { cuotas: 24, interes: 180 },
 ];
 
-// Formatear número en ARS, redondeando a múltiplos de 1.000
+const CUOTA_MINIMA = 80000;
+
 const formatARS = (valor) => {
   const redondeado = Math.ceil(Number(valor) / 1000) * 1000;
+
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
@@ -24,65 +25,197 @@ const formatARS = (valor) => {
   }).format(redondeado);
 };
 
-const Cuotas = () => {
-  const [monto, setMonto] = useState("");
+const Cuotas = ({ onClose }) => {
+  const [expresion, setExpresion] = useState(
+    () => localStorage.getItem("calculadoraExpresion") || ""
+  );
+
+  const [mostrarCuotas, setMostrarCuotas] = useState(
+    () => JSON.parse(localStorage.getItem("mostrarCuotas")) || false
+  );
+
+  const [minimizada, setMinimizada] = useState(false);
+
   const [resultados, setResultados] = useState([]);
+  const [total, setTotal] = useState(0);
 
-  // Manejar cambio de input
-  const handleChange = (e) => {
-    let valor = e.target.value.replace(/\D/g, ""); // solo números
-    setMonto(valor);
-  };
+  useEffect(() => {
+    localStorage.setItem("calculadoraExpresion", expresion);
+  }, [expresion]);
 
-  // Calcular cuotas
-  const handleCalcular = () => {
-    const montoNum = Number(monto);
-    if (isNaN(montoNum) || montoNum <= 0) {
-      setResultados(["Por favor, ingrese un monto válido."]);
+  useEffect(() => {
+    localStorage.setItem(
+      "mostrarCuotas",
+      JSON.stringify(mostrarCuotas)
+    );
+  }, [mostrarCuotas]);
+
+  useEffect(() => {
+    if (!expresion.trim()) {
+      setResultados([]);
+      setTotal(0);
       return;
     }
 
-    // Filtrar cuotas según el rango del monto
-    const cuotasFiltradas = configuracionCuotas.filter((opcion) => {
-      if (montoNum < 30000) return opcion.cuotas <= 2;
-      if (montoNum >= 30000 && montoNum < 80000) return opcion.cuotas <= 3;
-      if (montoNum >= 80000 && montoNum < 150000) return opcion.cuotas <= 6;
-      if (montoNum >= 150000 && montoNum < 250000) return opcion.cuotas <= 9;
-      if (montoNum >= 250000 && montoNum < 350000) return opcion.cuotas <= 12;
-      if (montoNum >= 350000 && montoNum < 500000) return opcion.cuotas <= 18;
-      return true; // monto >= 500.000
-    });
+    try {
+      const resultado = Function(
+        `"use strict"; return (${expresion.replace(/,/g, "")})`
+      )();
 
-    // Calcular cada cuota
-    const resultadosArray = cuotasFiltradas.map(({ cuotas, interes }) => {
-      const montoConInteres = montoNum * (1 + interes / 100);
-      const montoCuota = Math.ceil(montoConInteres / cuotas / 1000) * 1000;
-      return `Para ${cuotas} cuotas: ${formatARS(montoCuota)} por mes`;
-    });
+      if (isNaN(resultado) || resultado <= 0) {
+        setResultados([]);
+        setTotal(0);
+        return;
+      }
 
-    setResultados(resultadosArray);
+      setTotal(resultado);
+
+      const resultadosArray = configuracionCuotas
+        .map(({ cuotas, interes }) => {
+          const montoConInteres =
+            resultado * (1 + interes / 100);
+
+          const montoCuota =
+            Math.ceil(
+              montoConInteres / cuotas / 1000
+            ) * 1000;
+
+          return {
+            cuotas,
+            montoCuota,
+          };
+        })
+        .filter(
+          ({ montoCuota }) =>
+            montoCuota >= CUOTA_MINIMA
+        )
+        .map(
+          ({ cuotas, montoCuota }) =>
+            `${cuotas} cuotas de ${formatARS(
+              montoCuota
+            )}`
+        );
+
+      setResultados(resultadosArray);
+    } catch {
+      setResultados([]);
+      setTotal(0);
+    }
+  }, [expresion]);
+
+  const agregar = (valor) => {
+    setExpresion((prev) => prev + valor);
   };
+
+  if (minimizada) {
+    return (
+      <div className={styles.miniCalculator}>
+        <div>
+          🧮 {formatARS(total || 0)}
+        </div>
+
+        <button
+          onClick={() => setMinimizada(false)}
+        >
+          ⬆
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.cuotasContainer}>
-      <h3 className={styles.title}>Calculadora de Cuotas</h3>
-      <div className={styles.inputGroup}>
-        <label htmlFor="monto">Ingrese monto:</label>
-        <input
-          type="text"
-          id="monto"
-          value={Number(monto).toLocaleString("es-AR")}
-          onChange={handleChange}
-          placeholder="0"
-        />
-        <button onClick={handleCalcular}>Calcular</button>
+      <button
+        className={styles.closeButton}
+        onClick={onClose}
+      >
+        ✕
+      </button>
+
+      <button
+        className={styles.minimizeButton}
+        onClick={() => setMinimizada(true)}
+      >
+        ─
+      </button>
+
+      <h3 className={styles.title}>
+        Calculadora de Cuotas
+      </h3>
+
+      <input
+        type="text"
+        value={expresion}
+        onChange={(e) =>
+          setExpresion(e.target.value)
+        }
+        placeholder="suma aca el precio del producto"
+        className={styles.calculatorInput}
+      />
+
+      <div className={styles.calculatorButtons}>
+        <button onClick={() => agregar("7")}>7</button>
+        <button onClick={() => agregar("8")}>8</button>
+        <button onClick={() => agregar("9")}>9</button>
+        <button onClick={() => agregar("/")}>÷</button>
+
+        <button onClick={() => agregar("4")}>4</button>
+        <button onClick={() => agregar("5")}>5</button>
+        <button onClick={() => agregar("6")}>6</button>
+        <button onClick={() => agregar("*")}>×</button>
+
+        <button onClick={() => agregar("1")}>1</button>
+        <button onClick={() => agregar("2")}>2</button>
+        <button onClick={() => agregar("3")}>3</button>
+        <button onClick={() => agregar("-")}>−</button>
+
+        <button onClick={() => agregar("0")}>0</button>
+        <button onClick={() => agregar("000")}>000</button>
+        <button onClick={() => agregar(".")}>.</button>
+        <button onClick={() => agregar("+")}>+</button>
       </div>
 
-      <div className={styles.resultados}>
-        {resultados.map((res, i) => (
-          <p key={i}>{res}</p>
-        ))}
+      <div className={styles.totalBox}>
+        <strong>Total:</strong>{" "}
+        {total > 0
+          ? formatARS(total)
+          : "$ 0"}
       </div>
+
+      <button
+        className={styles.viewButton}
+        onClick={() =>
+          setMostrarCuotas(!mostrarCuotas)
+        }
+      >
+        {mostrarCuotas
+          ? "Ocultar cuotas"
+          : "Ver cuotas"}
+      </button>
+
+      <button
+        className={styles.clearButton}
+        onClick={() => {
+          setExpresion("");
+          setResultados([]);
+          setTotal(0);
+          setMostrarCuotas(false);
+
+          localStorage.removeItem(
+            "calculadoraExpresion"
+          );
+        }}
+      >
+        Limpiar
+      </button>
+
+      {mostrarCuotas && (
+        <div className={styles.resultados}>
+          {resultados.map((res, i) => (
+            <p key={i}>{res}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

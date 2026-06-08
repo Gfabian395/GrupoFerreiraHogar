@@ -375,3 +375,23 @@ figure img {
   width: 50px;
   height: 50px;
 }
+
+.productoActivo {
+  animation: pulseCard 1s ;
+  border-radius: 20px;
+}
+
+.productoActivo .productCard {
+  border: 2px solid #25d366;
+  box-shadow: 0 0 20px rgba(37, 211, 102, 0.6);
+}
+
+@keyframes pulseCard {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.02);
+  }
+}

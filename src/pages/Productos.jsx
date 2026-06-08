@@ -11,6 +11,7 @@ import QRCode from "qrcode";
 import styles from "../styles/Productos.module.css";
 import { Loader } from "../components/Loader";
 import Drop from "../components/Drop";
+import Cuotas from "../components/Cuotas";
 
 export const Productos = () => {
   const { categoriaId } = useParams();
@@ -21,18 +22,16 @@ export const Productos = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [addType, setAddType] = useState(null);
-
   const [productoEditando, setProductoEditando] = useState(null);
-
   const [role, setRole] = useState(null);
   const [search, setSearch] = useState("");
   const [showSinStock, setShowSinStock] = useState(false);
-
   const isJefe = role === "jefe";
   const isEncargado = role === "encargado";
-
   const canAddOrEdit = isJefe || isEncargado;
   const canDelete = isJefe;
+  const [ordenPrecio, setOrdenPrecio] = useState("ninguno");
+  const [showCalculator, setShowCalculator] = useState(false);
 
   /* ===============================
      ATAJOS DE TECLADO
@@ -163,37 +162,53 @@ export const Productos = () => {
   =============================== */
 
   const productosFiltrados = productos.filter((p) => {
-  const coincideBusqueda = (p.name || "")
-    .toLowerCase()
-    .includes(search.toLowerCase());
+    const coincideBusqueda = (p.name || "")
+      .toLowerCase()
+      .includes(search.toLowerCase());
 
-  const totalStock = (p.variantes || []).reduce((total, variante) => {
-    const stockVariante = Object.values(variante?.stock || {}).reduce(
-      (a, b) => a + b,
-      0
+    const totalStock = (p.variantes || []).reduce((total, variante) => {
+      const stockVariante = Object.values(variante?.stock || {}).reduce(
+        (a, b) => a + b,
+        0
+      );
+
+      return total + stockVariante;
+    }, 0);
+
+    const tieneStock = totalStock > 0;
+
+    const esInvitado = role === "invitado";
+
+    if (esInvitado) {
+      return coincideBusqueda && tieneStock;
+    }
+
+    if (!showSinStock) {
+      return coincideBusqueda && tieneStock;
+    }
+
+    return coincideBusqueda;
+  });
+
+  const productosOrdenados = [...productosFiltrados].sort((a, b) => {
+    const precioA = Math.min(
+      ...((a.variantes || []).map(v => Number(v.price || 0)))
     );
 
-    return total + stockVariante;
-  }, 0);
+    const precioB = Math.min(
+      ...((b.variantes || []).map(v => Number(v.price || 0)))
+    );
 
-  const tieneStock = totalStock > 0;
+    if (ordenPrecio === "asc") {
+      return precioA - precioB;
+    }
 
-  const esInvitado = role === "invitado";
+    if (ordenPrecio === "desc") {
+      return precioB - precioA;
+    }
 
-  // 🔒 Invitado → nunca ve sin stock
-  if (esInvitado) {
-    return coincideBusqueda && tieneStock;
-  }
-
-  // 👁 Otros → depende del botón
-  if (!showSinStock) {
-    return coincideBusqueda && tieneStock;
-  }
-
-  // 🔓 Mostrar todo
-  return coincideBusqueda;
-});
-
+    return 0;
+  });
   /* ===============================
      NOTIFICACIONES
   =============================== */
@@ -751,11 +766,34 @@ export const Productos = () => {
         />
       </div>
 
+      <div className={styles.priceFilters}>
+        <button
+          className={ordenPrecio === "ninguno" ? styles.activeFilter : ""}
+          onClick={() => setOrdenPrecio("ninguno")}
+        >
+          Todos
+        </button>
+
+        <button
+          className={ordenPrecio === "asc" ? styles.activeFilter : ""}
+          onClick={() => setOrdenPrecio("asc")}
+        >
+          💲 Menor a mayor
+        </button>
+
+        <button
+          className={ordenPrecio === "desc" ? styles.activeFilter : ""}
+          onClick={() => setOrdenPrecio("desc")}
+        >
+          💰 Mayor a menor
+        </button>
+      </div>
+
       {productos.length === 0 ? (
         <p>No hay productos en esta categoría.</p>
       ) : (
         <div className={styles.grid}>
-          {productosFiltrados.map((item) => {
+          {productosOrdenados.map((item) => {
             if (item.type === "combo") {
               return (
                 <ComboCard
@@ -850,16 +888,36 @@ export const Productos = () => {
       )}
 
       {canAddOrEdit && (
-        <button
-          className={styles.fab}
-          onClick={() => {
-            setProductoEditando(null);
-            setSelectorOpen(true);
-          }}
-        >
-          +
-        </button>
+        <>
+          <button
+            className={styles.calculatorFab}
+            onClick={() => setShowCalculator(true)}
+          >
+            <i className='bx bxs-calculator'></i>
+          </button>
+
+          <button
+            className={styles.fab}
+            onClick={() => {
+              setProductoEditando(null);
+              setSelectorOpen(true);
+            }}
+          >
+            +
+          </button>
+        </>
       )}
+
+      {showCalculator && (
+  <div
+    className={styles.calculatorOverlay}
+    onClick={() => setShowCalculator(false)}
+  >
+    <div onClick={(e) => e.stopPropagation()}>
+      <Cuotas onClose={() => setShowCalculator(false)} />
+    </div>
+  </div>
+)}
 
       {(isJefe || isEncargado) && (
         <Drop

@@ -116,9 +116,22 @@ export const Categorias = () => {
 
     return Object.values(productosPorCategoria)
       .map((cat) => {
-        const productosFiltrados = (cat.productos || []).filter((p) =>
-          (p.name || p.nombre || "").toLowerCase().includes(q)
-        );
+        const productosFiltrados = (cat.productos || []).filter((p) => {
+  const nombre = (p.name || p.nombre || "").toLowerCase();
+
+  const variantesTexto = (p.variantes || [])
+    .map((v) =>
+      Object.values(v)
+        .join(" ")
+        .toLowerCase()
+    )
+    .join(" ");
+
+  return (
+    nombre.includes(q) ||
+    variantesTexto.includes(q)
+  );
+});
 
         if (productosFiltrados.length === 0) return null;
 
@@ -230,14 +243,16 @@ export const Categorias = () => {
 
                 {cat.productos.map((p) => (
                   <div
-                    key={p.id}
-                    className={styles.searchItem}
-                    onClick={() =>
-                      navigate(`/categorias/${cat.categoriaId}/productos`)
-                    }
-                  >
-                    {p.name || p.nombre}
-                  </div>
+  key={p.id}
+  className={styles.searchItem}
+  onClick={() =>
+    navigate(
+      `/categorias/${cat.categoriaId}/productos?producto=${p.id}`
+    )
+  }
+>
+  {p.name || p.nombre}
+</div>
                 ))}
               </div>
             ))}

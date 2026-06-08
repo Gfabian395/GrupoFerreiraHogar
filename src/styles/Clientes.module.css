@@ -91,24 +91,22 @@
   padding: 14px 18px;
 
   font-size: 1rem;
-  color: #eaffff;
-  background: #0b0f14;
-
+  color:  rgba(194, 148, 54);
+border: transparent;
   border-radius: 14px;
-  border: 2px solid rgba(0, 255, 255, 0.4);
   outline: none;
 
   box-shadow:
-    0 0 8px rgba(0, 255, 255, 0.5),
-    0 0 18px rgba(0, 255, 255, 0.3),
-    inset 0 0 6px rgba(0, 255, 255, 0.2);
+    0 0 8px  rgba(194, 148, 54),
+    0 0 18px  rgba(194, 148, 54),
+    inset 0 0 6px  rgba(194, 148, 54);
 
   transition: all 0.25s ease;
 }
 
 /* placeholder */
 .searchInput::placeholder {
-  color: rgba(180, 255, 255, 0.5);
+  color:  rgba(194, 148, 54);
   letter-spacing: 0.5px;
 }
 

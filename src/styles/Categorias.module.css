@@ -77,10 +77,8 @@
 
   font-size: 1rem;
   color: black;
-  background: #3f1d0d;
-
   border-radius: 16px;
-  border: 2px solid rgba(251, 191, 36, 0.35);
+  border: 2px solid rgba( 194, 148, 54);
   outline: none;
 
   box-shadow:
@@ -93,22 +91,9 @@
 
 /* PLACEHOLDER */
 .searchInput::placeholder {
-  color: rgba(253, 230, 138, 0.55);
+  color: rgba(194, 148, 54);
   letter-spacing: 0.4px;
 }
-
-/* FOCUS */
-/* .searchInput:focus {
-  border-color: #fbbf24;
-
-  box-shadow:
-    0 0 14px rgba(251, 191, 36, 0.9),
-    0 0 32px rgba(251, 191, 36, 0.7),
-    0 0 55px rgba(251, 191, 36, 0.45),
-    inset 0 0 10px rgba(251, 191, 36, 0.35);
-
-  transform: scale(1.02);
-} */
 
 /* ===============================
    RESULTADOS

@@ -255,6 +255,60 @@ export default function Ventas() {
         // ===============================
         // 2️⃣ DESCONTAR STOCK
         // ===============================
+        const vendedorId = ventaDeOtro
+          ? vendedorReal
+          : auth.currentUser.uid;
+
+        const vendedorRef = doc(db, "usuarios", vendedorId);
+        const vendedorSnap = await transaction.get(vendedorRef);
+
+        if (!vendedorSnap.exists()) {
+          throw new Error("Vendedor no encontrado");
+        }
+
+        const vendedorData = vendedorSnap.data();
+
+        const topeTotal = 5000000;
+
+        const mesActual = new Date().toISOString().slice(0, 7);
+
+        let topeUsado = vendedorData.topeUsado || 0;
+        const mesCredito = vendedorData.mesCredito || null;
+
+        // 🔥 reset automático mensual
+        if (mesCredito !== mesActual) {
+          topeUsado = 0;
+        }
+
+        let riesgo = 0;
+
+        // calculamos costo total de la venta
+        const costoTotal = productosLeidos.reduce((acc, p) => {
+          const qty = p.item.qty || 0;
+          const costo = Number(p.data.purchasePrice || 0);
+          return acc + costo * qty;
+        }, 0);
+
+        if (primerCuotaPaga) {
+          riesgo = 0;
+        } else if (pagoParcial) {
+          riesgo = saldoFinanciado;
+        } else {
+          // 🔥 SOLO cuando no paga nada → usa costo en vez de precio de venta
+          riesgo = costoTotal;
+        }
+
+        const disponible = topeTotal - topeUsado;
+
+        if (riesgo > disponible) {
+          throw new Error("El vendedor no tiene crédito disponible suficiente");
+        }
+
+        // ===============================
+        // 3️⃣ WRITES
+        // ===============================
+
+        // 🔻 DESCONTAR STOCK
         for (const { item, ref, data } of productosLeidos) {
           const variantesDB = Array.isArray(data.variantes)
             ? data.variantes
@@ -287,9 +341,13 @@ export default function Ventas() {
           });
         }
 
-        // ===============================
-        // 3️⃣ REGISTRAR VENTA (ESTO FALTABA)
-        // ===============================
+        // 🔻 ACTUALIZAR CRÉDITO
+        transaction.update(vendedorRef, {
+          topeUsado: topeUsado + riesgo,
+          mesCredito: mesActual,
+        });
+
+        // 🔻 REGISTRAR VENTA
         transaction.set(ventaRef, venta);
       });
 

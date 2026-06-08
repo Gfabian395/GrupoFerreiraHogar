@@ -8,8 +8,7 @@
   justify-content: center;
   align-items: center;
   font-family: "Poppins", sans-serif;
-  background: #060612;
-  color: white;
+  color: black;
 }
 
 /* ============================= */
@@ -62,7 +61,7 @@
   position: relative;
   z-index: 2;
   border-radius: 30px;
-  background: #111126;
+  background: white;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 60px 140px rgba(0, 0, 0, 0.9);
   transition: transform 0.4s ease, box-shadow 0.4s ease;

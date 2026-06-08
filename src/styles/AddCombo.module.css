@@ -100,12 +100,8 @@ input[type="text"],
 input[type="number"] {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(0, 255, 255, 0.25);
-  background: rgba(10, 18, 32, 0.9);
-
   font-size: 0.9rem;
-  color: #eaffff;
-
+  color: black;
   transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
