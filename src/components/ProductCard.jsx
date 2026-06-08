@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import styles from "../styles/ProductCard.module.css";
 import { useCart } from "../context/CartContext";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { doc, updateDoc, addDoc, collection, serverTimestamp, getDoc } from "firebase/firestore";
 import { db, auth } from "../firebase/firebaseConfig";
 import ImgCarrusel from "./ImgCarrusel";
@@ -27,10 +27,6 @@ export default function ProductCard({ producto, onEdit, onDelete, fromCombo = fa
 
   const { addToCart, items } = useCart();
   const { categoriaId } = useParams();
-
-  const [searchParams] = useSearchParams();
-  const productoSeleccionado = searchParams.get("producto");
-  const varianteSeleccionada = searchParams.get("variante");
 
   if (!producto || !variantes.length) return null;
 
@@ -64,45 +60,39 @@ export default function ProductCard({ producto, onEdit, onDelete, fromCombo = fa
     });
   };
 
- const configuracionCuotas = [
-  { cuotas: 2, interes: 15 },
-  { cuotas: 3, interes: 25 },
-  { cuotas: 4, interes: 40 },
-  { cuotas: 6, interes: 60 },
-  { cuotas: 9, interes: 75 },
-  { cuotas: 12, interes: 100 },
-];
+  const configuracionCuotas = [
+    { cuotas: 2, interes: 15 },
+    { cuotas: 3, interes: 25 },
+    { cuotas: 4, interes: 40 },
+    { cuotas: 6, interes: 60 },
+    { cuotas: 9, interes: 75 },
+    { cuotas: 12, interes: 100 },
+  ];
 
-const CUOTA_MINIMA = 80000;
+  const formatARS = (valor) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(Math.ceil(Number(valor) / 1000) * 1000);
 
-const formatARS = (valor) =>
-  new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
-  }).format(Math.ceil(Number(valor) / 1000) * 1000);
-
-const cuotas = useMemo(() => {
-  if (!variant?.price) return [];
-
-  const precio = variant.price;
-
-  return configuracionCuotas
-    .map(({ cuotas, interes }) => {
-      const monto = precio * (1 + interes / 100);
-      const cuota = Math.ceil(monto / cuotas / 1000) * 1000;
-
-      return {
-        cuotas,
-        cuota,
-      };
-    })
-    .filter(({ cuota }) => cuota >= CUOTA_MINIMA)
-    .map(
-      ({ cuotas, cuota }) =>
-        `${cuotas} cuotas ${formatARS(cuota)}`
-    );
-}, [variant?.price]);
+  const cuotas = useMemo(() => {
+    if (!variant?.price) return [];
+    const precio = variant.price;
+    return configuracionCuotas
+      .filter(({ cuotas }) => {
+        if (precio < 30000) return cuotas <= 2;
+        if (precio < 80000) return cuotas <= 3;
+        if (precio < 150000) return cuotas <= 6;
+        if (precio < 250000) return cuotas <= 9;
+        return cuotas <= 12;
+      })
+      .map(({ cuotas, interes }) => {
+        const monto = precio * (1 + interes / 100);
+        const cuota = Math.ceil(monto / cuotas / 1000) * 1000;
+        return `${cuotas} cuotas ${formatARS(cuota)}`;
+      });
+  }, [variant?.price]);
 
   const updateStock = async (sucursal, delta) => {
     if (!esJefe) return;
@@ -211,9 +201,7 @@ const cuotas = useMemo(() => {
     try {
       const variantIndex = selectedVariant;
 
-      const productUrl =
-  `${window.location.origin}/producto/${categoriaId}/${producto.id}` +
-  `?producto=${producto.id}&variante=${encodeURIComponent(variant.attr)}`;
+      const productUrl = `${window.location.origin}/producto/${categoriaId}/${producto.id}?v=${variantIndex}`;
 
       await navigator.clipboard.writeText(productUrl);
 
@@ -228,45 +216,8 @@ const cuotas = useMemo(() => {
     }
   };
 
-  useEffect(() => {
-    if (!productoSeleccionado) return;
-
-    setTimeout(() => {
-      const el = document.getElementById(
-        `producto-${productoSeleccionado}`
-      );
-
-      if (el) {
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    }, 400);
-  }, [productoSeleccionado]);
-
-  useEffect(() => {
-  if (!varianteSeleccionada || !variantes.length) return;
-
-  const index = variantes.findIndex(
-    (v) =>
-      v.attr?.toLowerCase().trim() ===
-      varianteSeleccionada.toLowerCase().trim()
-  );
-
-  if (index >= 0) {
-    setSelectedVariant(index);
-  }
-}, [varianteSeleccionada, variantes]);
-
   return (
-    <div
-      id={`producto-${producto.id}`}
-      className={`${styles.productWrapper} ${producto.id === productoSeleccionado
-        ? styles.productoActivo
-        : ""
-        }`}
-    >
+    <div className={styles.productWrapper}>
       <article className={styles.productCard}>
         {(esJefe || esEncargado) && (
           <div className={styles.productActions}>
