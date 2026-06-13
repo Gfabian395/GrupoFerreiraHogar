@@ -16,6 +16,17 @@ const formatText = (value) => {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 };
 
+const createEmptyVariant = () => ({
+  attr: "",
+  price: "",
+  priceJuego: "",
+  unidadesPorJuego: "",
+  image: "",
+  stock4320: 0,
+  stock4034: 0,
+  stock2440: 0,
+});
+
 export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const [name, setName] = useState(producto?.name || "");
   const [tag, setTag] = useState(producto?.tag || "");
@@ -26,24 +37,18 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
   const [variantes, setVariantes] = useState(
     producto?.variantes?.map((v) => ({
-      attr: v.attr,
-      price: v.price,
+      attr: v.attr || "",
+      price: v.price ?? "",
+      priceJuego: v.priceJuego ?? "",
+      unidadesPorJuego: v.unidadesPorJuego ?? "",
       image: v.image || "",
       stock4320: v.stock?.["Los Andes 4320"] ?? 0,
       stock4034: v.stock?.["Los Andes 4034"] ?? 0,
-      stock2440: v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ??
+      stock2440:
+        v.stock?.["Jofre 2440"] ??
+        v.stock?.["Mosconi"] ??
         0,
-
-    })) || [
-      {
-        attr: "",
-        price: "",
-        image: "",
-        stock4320: 0,
-        stock4034: 0,
-        stock2440: 0,
-      },
-    ]
+    })) || [createEmptyVariant()]
   );
 
   /* ================= ESC PARA CERRAR ================= */
@@ -55,17 +60,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
   /* ================= VARIANTES ================= */
   const handleAddVariant = () => {
-    setVariantes([
-      ...variantes,
-      {
-        attr: "",
-        price: "",
-        image: "",
-        stock4320: 0,
-        stock4034: 0,
-        stock2440: 0,
-      },
-    ]);
+    setVariantes([...variantes, createEmptyVariant()]);
   };
 
   const handleRemoveVariant = (index) => {
@@ -113,6 +108,19 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       return;
     }
 
+    if (
+      variantes.some(
+        (v) =>
+          (v.priceJuego !== "" && v.unidadesPorJuego === "") ||
+          (v.priceJuego === "" && v.unidadesPorJuego !== "")
+      )
+    ) {
+      alert(
+        "Si cargás precio por juego/combo, también tenés que indicar las unidades por juego/combo."
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -139,6 +147,9 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           return {
             attr: v.attr,
             price: Number(v.price),
+            priceJuego: v.priceJuego !== "" ? Number(v.priceJuego) : null,
+            unidadesPorJuego:
+              v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
             image,
             stock: {
               "Los Andes 4320": Number(v.stock4320),
@@ -260,7 +271,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
               </label>
 
               <label>
-                Precio
+                Precio por unidad
                 <input
                   type="number"
                   min="0"
@@ -270,6 +281,36 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                     handleVariantChange(i, "price", e.target.value)
                   }
                   onWheel={(e) => e.preventDefault()}
+                />
+              </label>
+
+              <label>
+                Precio por juego / combo
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={v.priceJuego}
+                  onChange={(e) =>
+                    handleVariantChange(i, "priceJuego", e.target.value)
+                  }
+                  onWheel={(e) => e.preventDefault()}
+                  placeholder="Ej: 120000"
+                />
+              </label>
+
+              <label>
+                Unidades por juego / combo
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={v.unidadesPorJuego}
+                  onChange={(e) =>
+                    handleVariantChange(i, "unidadesPorJuego", e.target.value)
+                  }
+                  onWheel={(e) => e.preventDefault()}
+                  placeholder="Ej: 6"
                 />
               </label>
 
@@ -361,4 +402,3 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     </div>
   );
 }
-/* ORIGINAL, FUNCIONA */

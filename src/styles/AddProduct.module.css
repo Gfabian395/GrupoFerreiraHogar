@@ -1,363 +1,666 @@
 /* ===============================
-   OVERLAY – FUTURISTIC GLASS HUD
+   ADD PRODUCT MODAL
+   LIGHT GLASS HUD
 ================================ */
+
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
-  background:
-    radial-gradient(circle at 50% 20%, rgba(0, 255, 255, 0.12), transparent 60%),
-    radial-gradient(circle at 80% 80%, rgba(255, 0, 255, 0.12), transparent 60%),
-    rgba(5, 8, 14, 0.85);
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 
   display: grid;
   place-items: center;
 
   padding: 16px;
   overflow-y: auto;
+
+  background:
+    radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.12), transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.12), transparent 60%),
+    rgba(241, 245, 249, 0.82);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* ===============================
-   PRODUCT FORM – NEON GLASS
+   FORM CONTAINER
 ================================ */
+
+.productForm,
+.productForm * {
+  box-sizing: border-box;
+}
+
 .productForm {
   position: relative;
   z-index: 10000;
 
-  width: 90%;
-  max-width: 420px;
-  max-height: min(92vh, 760px);
+  width: min(100%, 520px);
+  max-height: min(92vh, 820px);
 
   overflow-y: auto;
   overscroll-behavior: contain;
 
-  padding: 20px 18px 22px;
+  padding: 22px 20px 24px;
   border-radius: 22px;
 
   display: grid;
   gap: 16px;
 
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #e8faff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1e293b;
 
   background:
-    linear-gradient(180deg,
-      rgba(20, 30, 50, 0.95),
-      rgba(10, 15, 30, 0.95));
+    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.95), transparent 38%),
+    linear-gradient(180deg, #ffffff, #f3f6fa);
 
-  border: 1px solid rgba(0, 255, 255, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.38);
 
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    0 0 24px rgba(0, 255, 255, 0.25),
-    0 0 48px rgba(255, 0, 255, 0.15),
-    inset 0 0 22px rgba(0, 0, 0, 0.6);
+    0 0 0 1px rgba(255, 255, 255, 0.85),
+    0 24px 60px rgba(15, 23, 42, 0.18),
+    0 8px 20px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 
   animation: hudIn 0.35s cubic-bezier(.16, .84, .44, 1);
 }
 
+.productForm::-webkit-scrollbar {
+  width: 8px;
+}
+
+.productForm::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.9);
+  border-radius: 999px;
+}
+
+.productForm::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 999px;
+}
+
+.productForm::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}
+
 /* ===============================
-   CLOSE BUTTON – HUD STYLE
+   CLOSE BUTTON
 ================================ */
-.closeButton {
+
+.productForm .closeButton {
   position: absolute;
   top: 12px;
   right: 14px;
 
   width: 34px;
   height: 34px;
+  min-height: 34px;
+
+  margin: 0;
+  padding: 0;
+
   border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.45);
 
-  border: 1px solid rgba(0, 255, 255, 0.4);
-  background: rgba(10, 20, 35, 0.8);
+  background: #ffffff;
+  color: #334155;
 
-  color: #9ffcff;
-  font-size: 1.15rem;   /* 🔧 un pelo menos */
-  font-weight: 700;
-  line-height: 1;       /* 🔥 clave para centrar texto */
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
 
   cursor: pointer;
 
-  display: flex;        /* 🔁 mejor que grid para texto */
+  display: flex;
   align-items: center;
   justify-content: center;
 
-  padding: 0;           /* 🚫 evita desfasajes */
-
   box-shadow:
-    0 0 10px rgba(0, 255, 255, 0.6),
-    inset 0 0 8px rgba(0, 0, 0, 0.6);
+    0 8px 18px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 
-  transition: transform 0.15s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
 }
 
-
-.closeButton:hover {
+.productForm .closeButton:hover {
   transform: scale(1.08);
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.38);
+
   box-shadow:
-    0 0 18px rgba(0, 255, 255, 0.9),
-    0 0 28px rgba(255, 0, 255, 0.6);
+    0 10px 22px rgba(185, 28, 28, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 /* ===============================
-   TITLES
+   TITLE
 ================================ */
-.productForm h2 {
-  margin: 0 0 4px;
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: 0.6px;
 
-  color: #eaffff;
+.productForm h2 {
+  margin: 0 42px 2px 0;
+
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+
+  color: #0f172a;
+
   text-shadow:
-    0 0 6px rgba(0, 255, 255, 0.6),
-    0 0 14px rgba(255, 0, 255, 0.4);
+    0 1px 0 rgba(255, 255, 255, 0.9),
+    0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 /* ===============================
    LABELS
 ================================ */
+
 .productForm label {
   display: grid;
   gap: 6px;
-  font-size: 0.75rem;
-  letter-spacing: 0.5px;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.55px;
   text-transform: uppercase;
-  color: #9fdfe6;
+
+  color: #475569;
 }
 
 /* ===============================
-   INPUTS & SELECTS
+   INPUTS
 ================================ */
+
 .productForm input,
 .productForm select {
+  width: 100%;
+  min-height: 39px;
+
   padding: 9px 11px;
-  /* 🔽 más finos */
+
   border-radius: 12px;
-  font-size: 0.8rem;
-  /* 🔽 texto más chico */
-  width: 98%;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+
+  background: #ffffff;
+
+  color: #111827;
+
+  font-size: 0.82rem;
+  font-weight: 500;
+
+  outline: none;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    inset 0 1px 2px rgba(15, 23, 42, 0.04);
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-
 .productForm input::placeholder {
-  color: rgba(180, 230, 240, 0.45);
+  color: rgba(100, 116, 139, 0.55);
 }
 
 .productForm input:focus,
 .productForm select:focus {
-  outline: none;
-  border-color: #00ffff;
+  border-color: #2563eb;
+
+  background: #ffffff;
 
   box-shadow:
-    0 0 0 3px rgba(0, 255, 255, 0.25),
-    0 0 14px rgba(0, 255, 255, 0.6);
+    0 0 0 3px rgba(37, 99, 235, 0.16),
+    0 8px 18px rgba(37, 99, 235, 0.08);
+}
+
+.productForm input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.productForm input[type="number"]::-webkit-outer-spin-button,
+.productForm input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* ===============================
+   FILE INPUT
+================================ */
+
+.productForm input[type="file"] {
+  padding: 7px;
+  cursor: pointer;
+
+  background: #f8fafc;
+  border: 1px dashed rgba(100, 116, 139, 0.45);
+  color: #475569;
+}
+
+.productForm input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 8px 11px;
+
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 10px;
+
+  background: #e2e8f0;
+  color: #1e293b;
+
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.productForm input[type="file"]::file-selector-button:hover {
+  background: #cbd5e1;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
 }
 
 /* ===============================
    FIELDSET
 ================================ */
+
 .productForm fieldset {
-  border: 1px dashed rgba(0, 255, 255, 0.35);
-  border-radius: 16px;
+  margin: 2px 0 0;
   padding: 14px;
 
+  border: 1px dashed rgba(148, 163, 184, 0.58);
+  border-radius: 16px;
+
   display: grid;
-  gap: 12px;
+  gap: 14px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(248, 250, 252, 0.95),
+      rgba(241, 245, 249, 0.85)
+    );
 }
 
 .productForm legend {
   padding: 0 10px;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  color: #9fdfe6;
+
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+
+  color: #334155;
 }
 
 /* ===============================
-   ACTION BUTTON
+   VARIANT CARD
 ================================ */
-.productForm button {
-  margin-top: 10px;
-  padding: 14px;
 
+.variant {
+  position: relative;
+
+  display: grid;
+  gap: 12px;
+
+  padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(0, 255, 255, 0.45);
 
   background:
-    linear-gradient(180deg, #00ffff, #7d5fff);
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 45%),
+    linear-gradient(180deg, #ffffff, #f8fafc);
 
-  color: #041018;
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.6px;
+  border: 1px solid rgba(148, 163, 184, 0.38);
+
+  box-shadow:
+    0 10px 22px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.variant label {
+  font-size: 0.68rem;
+}
+
+.variant img {
+  width: 82px !important;
+  height: 82px;
+
+  object-fit: cover;
+
+  margin-top: 2px !important;
+  border-radius: 12px !important;
+
+  border: 1px solid rgba(148, 163, 184, 0.45);
+
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.variant hr {
+  width: 100%;
+  height: 1px;
+
+  margin: 2px 0 0;
+
+  border: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(148, 163, 184, 0.55),
+      rgba(37, 99, 235, 0.24),
+      transparent
+    );
+}
+
+/* ===============================
+   BUTTONS
+================================ */
+
+.productForm button:not(.closeButton) {
+  min-height: 42px;
+
+  padding: 12px 14px;
+
+  border-radius: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+
+  background:
+    linear-gradient(180deg, #3b82f6, #2563eb);
+
+  color: #ffffff;
+
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.45px;
 
   cursor: pointer;
 
   box-shadow:
-    0 0 16px rgba(0, 255, 255, 0.8),
-    0 0 28px rgba(125, 95, 255, 0.6);
+    0 12px 24px rgba(37, 99, 235, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 
   transition:
     transform 0.15s ease,
-    box-shadow 0.25s ease;
+    box-shadow 0.25s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
 }
 
-.productForm button:hover {
+.productForm button:not(.closeButton):hover {
   transform: translateY(-2px);
+
   box-shadow:
-    0 0 24px rgba(0, 255, 255, 1),
-    0 0 40px rgba(125, 95, 255, 0.9);
+    0 16px 30px rgba(37, 99, 235, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+
+  filter: brightness(1.04);
 }
 
-.productForm button:active {
+.productForm button:not(.closeButton):active {
   transform: translateY(0);
+
   box-shadow:
-    0 0 14px rgba(0, 255, 255, 0.7),
-    inset 0 0 16px rgba(0, 0, 0, 0.6);
+    0 8px 18px rgba(37, 99, 235, 0.22),
+    inset 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.productForm button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none !important;
+  filter: grayscale(0.35);
+}
+
+/* Agregar variante */
+.productForm fieldset > button {
+  background:
+    linear-gradient(
+      180deg,
+      #38bdf8,
+      #2563eb
+    );
+
+  color: #ffffff;
+}
+
+/* Eliminar variante */
+.variant > button {
+  background:
+    linear-gradient(
+      180deg,
+      #ef4444,
+      #b91c1c
+    ) !important;
+
+  color: #ffffff !important;
+
+  border-color: rgba(239, 68, 68, 0.5) !important;
+
+  box-shadow:
+    0 10px 22px rgba(239, 68, 68, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+/* Guardar / Agregar producto */
+.productForm > button[type="submit"] {
+  min-height: 48px;
+
+  margin-top: 2px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #1d4ed8 45%,
+      #0f766e
+    );
+
+  color: #ffffff;
+
+  font-size: 0.95rem;
+  font-weight: 900;
+
+  box-shadow:
+    0 16px 32px rgba(37, 99, 235, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 /* ===============================
-   MOBILE – SLIM HUD MODE
+   MOBILE
 ================================ */
-@media (max-width: 480px) {
 
+@media (max-width: 480px) {
   .overlay {
     padding: 10px;
+    place-items: start center;
   }
 
   .productForm {
     width: 100%;
-    /* max-height: 94vh; */
+    max-height: 94vh;
 
-    padding: 14px 12px 16px;
+    padding: 16px 13px 18px;
     gap: 12px;
 
     border-radius: 18px;
   }
 
-  /* Title */
   .productForm h2 {
-    font-size: 1.1rem;
-    letter-spacing: 0.4px;
+    font-size: 1.08rem;
+    letter-spacing: 0.3px;
   }
 
-  /* Labels */
   .productForm label {
-    font-size: 0.7rem;
+    font-size: 0.66rem;
     gap: 4px;
   }
 
-  /* Inputs */
   .productForm input,
   .productForm select {
-    padding: 9px 11px;
-    /* 🔽 más finos */
-    border-radius: 12px;
-    font-size: 0.8rem;
-    /* 🔽 texto más chico */
+    min-height: 36px;
+    padding: 8px 10px;
+
+    border-radius: 11px;
+
+    font-size: 0.78rem;
   }
 
-
-  /* Fieldset */
   .productForm fieldset {
     padding: 10px;
     gap: 10px;
+
     border-radius: 14px;
   }
 
   .productForm legend {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
   }
 
-  /* Button */
-  .productForm button {
-    padding: 12px;
-    font-size: 0.85rem;
+  .variant {
+    padding: 11px;
+    gap: 10px;
+
     border-radius: 14px;
   }
 
-  /* Close button smaller */
-  .closeButton {
+  .variant label {
+    font-size: 0.62rem;
+  }
+
+  .productForm button:not(.closeButton) {
+    min-height: 38px;
+    padding: 10px 12px;
+
+    border-radius: 13px;
+
+    font-size: 0.8rem;
+  }
+
+  .productForm .closeButton {
+    top: 10px;
+    right: 10px;
+
     width: 30px;
     height: 30px;
+    min-height: 30px;
+
     font-size: 1rem;
   }
 }
 
-
 /* ===============================
-   HUD ANIMATION
+   SMALL MOBILE
 ================================ */
-@media (max-width: 380px) {
 
+@media (max-width: 380px) {
   .overlay {
     padding: 6px;
   }
 
   .productForm {
-    width: 90%;
-    max-width: 100%;
-    max-height: 88vh;
+    width: 100%;
+    max-height: 92vh;
 
-    padding: 10px 10px 12px;
-    gap: 8px;
+    padding: 12px 10px 14px;
+    gap: 9px;
 
-    border-radius: 14px;
-
-    overflow-y: auto;
-    /* solo si no entra */
+    border-radius: 15px;
   }
 
-  /* Título ultra compacto */
   .productForm h2 {
-    font-size: 0.95rem;
+    font-size: 0.98rem;
     letter-spacing: 0.25px;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
   }
 
-  /* Labels más chicos */
   .productForm label {
-    font-size: 0.6rem;
-    gap: 2px;
+    font-size: 0.58rem;
+    gap: 3px;
   }
 
-  /* Inputs bien finos */
   .productForm input,
   .productForm select {
-    padding: 8px 10px;
-    font-size: 0.75rem;
+    min-height: 34px;
+
+    padding: 7px 9px;
+
     border-radius: 10px;
+
+    font-size: 0.73rem;
   }
 
-  /* Fieldset minimal */
   .productForm fieldset {
-    padding: 7px;
-    gap: 6px;
-    border-radius: 10px;
-  }
+    padding: 8px;
+    gap: 8px;
 
-  .productForm legend {
-    font-size: 0.55rem;
-  }
-
-  /* Botón compacto pero usable */
-  .productForm button {
-    padding: 9px;
-    font-size: 0.75rem;
     border-radius: 12px;
   }
 
-  /* Close button mini HUD */
-  .closeButton {
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    font-size: 0.85rem;
+  .productForm legend {
+    font-size: 0.54rem;
   }
 
+  .variant {
+    padding: 9px;
+    gap: 8px;
+
+    border-radius: 12px;
+  }
+
+  .variant img {
+    width: 70px !important;
+    height: 70px;
+  }
+
+  .productForm button:not(.closeButton) {
+    min-height: 34px;
+
+    padding: 8px 10px;
+
+    font-size: 0.72rem;
+    border-radius: 11px;
+  }
+
+  .productForm .closeButton {
+    top: 7px;
+    right: 7px;
+
+    width: 25px;
+    height: 25px;
+    min-height: 25px;
+
+    font-size: 0.85rem;
+  }
+}
+
+/* ===============================
+   ANIMATION
+================================ */
+
+@keyframes hudIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
