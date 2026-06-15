@@ -196,7 +196,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       console.error(error);
       alert("Ocurrió un error. Revisá la consola.");
     } finally {
-      setLoading(false);
+      loading(false);
     }
   };
 
@@ -280,7 +280,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   onChange={(e) =>
                     handleVariantChange(i, "price", e.target.value)
                   }
-                  onWheel={(e) => e.preventDefault()}
+                  onWheel={(e) => e.target.blur()}
                 />
               </label>
 
@@ -294,7 +294,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   onChange={(e) =>
                     handleVariantChange(i, "priceJuego", e.target.value)
                   }
-                  onWheel={(e) => e.preventDefault()}
+                  onWheel={(e) => e.target.blur()}
                   placeholder="Ej: 120000"
                 />
               </label>
@@ -309,7 +309,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   onChange={(e) =>
                     handleVariantChange(i, "unidadesPorJuego", e.target.value)
                   }
-                  onWheel={(e) => e.preventDefault()}
+                  onWheel={(e) => e.target.blur()}
                   placeholder="Ej: 6"
                 />
               </label>
@@ -346,7 +346,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   onChange={(e) =>
                     handleVariantChange(i, "stock4320", e.target.value)
                   }
-                  onWheel={(e) => e.preventDefault()}
+                  onWheel={(e) => e.target.blur()}
                 />
               </label>
 
@@ -360,7 +360,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   onChange={(e) =>
                     handleVariantChange(i, "stock4034", e.target.value)
                   }
-                  onWheel={(e) => e.preventDefault()}
+                  onWheel={(e) => e.target.blur()}
                 />
               </label>
 
@@ -374,7 +374,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   onChange={(e) =>
                     handleVariantChange(i, "stock2440", e.target.value)
                   }
-                  onWheel={(e) => e.preventDefault()}
+                  onWheel={(e) => e.target.blur()}
                 />
               </label>
 

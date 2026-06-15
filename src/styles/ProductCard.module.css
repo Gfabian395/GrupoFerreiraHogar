@@ -199,25 +199,56 @@
 }
 
 /* ===============================
-   VARIANT OPTIONS
+    VARIANT OPTIONS (SCROLL TOTAL)
 ================================ */
 .variantGrid {
-  display: flex;
+  display: flex !important;
+  flex-wrap: nowrap !important;       /* Prohíbe terminantemente irse hacia abajo */
   align-items: flex-start;
   gap: 12px;
-  overflow-x: auto;
-  padding: 4px;
+  overflow-x: auto !important;       /* Fuerza la activación del scroll horizontal */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  
+  /* Dejamos un margen abajo para la barra de scroll gris de tus capturas */
+  padding: 8px 4px 14px 4px; 
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* Scroll suave y rápido en iOS/Android */
+
+  /* Forzamos una barra de scroll fina y estética en Firefox */
+  scrollbar-width: thin !important;
+  scrollbar-color: #9ca3af #f3f4f6;
+}
+
+/* Forzamos una barra de scroll visible y limpia en Chrome, Safari y Edge */
+.variantGrid::-webkit-scrollbar {
+  display: block !important;
+  height: 5px;                       /* Barra ultra delgada para que no sea tosca */
+}
+
+.variantGrid::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.variantGrid::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 10px;
 }
 
 .variantOption {
   position: relative;
-  min-width: 55px;
-  display: grid;
-  justify-items: center;
+  flex-shrink: 0 !important;          /* PROHIBIDO que los elementos se aplasten entre sí */
+  width: 85px;                       /* Ancho ideal para mantener las columnas separadas */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 6px;
   cursor: pointer;
   user-select: none;
   color: #111827;
+  text-align: center;
 }
 
 .variantOption input {
@@ -228,7 +259,7 @@
 
 .variantCircle {
   position: relative;
-  width: 46px; /* Tamaño optimizado */
+  width: 46px; 
   height: 46px;
   border-radius: 50%;
   display: grid;
@@ -256,10 +287,17 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
 }
 
+/* Solución definitiva al texto encimado */
 .variantName {
-  font-size: 0.8rem;
+  font-size: 0.72rem;                /* Más pequeño y controlado */
   font-weight: bold;
   color: #111827;
+  line-height: 1.2;
+  white-space: normal !important;    /* Permite saltos de línea */
+  word-break: break-all !important;  /* CRUCIAL: Rompe "Colchon$750.000" aunque venga sin espacios */
+  overflow-wrap: break-word !important;
+  display: block;
+  width: 100%;
 }
 
 .disabled {
@@ -270,43 +308,52 @@
 .soldOutBadge {
   position: absolute;
   top: -6px;
-  right: -6px;
+  right: 4px;
   z-index: 3;
   padding: 2px 6px;
   border-radius: 4px;
   background: #ef4444;
   color: #ffffff;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: bold;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 /* ===============================
-   BUY FORMAT
+    BUY FORMAT (MINI COMPACTO)
 ================================ */
 .buyFormatGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 6px;                          /* Espaciado ajustado */
+  max-width: 230px;                  /* Contenedor mucho más angosto y estético */
+  width: 100%;
+  margin: 0 auto;                    
 }
 
 .formatButton {
   position: relative;
-  min-height: 46px; /* Altura compacta pero limpia */
-  padding: 10px;
-  border-radius: 8px;
+  min-height: 36px;                  /* Reducido de 46px a una altura bien compacta */
+  padding: 6px 8px;                  /* Relleno mínimo para que no flote tanto texto */
+  border-radius: 6px;                /* Bordes más pequeños acordes al tamaño */
   border: 2px solid #d1d5db;
   background: #f9fafb;
   color: #111827;
   cursor: pointer;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   font-weight: bold;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .formatButton strong {
-  font-size: 0.95rem;
+  font-size: 0.75rem;                /* Fuente pequeña para que "3 disponibles" entre limpio */
+  line-height: 1.1;
+  text-align: center;
 }
 
 .formatButton:hover:not(:disabled) {
@@ -317,7 +364,7 @@
 .selectedFormat {
   border-color: #2563eb;
   background: #eff6ff;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 1.5px rgba(37, 99, 235, 0.15);
 }
 
 /* ===============================

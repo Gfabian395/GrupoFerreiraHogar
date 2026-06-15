@@ -78,14 +78,16 @@ export default function ProductCard({
   const esJefe = userRole === "jefe";
   const esEncargado = userRole === "encargado";
 
-  const configuracionCuotas = [
-    { cuotas: 2, interes: 15 },
-    { cuotas: 3, interes: 25 },
-    { cuotas: 4, interes: 40 },
-    { cuotas: 6, interes: 60 },
-    { cuotas: 9, interes: 75 },
-    { cuotas: 12, interes: 100 },
-  ];
+ const configuracionCuotas = [
+  { cuotas: 2, interes: 30 },
+  { cuotas: 3, interes: 50 },
+  { cuotas: 4, interes: 70 },
+  { cuotas: 6, interes: 90 },
+  { cuotas: 9, interes: 120 },
+  { cuotas: 12, interes: 150 },
+  { cuotas: 18, interes: 170 },
+  { cuotas: 24, interes: 200 },
+];
 
   const formatARS = (valor) =>
     new Intl.NumberFormat("es-AR", {
