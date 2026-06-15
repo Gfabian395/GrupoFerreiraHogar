@@ -363,7 +363,7 @@
 ================================ */
 .stock {
   display: grid;
-  gap: 10px; /* Separación prolija entre sucursales */
+  gap: 10px; /* Separación prolija entre sucursales */ 
 }
 
 .branch {
