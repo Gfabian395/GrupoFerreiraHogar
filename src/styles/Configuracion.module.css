@@ -8,20 +8,22 @@
   align-items: center;
   padding: 24px;
   font-family: 'Poppins', sans-serif;
-  color: #ffffff;
+  background-color: #f8fafc; /* Gris muy claro y limpio para el fondo de pantalla */
+  color: #334155; /* Texto principal en gris oscuro (suave para la vista) */
 }
 
 /* ===== CARD ===== */
 .configCard {
   width: 100%;
   max-width: 420px;
-  background: rgba(31, 41, 58, 0.85);
-  border: 2px solid #2c4766;
+  background: #ffffff; /* Fondo blanco puro */
+  border: 1px solid #e2e8f0; /* Borde sutil */
   border-radius: 24px;
   padding: 32px 28px;
-  box-shadow:
-    0 0 25px rgba(0, 238, 255, 0.15),
-    inset 0 0 10px rgba(0, 238, 255, 0.05);
+  /* Sombra natural y suave drop-shadow en lugar de neón */
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.05),
+    0 8px 10px -6px rgba(0, 0, 0, 0.05);
   animation: fadeUp 0.6s ease;
 }
 
@@ -29,53 +31,55 @@
 .configCard h2 {
   text-align: center;
   font-size: 1.8em;
-  color: #0ef;
+  color: #1e293b; /* Color pizarra oscuro para máxima legibilidad */
   margin-bottom: 20px;
+  font-weight: 700;
 }
 
 .configCard h3 {
   margin: 20px 0 14px;
   font-size: 1.05em;
-  color: #94a3b8;
-  font-weight: 500;
+  color: #64748b; /* Gris medio para jerarquía */
+  font-weight: 600;
 }
 
 /* ===== INFO USUARIO ===== */
 .userInfo p {
   margin: 6px 0;
   font-size: 0.95em;
-  color: #e5e7eb;
+  color: #475569;
 }
 
 .userInfo strong {
-  color: #0ef;
+  color: #2563eb; /* Azul acento vibrante pero formal */
+  font-weight: 600;
 }
 
 /* ===== SEPARADOR ===== */
 .divider {
   height: 1px;
+  /* Gradiente sutil que se desvanece hacia los lados */
   background: linear-gradient(
     to right,
     transparent,
-    #0ef,
+    #cbd5e1,
     transparent
   );
   margin: 22px 0;
-  opacity: 0.4;
 }
 
 /* ===== INPUT ===== */
 .input {
   width: 100%;
   height: 48px;
-  background: transparent;
-  border: 2px solid #2c4766;
+  background: #f1f5f9; /* Fondo gris claro para los campos */
+  border: 2px solid transparent; /* Sin borde inicial */
   border-radius: 40px;
   font-size: 0.95em;
-  color: #ffffff;
-  padding: 0 18px;
+  color: #1e293b;
+  padding: 0 20px;
   outline: none;
-  transition: 0.4s ease;
+  transition: all 0.3s ease;
 }
 
 .input::placeholder {
@@ -83,23 +87,26 @@
 }
 
 .input:focus {
-  border-color: #0ef;
-  box-shadow: 0 0 12px rgba(0, 238, 255, 0.45);
+  background: #ffffff;
+  border-color: #2563eb; /* El azul toma el protagonismo al enfocar */
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15); /* Efecto de anillo sutil */
 }
 
 /* ===== MENSAJES ===== */
 .success {
   margin-top: 12px;
-  color: #22c55e;
+  color: #16a34a; /* Verde legible en fondos blancos */
   font-size: 0.9em;
   text-align: center;
+  font-weight: 500;
 }
 
 .error {
   margin-top: 12px;
-  color: #ef4444;
+  color: #dc2626; /* Rojo legible en fondos blancos */
   font-size: 0.9em;
   text-align: center;
+  font-weight: 500;
 }
 
 /* ===== BOTON ===== */
@@ -109,16 +116,18 @@
   height: 46px;
   border-radius: 40px;
   border: none;
-  background: #0ef;
-  color: #1f293a;
+  background: #2563eb; /* Botón azul llamativo */
+  color: #ffffff; /* Texto blanco */
   font-weight: 600;
   font-size: 0.95em;
   cursor: pointer;
-  transition: 0.3s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
 }
 
 .button:hover {
-  box-shadow: 0 0 20px rgba(0, 238, 255, 0.7);
+  background: #1d4ed8; /* Azul un toque más oscuro al pasar el mouse */
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
   transform: translateY(-1px);
 }
 
@@ -128,7 +137,9 @@
 }
 
 .button:disabled {
-  opacity: 0.5;
+  background: #e2e8f0;
+  color: #94a3b8;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -138,16 +149,20 @@
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #0ef;
-  box-shadow: 0 0 18px rgba(0, 238, 255, 0.6);
+  border: 4px solid #ffffff; /* Borde blanco grueso para separarlo de la sombra */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Sombra suave para darle volumen */
   margin-bottom: 12px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* ===== INPUT FILE ===== */
 .fileInput {
   margin-top: 6px;
   font-size: 0.85em;
-  color: #cbd5f5;
+  color: #64748b;
+  text-align: center;
 }
 
 /* ===== ANIMACION ===== */

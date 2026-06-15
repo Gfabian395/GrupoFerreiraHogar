@@ -1,29 +1,35 @@
-/* ================= PAYMENT WRAPPER ================= */
+/* ==========================================================================
+   💳 PAYMENT WRAPPER & CARD
+   ========================================================================== */
 .paymentWrapper {
   display: grid;
   gap: 1.5rem;
   justify-content: center;
   padding: 1rem 0;
+  background-color: #f8fafc; /* Fondo de pantalla suave */
+  min-height: 100vh;
 }
 
-/* ================= PAYMENT CARD ================= */
 .paymentCard {
-  backdrop-filter: blur(14px);
+  background: #ffffff; /* Fondo blanco puro */
   border-radius: 1.5rem;
   padding: 1.5rem;
   display: grid;
   gap: 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0; /* Borde sutil gris */
+  /* Sombra elegante y difuminada en lugar de la sombra dura oscura */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .paymentCard:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 28px 55px rgba(0, 0, 0, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* ================= CLIENT HEADER ================= */
+/* ==========================================================================
+   👤 CLIENT HEADER & IDENTITY
+   ========================================================================== */
 .clientHeader {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -35,13 +41,14 @@
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  border: 2px solid #38bdf8;
+  border: 2px solid #e2e8f0; /* Cambiado de azul neón a gris neutro */
+  object-fit: cover;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .clientHeader img:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .identity {
@@ -49,17 +56,25 @@
   gap: 0.2rem;
 }
 
+.identity h3 {
+  color: #0f172a; /* Slate oscuro para títulos principales */
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
 .identity span {
-  font-size: 0.8rem;
-  color: black;
+  font-size: 0.85rem;
+  color: #475569; /* Gris intermedio legible */
 }
 
 .identity .address {
-  font-size: 0.75rem;
-  color: black;
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
-/* ================= STATUS ================= */
+/* ==========================================================================
+   🚦 STATUS BADGES
+   ========================================================================== */
 .status {
   font-size: 0.75rem;
   padding: 0.35rem 0.6rem;
@@ -70,60 +85,67 @@
 }
 
 .ok {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  background: #dcfce7; /* Fondo verde pastel */
+  color: #16a34a;      /* Texto verde oscuro con contraste */
 }
 
 .blocked {
-  background: rgba(239, 68, 68, 0.15);
-  color: #dc2626;
+  background: #fee2e2; /* Fondo rojo pastel */
+  color: #dc2626;      /* Texto rojo con contraste */
 }
 
-/* ================= SALE INFO CARD ================= */
+/* ==========================================================================
+   📦 SALE INFO CARD (Detalles de la Venta)
+   ========================================================================== */
 .saleInfoCard {
   display: grid;
   gap: 1rem;
   padding: 1rem;
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
 }
 
-/* Secciones internas */
 .saleSection {
   padding: 0.8rem;
   border-radius: 0.8rem;
+  background-color: #f8fafc; /* Secciones internas ligeramente grises */
 }
 
 .saleSection h4 {
   margin-bottom: 0.5rem;
-  color: black;
-  font-size: 1rem;
+  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .saleSection p,
 .saleSection li {
-  font-size: 0.8rem;
-  color: black;
+  font-size: 0.85rem;
+  color: #334155;
   margin: 0.2rem 0;
 }
 
 .saleSection ul {
   list-style: inside disc;
-  padding-left: 1rem;
+  padding-left: 0.5rem;
 }
 
-/* BADGES para datos importantes */
+/* Badges informativas */
 .badge {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 0.5rem;
-  color: black;
+  background-color: #e2e8f0;
+  color: #334155;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   margin-right: 0.3rem;
 }
 
-/* ================= ACTIONS ================= */
+/* ==========================================================================
+   🛠️ ACTIONS (Botones de operaciones)
+   ========================================================================== */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -131,25 +153,36 @@
 }
 
 .actions button {
-  border: none;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
   border-radius: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
-  color: black;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: #334155;
+  transition: all 0.2s ease;
 }
 
 .actions button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
 }
 
 .actions .danger {
   color: #dc2626;
+  border-color: #fca5a5;
 }
 
-/* ================= PAYMENTS TABLE ================= */
+.actions .danger:hover {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+}
+
+/* ==========================================================================
+   📊 PAYMENTS (Tabla de control de Cuotas)
+   ========================================================================== */
 .payments {
   display: grid;
   gap: 0.8rem;
@@ -163,91 +196,112 @@
 
 .payments header h4 {
   font-size: 1rem;
-  color: black;
+  color: #0f172a;
+  font-weight: 600;
 }
 
+/* Botón "Agregar Pago" principal */
 .payments header button {
-  background: linear-gradient(135deg, #38bdf8, #60a5fa);
-  color: black;
+  background: #2563eb; /* Azul sólido premium */
+  color: #ffffff;      /* Texto en blanco obligatorio */
   border: none;
   border-radius: 0.7rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.5rem 0.85rem;
   font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s ease;
 }
 
 .payments header button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  background-color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(29, 78, 216, 0.3);
 }
 
-/* TABLE */
+/* ESTRUCTURA DE LA TABLA */
 .table {
   display: grid;
   border-radius: 1rem;
   overflow: hidden;
+  border: 1px solid #e2e8f0;
 }
 
 .row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  padding: 0.55rem 0.6rem;
+  padding: 0.65rem 0.6rem;
   font-size: 0.8rem;
   align-items: center;
   gap: 0.3rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155; /* 🛠️ CORREGIDO: De gris claro a gris oscuro para que sea legible */
+  background-color: #ffffff;
   transition: background 0.2s ease;
-  color: #e5e7eb;
+}
+
+.row:last-child {
+  border-bottom: none;
 }
 
 .row.head {
   font-weight: 600;
-  color: black;
+  color: #475569;
+  background-color: #f8fafc; /* Fondo de cabecera sutil */
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .row.paid {
-  background: rgba(34, 197, 94, 0.15);
-    color: black;
+  background-color: #f0fdf4; /* Verde pastel suave */
+  color: #166534;            /* Texto verde oscuro */
 }
 
 .row.late {
-  background: rgba(239, 68, 68, 0.15);
-    color: black;
+  background-color: #fef2f2; /* Rojo pastel suave */
+  color: #991b1b;            /* Texto rojo oscuro */
 }
 
-/* ================= ADD PAYMENT ROW ================= */
+/* ==========================================================================
+   ➕ ADD PAYMENT ROW (Inputs de inserción)
+   ========================================================================== */
 .addPagoRow input {
-  padding: 0.35rem;
+  padding: 0.45rem 0.6rem;
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #e5e7eb;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #1e293b; /* 🛠️ CORREGIDO: Texto oscuro al escribir */
   font-size: 0.75rem;
   width: 100%;
-  transition: border 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
 .addPagoRow input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35);
-  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .addPagoRow button {
-  padding: 0.35rem 0.6rem;
+  padding: 0.45rem 0.6rem;
   font-size: 0.75rem;
+  font-weight: 600;
   border-radius: 0.5rem;
   border: none;
   cursor: pointer;
-  color: #020617;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: #0f172a; /* Botón de confirmación oscuro para contraste */
+  color: #ffffff;
+  transition: all 0.2s ease;
 }
 
 .addPagoRow button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  background-color: #1e293b;
+  transform: translateY(-1px);
 }
 
-/* ================= PAGOS COMPLETAMENTE PAGADOS ================= */
+/* ==========================================================================
+   ✅ PAID SUMMARY (Resumen inferior de completados)
+   ========================================================================== */
 .paidSummary {
   margin-top: 2rem;
 }
@@ -268,14 +322,15 @@
 }
 
 .paidItem {
-  /* Verde muy suave */
-  color: #166534;
-  /* Verde oscuro */
+  color: #15803d;
+  background-color: #f0fdf4; /* Fondo verde pastel */
+  border: 1px solid #bbf7d0;
   font-size: 0.85rem;
+  font-weight: 500;
   border-radius: 0.75rem;
   padding: 0.5rem 0.75rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,31 +338,32 @@
 
 .paidItem:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+  background-color: #dcfce7;
 }
 
-
+/* Animaciones de Flash */
 .destacado {
   animation: flash 3s ease;
-  border: 2px solid #4caf50;
+  border: 2px solid #22c55e;
 }
 
 h3 {
-  color: black;
+  color: #0f172a;
 }
 
 @keyframes flash {
   0% {
-    background-color: #d4edda;
+    background-color: #dcfce7;
   }
   100% {
     background-color: transparent;
   }
 }
 
-/* ================= RESPONSIVE ================= */
-
-/* Tablets (560px - 900px) */
+/* ==========================================================================
+   📱 MEDIA QUERIES (Ajustes Mobile Modo Claro)
+   ========================================================================== */
 @media (max-width: 900px) {
   .paymentWrapper {
     width: 90vw;
@@ -331,7 +387,6 @@ h3 {
   }
 }
 
-/* Smartphones (menos de 560px) */
 @media (max-width: 560px) {
   .paymentWrapper {
     width: 96vw;
@@ -350,12 +405,12 @@ h3 {
 
   .identity h3 {
     font-size: 1rem;
-    color: black;
+    color: #0f172a;
   }
 
   .identity span {
-    font-size: 0.7rem;
-    color: black;
+    font-size: 0.75rem;
+    color: #475569;
   }
 
   .saleInfo {
@@ -392,7 +447,7 @@ h3 {
   .addPagoRow input,
   .addPagoRow button {
     font-size: 0.7rem;
-    padding: 0.3rem;
+    padding: 0.35rem;
   }
 
   .badge {

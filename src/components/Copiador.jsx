@@ -158,64 +158,100 @@ const Copiador = () => {
     }
   };
 
-  return (
-    <div>
-      <h2>🧬 Migración completa</h2>
+return (
+  <div style={{
+    padding: "24px",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+    maxWidth: "800px",
+    margin: "0 auto",
+    fontFamily: "system-ui, sans-serif"
+  }}>
+    <h2 style={{
+      color: "#1e293b",
+      fontSize: "1.5rem",
+      fontWeight: "600",
+      marginTop: 0,
+      marginBottom: "20px",
+      display: "flex",
+      alignItems: "center",
+      gap: "8px"
+    }}>
+      🧬 Migración completa
+    </h2>
 
-      <button
-        onClick={handleImportarTodo}
-        disabled={loading}
+    <button
+      onClick={handleImportarTodo}
+      disabled={loading}
+      style={{
+        marginBottom: "24px",
+        padding: "12px 24px",
+        background: loading ? "#cbd5e1" : "#2563eb", /* Gris suave si carga, azul limpio si está activo */
+        color: loading ? "#64748b" : "#ffffff",
+        border: "none",
+        borderRadius: "8px",
+        fontSize: "15px",
+        fontWeight: "600",
+        cursor: loading ? "not-allowed" : "pointer",
+        transition: "background 0.2s ease",
+        boxShadow: loading ? "none" : "0 2px 4px rgba(37, 99, 235, 0.2)"
+      }}
+    >
+      {loading ? "Migrando..." : "Migrar clientes + ventas"}
+    </button>
+
+    <div style={{ display: "flex", gap: "20px" }}>
+      {/* Contenedor de Logs (Éxito / Proceso) */}
+      <div
         style={{
-          marginBottom: "1rem",
-          padding: "10px 20px",
-          background: loading ? "#999" : "#111",
-          color: "#fff",
-          border: "none",
-          borderRadius: "6px",
-          cursor: loading ? "not-allowed" : "pointer",
+          flex: 1,
+          background: "#f8fafc", /* Un gris/azuladizo muy limpio */
+          border: "1px solid #e2e8f0",
+          color: "#334155",
+          padding: "16px",
+          borderRadius: "8px",
+          maxHeight: "350px",
+          overflowY: "auto",
+          fontSize: "14px",
+          lineHeight: "1.6",
+          fontFamily: "monospace" /* Fuente mono para que los logs queden alineados */
         }}
       >
-        {loading ? "Migrando..." : "Migrar clientes + ventas"}
-      </button>
+        <div style={{ fontWeight: "600", marginBottom: "8px", color: "#475569" }}>📋 Registro de actividad:</div>
+        {log.map((l, i) => (
+          <div key={i} style={{ padding: "2px 0", borderBottom: "1px solid #f1f5f9" }}>{l}</div>
+        ))}
+      </div>
 
-      <div style={{ display: "flex", gap: "1rem" }}>
-        <div
-          style={{
-            flex: 1,
-            background: "#f4f4f4",
-            padding: "1rem",
-            borderRadius: "6px",
-            maxHeight: "300px",
-            overflowY: "auto",
-            fontSize: "14px",
-          }}
-        >
-          {log.map((l, i) => (
-            <div key={i}>{l}</div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            background: "#ffecec",
-            padding: "1rem",
-            borderRadius: "6px",
-            maxHeight: "300px",
-            overflowY: "auto",
-            fontSize: "14px",
-          }}
-        >
-          <strong>❌ Ventas con errores</strong>
-          {errores.map((e, i) => (
-            <div key={i}>
-              DNI: {e.dni} — {e.motivo}
-            </div>
-          ))}
-        </div>
+      {/* Contenedor de Errores */}
+      <div
+        style={{
+          flex: 1,
+          background: "#fef2f2", /* Rojo/rosa muy suave de fondo */
+          border: "1px solid #fee2e2", /* Borde rojo sutil */
+          color: "#991b1b", /* Texto rojo oscuro legible */
+          padding: "16px",
+          borderRadius: "8px",
+          maxHeight: "350px",
+          overflowY: "auto",
+          fontSize: "14px",
+          lineHeight: "1.6"
+        }}
+      >
+        <strong style={{ display: "block", marginBottom: "8px", color: "#991b1b" }}>
+          ❌ Ventas con errores
+        </strong>
+        {errores.map((e, i) => (
+          <div key={i} style={{ padding: "4px 0", borderBottom: "1px solid #fecaca" }}>
+            <span style={{ fontWeight: "600" }}>DNI: {e.dni}</span> — <span style={{ opacity: 0.9 }}>{e.motivo}</span>
+          </div>
+        ))}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Copiador;

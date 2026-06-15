@@ -239,7 +239,7 @@ export default function ClientDetail() {
     }
 
     const firma = {
-      nombre: usuarioActual.displayName || "",
+      nombre: usuarioActual.nombre || "",
       email: usuarioActual.email || "",
     };
 
@@ -282,44 +282,53 @@ export default function ClientDetail() {
     }
   };
 
-  // ===============================
-  // VERIFICAR SI VENTA ESTÁ PAGADA
-  // ===============================
-  const estaPagado = (venta) => {
-    const totalPagado =
-      (venta.pagos || []).reduce(
-        (sum, p) => sum + Number(p.monto || 0),
-        0
-      );
+// ===============================
+// VERIFICAR SI VENTA ESTÁ PAGADA (CORREGIDA)
+// ===============================
+const estaPagado = (venta) => {
+  const totalPagado = (venta.pagos || []).reduce(
+    (sum, p) => {
+      // Reemplaza comas por puntos por si se cargó como string regional (ej: "1500,50")
+      const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+      return sum + Number(montoLimpio || 0);
+    },
+    0
+  );
 
-    const totalCredito =
-      venta.totalCredito ||
-      (venta.valorCuota || 0) * (venta.cuotas || 0);
+  const totalCredito =
+    venta.totalCredito ||
+    (venta.valorCuota || 0) * (venta.cuotas || 0);
 
-    return totalPagado >= totalCredito;
-  };
+  // Usamos Math.round para ignorar diferencias de centavos por divisiones o flotantes
+  return Math.round(totalPagado) >= Math.round(totalCredito);
+};
 
-  // ===============================
-  // VENTAS ATRASADAS (IDs)
-  // ===============================
-  const ventasAtrasadasIds = useMemo(() => {
-    const hoy = new Date();
-    return ventas
-      .filter((v) => {
-        const totalCredito = v.totalCredito || (v.valorCuota * v.cuotas);
-        const totalPagado = (v.pagos || []).reduce((sum, p) => sum + Number(p.monto || 0), 0);
-        if (totalPagado >= totalCredito) return false; // ya pagada
+// ===============================
+// VENTAS ATRASADAS (IDs) (CORREGIDA)
+// ===============================
+const ventasAtrasadasIds = useMemo(() => {
+  const hoy = new Date();
+  return ventas
+    .filter((v) => {
+      const totalCredito = v.totalCredito || (v.valorCuota * v.cuotas);
+      const totalPagado = (v.pagos || []).reduce((sum, p) => {
+        const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+        return sum + Number(montoLimpio || 0);
+      }, 0);
+      
+      // Aplicar redondeo aquí también para evitar falsos positivos de deuda
+      if (Math.round(totalPagado) >= Math.round(totalCredito)) return false; // ya pagada
 
-        const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
-        const cuotasPagadas = v.pagos?.length || 0;
-        const proximoVencimiento = new Date(fechaInicio);
-        proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
+      const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
+      const cuotasPagadas = v.pagos?.length || 0;
+      const proximoVencimiento = new Date(fechaInicio);
+      proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
 
-        const diasAtraso = (hoy - proximoVencimiento) / (1000 * 60 * 60 * 24);
-        return diasAtraso > 30; // atraso > 30 días
-      })
-      .map((v) => v.id);
-  }, [ventas]);
+      const diasAtraso = (hoy - proximoVencimiento) / (1000 * 60 * 60 * 24);
+      return diasAtraso > 30; // atraso > 30 días
+    })
+    .map((v) => v.id);
+}, [ventas]);
 
   // ===============================
   // DOBLE CLICK → RESALTAR Y SCROLL
@@ -415,7 +424,7 @@ Este es un mensaje automático generado por nuestro sistema.`;
     window.open(url, "_blank");
   };
 
-  // ===============================
+// ===============================
   // REENVIAR COMPROBANTE
   // ===============================
   const reenviarComprobante = (venta) => {
@@ -433,16 +442,49 @@ Este es un mensaje automático generado por nuestro sistema.`;
       ? telefonoRaw
       : `54${telefonoRaw}`;
 
-    const totalCredito =
-      venta.totalCredito ||
-      (Number(venta.valorCuota || 0) * Number(venta.cuotas || 0));
-
+    // Formato de productos
     const productosTexto = venta.productos
-      ?.map(
-        (p) =>
-          `• ${p.nombre} x${p.cantidad} — $${Number(p.precio).toLocaleString("es-AR")}`
-      )
+      ?.map((p) => `* ${p.nombre} x${p.cantidad} —`)
       .join("\n");
+
+    // =========================================================
+    // 🧮 LÓGICA MATEMÁTICA DE CUOTAS (CORREGIDA)
+    // =========================================================
+    const valorCuota = Number(venta.valorCuota || 0);
+    const todosLosPagos = venta.pagos || [];
+    
+    // 1. Calcular el total acumulado de dinero pagado hasta hoy
+    const totalPagadoHistorico = todosLosPagos.reduce((sum, p) => sum + Number(p.monto || 0), 0);
+    
+    // 2. Obtener los datos específicos del último pago realizado
+    const ultimoPago = todosLosPagos.length > 0 ? todosLosPagos[todosLosPagos.length - 1] : null;
+    const montoUltimoPago = ultimoPago ? Number(ultimoPago.monto || 0) : 0;
+    const valorPagadoTexto = montoUltimoPago.toLocaleString("es-AR");
+
+    // 3. Calcular cuántas cuotas se habían completado ANTES de este último pago
+    const totalAntesDeEstePago = totalPagadoHistorico - montoUltimoPago;
+    const cuotasCompletasAntes = Math.floor(totalAntesDeEstePago / valorCuota);
+    
+    // 4. Calcular cuántas cuotas se completan AHORA con este pago
+    const cuotasCompletasAhora = Math.floor(totalPagadoHistorico / valorCuota);
+
+    let detalleCuota = "";
+
+    if (cuotasCompletasAhora > cuotasCompletasAntes) {
+      // Si este pago logró cerrar una cuota que venía incompleta
+      detalleCuota = `cuota n°${cuotasCompletasAhora} (completa)`;
+      
+      // Si además de completar la cuota sobró plata para la que sigue
+      const saldoSobrante = totalPagadoHistorico % valorCuota;
+      if (saldoSobrante > 0 && cuotasCompletasAhora < Number(venta.cuotas)) {
+        detalleCuota += ` y saldo a cuenta de cuota n°${cuotasCompletasAhora + 1}`;
+      }
+    } else {
+      // Si el pago no llegó a completar ninguna cuota nueva, sigue siendo un pago parcial
+      const cuotaEnProceso = cuotasCompletasAhora + 1;
+      detalleCuota = `a cuenta de cuota n°${cuotaEnProceso} (pago parcial)`;
+    }
+    // =========================================================
 
     const mensaje = `COMPROBANTE DE COMPRA
 
@@ -456,9 +498,9 @@ Vendedor: ${venta.vendedor || "—"}
 Productos:
 ${productosTexto}
 
-Total Crédito: $${totalCredito.toLocaleString("es-AR")}
-Cuotas: ${venta.cuotas}
-Valor por cuota: $${Number(venta.valorCuota || 0).toLocaleString("es-AR")}
+Cantidad de cuotas: ${venta.cuotas}
+Valor de la cuota: $${valorCuota.toLocaleString("es-AR")}
+Total pagado: $${valorPagadoTexto} ${detalleCuota}
 
 Gracias por su compra.`;
 
@@ -546,7 +588,7 @@ Gracias por su pago.`;
 
         {/* ================= VENTAS ================= */}
         {ventas.length === 0 ? (
-          <p>No hay ventas registradas</p>
+          <p style={{ color: "#64748b" }}>No hay ventas registradas</p>
         ) : (
           <>
             {/* ================= VENTAS PENDIENTES ================= */}
@@ -645,6 +687,7 @@ Gracias por su pago.`;
                       )}
 
                     {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
+                    
                     <div style={{ marginTop: "8px" }}>
                       <button
                         onClick={() => reenviarComprobante(venta)}
@@ -710,14 +753,20 @@ Gracias por su pago.`;
                               setNuevoPago({ ...nuevoPago, monto: e.target.value })
                             }
                           />
-                          <input
-                            type="text"
-                            placeholder="Método"
+                          <select
                             value={nuevoPago.metodo}
                             onChange={(e) =>
                               setNuevoPago({ ...nuevoPago, metodo: e.target.value })
                             }
-                          />
+                          >
+                            <option value="" disabled hidden>Método</option>
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito</option>
+                            <option value="Tarjeta de Débito">💳 Tarjeta de Débito</option>
+                            <option value="Transferencia">🏦 Transferencia</option>
+                            <option value="QR">📱 QR</option>
+                            <option value="Link de Pago">🔗 Link de Pago</option>
+                          </select>
                           <button onClick={() => handleSavePago(venta.id)}>
                             Guardar
                           </button>

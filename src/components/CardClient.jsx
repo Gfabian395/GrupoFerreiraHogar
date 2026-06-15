@@ -23,6 +23,9 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     fotoUrl,
   } = cliente;
 
+  // 🔍 CONTROL: Mirá la consola de tu navegador (F12) para ver la estructura real de tu cliente si el ID no aparece.
+  console.log("Datos de este cliente:", cliente);
+
   // ===============================
   // CERRAR MENU (CLICK FUERA / ESC)
   // ===============================
@@ -70,11 +73,24 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     }
   };
 
+  // Variable para manejar la clase de estado dinámicamente
+  let cardStatusClass = "";
+
+  if (estado === "Bloqueado") {
+    cardStatusClass = styles.cardBlocked;
+  } else if (cliente.comprasPagadas > 10) {
+    cardStatusClass = styles.cardVip;       // Más de 10 -> Verde
+  } else if (cliente.comprasPagadas > 5) {
+    cardStatusClass = styles.cardPremium;   // Más de 5 -> Amarillo
+  }
+
+  // Intenta capturar el ID usando variantes comunes por si cambia el nombre en Firebase
+  const idDeVenta = cliente.idVenta || cliente.id_venta || cliente.idVentaActiva;
+
   return (
     <div className={styles.clientWrapper}>
       <article
-        className={`${styles.clientCard} ${estado === "Bloqueado" ? styles.cardBlocked : ""
-          }`}
+        className={`${styles.clientCard} ${cardStatusClass}`}
         onClick={handleCardClick}
         style={{ cursor: "pointer" }}
       >
@@ -91,21 +107,14 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
           </div>
 
           <div className={styles.identity}>
-            <h3>
-              {nombre}
-              {/*<span className={styles.noteFlag}>📝</span> */}
-            </h3>
-            {/*  <span>DNI {dni}</span>
-            <span className={styles.address}>
-              {direccion} · {entreCalles}
-            </span> */}
+            <h3>{nombre}</h3>
           </div>
 
           {/* MENU */}
           <div
             className={styles.clientMenu}
             ref={menuRef}
-            onClick={(e) => e.stopPropagation()} // no dispara la navegación
+            onClick={(e) => e.stopPropagation()}
           >
             <button
               className={styles.menuBtn}
@@ -179,6 +188,35 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
               </span>
             </div>
           )}
+
+          {/* 📊 BLOQUE DE MÉTRICAS */}
+          <div className={styles.metricsContainer}>
+            {/* Total */}
+            <div className={`${styles.metricBox} ${styles.boxTotal}`}>
+              <span className={styles.metricLabel}>Total de compras</span>
+              <strong className={styles.metricValue}>{cliente.comprasTotales || 0}</strong>
+            </div>
+
+            {/* Activas */}
+            <div className={`${styles.metricBox} ${styles.boxActive}`}>
+              <span className={styles.metricLabel}>Esta pagando</span>
+              <strong className={styles.metricValue}>
+                {cliente.comprasActivas || 0}
+                {idDeVenta && (
+                  <span style={{ fontSize: "12px", fontWeight: "normal", opacity: 0.6, marginLeft: "6px" }}>
+                    (#{String(idDeVenta).slice(-4)})
+                  </span>
+                )}
+              </strong>
+            </div>
+
+            {/* Terminadas */}
+            <div className={`${styles.metricBox} ${styles.boxCompleted}`}>
+              <span className={styles.metricLabel}>Termino</span>
+              <strong className={styles.metricValue}>{cliente.comprasTerminadas || 0}</strong>
+            </div>
+          </div>
+
         </div>
       </article>
     </div>

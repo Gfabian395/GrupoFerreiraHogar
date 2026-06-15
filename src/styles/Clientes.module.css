@@ -91,36 +91,16 @@
   padding: 14px 18px;
 
   font-size: 1rem;
-  color:  rgba(194, 148, 54);
-border: transparent;
+  color: rgba(194, 148, 54);
+  border: solid 1px black;
   border-radius: 14px;
   outline: none;
-
-  box-shadow:
-    0 0 8px  rgba(194, 148, 54),
-    0 0 18px  rgba(194, 148, 54),
-    inset 0 0 6px  rgba(194, 148, 54);
-
-  transition: all 0.25s ease;
 }
 
 /* placeholder */
 .searchInput::placeholder {
-  color:  rgba(194, 148, 54);
+  color: black;
   letter-spacing: 0.5px;
-}
-
-/* focus glow */
-.searchInput:focus {
-  border-color: #00ffff;
-
-  box-shadow:
-    0 0 12px rgba(0, 255, 255, 0.9),
-    0 0 28px rgba(0, 255, 255, 0.7),
-    0 0 50px rgba(0, 255, 255, 0.5),
-    inset 0 0 10px rgba(0, 255, 255, 0.3);
-
-  transform: scale(1.02);
 }
 
 /* ===============================
@@ -128,7 +108,7 @@ border: transparent;
 =============================== */
 .empty {
   text-align: center;
-  color: #88ffff;
+  color: black;
   opacity: 0.8;
   margin-top: 40px;
 }
@@ -281,11 +261,75 @@ label {
   font-weight: 600;
 }
 
-/* Tabla */
+/* ==========================================================================
+   📌 FILTRO (Modo Claro)
+   ========================================================================== */
+.filterContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 20px 0;
+  color: #475569;
+  /* Gris pizarra legible */
+  font-weight: 500;
+  font-size: 14px;
+}
 
+.filterContainer select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  /* Borde sutil gris */
+  background: #ffffff;
+  /* Fondo blanco */
+  color: #1e293b;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filterContainer select:focus {
+  border-color: #2563eb;
+  /* Enfoque azul */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+label {
+  color: #475569;
+}
+
+
+/* ==========================================================================
+   📊 CLIENTES VENCIDOS / ATRASADOS (Dashboard Light Style)
+   ========================================================================== */
+.vencidosContainer {
+  margin-bottom: 24px;
+  max-height: 300px;
+  /* Mantiene tu altura para scroll */
+  overflow-y: auto;
+  background: #ffffff;
+  /* Contenedor blanco para resaltar sobre el fondo */
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.vencidosTitle {
+  color: #dc2626;
+  /* Rojo alerta limpio, no chillón */
+  margin-bottom: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Tabla */
 .checkColumn {
   min-width: 24px;
-  /* suficiente para un check */
+  text-align: center;
 }
 
 .vencidosTable {
@@ -295,54 +339,73 @@ label {
 }
 
 .vencidosTable thead tr {
-  background: #111;
-  color: #fff;
+  background: #f8fafc;
+  /* Cabecera gris clara muy limpia */
+  color: #64748b;
+  /* Texto secundario suave */
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .vencidosTable th {
-  padding: 6px;
-  font-weight: 500;
+  padding: 10px 8px;
+  font-weight: 600;
   text-align: center;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .vencidosRow {
   text-align: center;
-  transition: background 0.2s ease;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  /* Líneas divisorias horizontales sutiles */
+  transition: background 0.15s ease;
 }
 
 .vencidosRow:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: #f1f5f9;
+  /* Resaltado ágil al pasar el cursor */
 }
 
 .clickableCell {
-  padding: 6px;
+  padding: 10px 8px;
   cursor: pointer;
-  color: #4da6ff;
+  color: #2563eb;
+  /* Azul estándar de enlace */
+  font-weight: 500;
 }
 
 .clickableCell:hover {
   text-decoration: underline;
+  color: #1d4ed8;
 }
 
 .diasCell {
-  padding: 6px;
-  font-weight: bold;
+  padding: 10px 8px;
+  font-weight: 700;
 }
 
-/* Semáforo */
+/* 🚦 Semáforo de días de atraso (Texto oscuro legible sobre fondo pastel) */
 .yellow {
-  color: #ffd11a;
+  color: #b45309;
+  background-color: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 
 .orange {
-  color: #ff944d;
+  color: #c2410c;
+  background-color: #ffedd5;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 
 .red {
-  color: #ff1a1a;
+  color: #b91c1c;
+  background-color: #fee2e2;
+  padding: 2px 8px;
+  border-radius: 6px;
 }
 
 /* Producto columna más chica */
@@ -355,8 +418,8 @@ label {
 
 /* Cliente destacado */
 .cliente-destacado {
-  border: 2px solid #ffd11a;
-  box-shadow: 0 0 15px #ffd11a;
+  border: 2px solid #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
   animation: parpadeo 1s ease-in-out 3;
 }
 
@@ -367,12 +430,27 @@ label {
   }
 
   50% {
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   100% {
     opacity: 1;
   }
+}
+
+/* Scroll personalizado modo claro */
+.vencidosContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vencidosContainer::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  /* Gris intermedio suave */
+  border-radius: 4px;
+}
+
+.vencidosContainer::-webkit-scrollbar-track {
+  background-color: transparent;
 }
 
 /* Scroll table */
@@ -389,39 +467,33 @@ label {
   background-color: transparent;
 }
 
-/* ===============================
-   RESPONSIVE PARA SMARTPHONES
-=============================== */
+/* ==========================================================================
+   📱 RESPONSIVE PARA SMARTPHONES (Modo Claro)
+   ========================================================================== */
 @media (max-width: 600px) {
   .vencidosTable {
-    font-size: 10px;
-    /* texto más pequeño */
+    font-size: 11px;
   }
 
   .vencidosTable th,
   .vencidosTable td {
-    padding: 4px;
-    /* menos padding para que quepan más columnas */
+    padding: 6px 4px;
   }
 
   .productColumn {
     max-width: 80px;
-    /* producto más pequeño */
   }
 
   .vencidosTitle {
     font-size: 14px;
-    /* título más pequeño */
   }
 
   .filterContainer select {
-    font-size: 11px;
-    /* dropdown más pequeño */
-    padding: 4px 6px;
+    font-size: 12px;
+    padding: 6px 8px;
   }
 
   .vencidosContainer {
-    padding: 5px;
-    /* menos padding en el contenedor */
+    padding: 10px;
   }
 }

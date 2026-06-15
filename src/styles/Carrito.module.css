@@ -1,218 +1,256 @@
-/* ================== OVERLAY – NEON BLUR ================== */
+/* ==========================================================================
+   🌌 OVERLAY (Fondo difuminado sutil)
+   ========================================================================== */
 .cartOverlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
+  background-color: rgba(15, 23, 42, 0.3); /* Capa oscura muy tenue de fondo */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
-
   padding: 16px;
   overflow-y: auto;
-
   animation: fadeIn 0.2s ease;
 }
 
-/* ================== CART FORM – FLOATING NEON ================== */
+/* ==========================================================================
+   🛒 CART FORM (Contenedor principal blanco con sombra natural)
+   ========================================================================== */
 .cartForm {
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-
-  background: linear-gradient(180deg,
-      rgba(18, 28, 48, 0.95),
-      rgba(10, 16, 32, 0.95));
-
-  padding: 18px;
+  background: #ffffff; /* Blanco puro */
+  padding: 20px;
   border-radius: 20px;
-
   display: flex;
   flex-direction: column;
   gap: 16px;
-
   position: relative;
-  border: 1px solid rgba(0, 255, 255, 0.25);
-
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.45),
-    0 0 28px rgba(0, 255, 255, 0.25),
-    0 0 42px rgba(255, 0, 255, 0.15);
-
+  border: 1px solid #e2e8f0; /* Borde ultra fino */
+  /* Sombra profunda y natural para dar sensación de flotado */
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.06), 
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: black;
-
+  color: #1e293b; /* Texto general slate oscuro */
   animation: slideUp 0.25s ease;
 }
 
-/* ================== CLOSE BUTTON ================== */
+/* ==========================================================================
+   ❌ CLOSE BUTTON (Botón de cerrar limpio)
+   ========================================================================== */
 .cartClose {
   position: absolute;
-  top: 12px;
+  top: 14px;
   right: 14px;
-
   width: 32px;
   height: 32px;
   border-radius: 50%;
-
-  border: 1px solid rgba(0, 255, 255, 0.4);
-
-  color: #9ffcff;
-  font-size: 18px;
+  border: none;
+  background-color: #f1f5f9; /* Círculo gris claro suave */
+  color: #64748b; /* Icono gris intermedio */
+  font-size: 16px;
   cursor: pointer;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  box-shadow:
-    0 0 10px rgba(0, 255, 255, 0.6),
-    inset 0 0 8px rgba(0, 0, 0, 0.6);
-
+  transition: all 0.2s ease;
 }
 
-/* ================== ITEMS – NEON CARDS ================== */
+.cartClose:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ==========================================================================
+   📦 ITEMS – CARDS DE PRODUCTOS
+   ========================================================================== */
 .card {
   display: grid;
   grid-template-columns: 80px 1fr auto;
   gap: 1rem;
-  padding: 1rem;
-  border-radius: 1.5rem;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 12px;
+  border-radius: 1rem;
+  background-color: #ffffff;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  border-color: #e2e8f0;
 }
 
 .card img {
   width: 80px;
   height: 80px;
   object-fit: cover;
-  border-radius: 1rem;
-  transition: transform 0.3s ease;
+  border-radius: 0.75rem;
 }
 
 .info h3 {
   margin: 0;
   font-size: 1rem;
-  color: #e5faff;
+  color: #0f172a; /* Texto destacado principal */
   font-weight: 600;
 }
 
 .variant {
   display: block;
-  color: #94e5f8;
+  color: #64748b; /* Info de variante en gris sutil */
   font-size: 0.8rem;
   margin-bottom: 0.25rem;
 }
 
 .price {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.5rem;
   display: block;
-  color: #00ffff;
+  color: #0f172a;
 }
 
-/* ================== QTY ================== */
+/* ==========================================================================
+   🔢 QTY CONTROLLER (Selector de cantidad)
+   ========================================================================== */
 .qty {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  border: 1px solid rgba(0, 255, 255, 0.25);
-  border-radius: 12px;
-  padding: 0.25rem 0.5rem;
-  color: #e5faff;
+  gap: 0.6rem;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  border-radius: 10px;
+  padding: 0.3rem 0.6rem;
+  color: #1e293b;
 }
 
 .qty button {
   border: none;
-  font-size: 1.2rem;
+  background: transparent;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
-  color: #00ffff;
-  transition: transform 0.2s ease;
+  color: #475569;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.qty button:hover {
+  color: #2563eb; /* Azul interactivo en los botones de +/- */
 }
 
 .qty span {
-  min-width: 24px;
+  min-width: 20px;
   text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
-/* ================== REMOVE ================== */
+/* ==========================================================================
+   🗑️ REMOVE BUTTON
+   ========================================================================== */
 .remove {
   border: none;
+  background: transparent;
   font-size: 1.2rem;
-  color: #ff00ff;
+  color: #94a3b8; /* Tacho inicialmente gris sutil */
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: color 0.2s ease;
 }
 
-/* ================== SUMMARY ================== */
+.remove:hover {
+  color: #ef4444; /* Rojo alerta al pasar el cursor */
+}
+
+/* ==========================================================================
+   📋 SUMMARY (Caja de totales inferiores)
+   ========================================================================== */
 .summary {
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
-  color: #e5faff;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background-color: #f8fafc; /* Fondo gris claro diferenciador */
+  border: 1px solid #e2e8f0;
+  color: #334155;
   height: fit-content;
 }
 
 .summary h2 {
   margin-top: 0;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 600;
+  color: #0f172a;
 }
 
 .row {
   display: flex;
   justify-content: space-between;
   margin: 0.75rem 0;
+  font-size: 0.9rem;
 }
 
-/* ================== CHECKOUT ================== */
+.row:last-of-type {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   🚀 CHECKOUT BUTTON (Botón primario de orden)
+   ========================================================================== */
 .checkout {
   width: 100%;
   margin-top: 1rem;
-  padding: 0.9rem;
-  border-radius: 1rem;
+  padding: 12px;
+  border-radius: 12px;
   border: none;
-  background: linear-gradient(135deg, #00ffff, #ff00ff);
-  color: #041018;
-  font-size: 1rem;
+  background: #2563eb; /* Azul vibrante premium */
+  color: #ffffff;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
+.checkout:hover {
+  background: #1d4ed8;
+  box-shadow: 0 6px 14px rgba(29, 78, 216, 0.3);
+}
+
+.checkout:active {
+  transform: scale(0.99);
+}
 
 .checkout:disabled {
-  opacity: 0.5;
+  background: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
+/* ==========================================================================
+   🤝 MERCADO PAGO BUTTON (⚠️ SE MANTIENE 100% IGUAL A TU DISEÑO ORIGINAL)
+   ========================================================================== */
 .mpButton {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-
   width: 100%;
   padding: 14px;
-
   border: none;
   border-radius: 8px;
-
   font-size: 15px;
   font-weight: 600;
-
   cursor: pointer;
-
   background-color: #009ee3;
   color: white;
-
   transition: all 0.2s ease;
 }
 
@@ -229,19 +267,27 @@
   font-size: 50px;
 }
 
-/* ================== RESPONSIVE ================== */
+.empty{
+  text-align: center;
+  color: #64748b;
+  font-size: 1.1rem;
+  font-weight: 500;}
+
+/* ==========================================================================
+   📱 RESPONSIVE
+   ========================================================================== */
 @media (max-width: 480px) {
   .cartForm {
     max-width: 95%;
     max-height: 88vh;
-    padding: 12px;
-    gap: 10px;
+    padding: 16px;
+    gap: 12px;
   }
 
   .card {
     grid-template-columns: 70px 1fr auto;
-    padding: 0.75rem;
-    border-radius: 1rem;
+    padding: 10px;
+    border-radius: 0.85rem;
   }
 
   .card img {
@@ -267,8 +313,8 @@
   }
 
   .checkout {
-    padding: 0.8rem;
-    font-size: 0.9rem;
+    padding: 12px;
+    font-size: 0.95rem;
   }
 
   .summary {
@@ -276,15 +322,12 @@
   }
 }
 
-/* ================== ANIMATIONS ================== */
+/* ==========================================================================
+   🎬 ANIMATIONS
+   ========================================================================== */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
@@ -292,7 +335,6 @@
     transform: translateY(16px);
     opacity: 0;
   }
-
   to {
     transform: translateY(0);
     opacity: 1;

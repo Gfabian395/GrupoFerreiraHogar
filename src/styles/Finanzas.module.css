@@ -1,32 +1,38 @@
 /* =============================== CONTAINER =============================== */
 .container {
-  padding: 20px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: black;
+  padding: 32px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f8fafc; /* Fondo de pantalla gris/azuladizo ultra limpio */
+  min-height: 100vh;
+  color: #334155; /* Texto principal suave */
 }
 
 /* =============================== TITULOS =============================== */
 h1 {
-  font-size: 2rem;
-  margin-bottom: 20px;
-  color: black;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: 24px;
+  color: #0f172a; /* Slate oscuro, con mucha personalidad */
 }
 
 section h2 {
   font-size: 1.5rem;
-  margin-bottom: 10px;
-  color: black;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  color: #1e293b;
 }
 
 /* =============================== SECTIONS =============================== */
 section {
-  margin-bottom: 30px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  margin-bottom: 32px;
+  background: #ffffff; /* Tarjeta blanca pura que resalta sobre el fondo */
+  border: 1px solid #e2e8f0; /* Borde ultra sutil */
   border-radius: 16px;
-  padding: 16px;/* 
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3),
-              0 0 28px rgba(255, 0, 255, 0.15); */
+  padding: 24px;
+  /* Sombra suave de caída para dar profundidad limpia */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 /* =============================== TABLE WRAPPER =============================== */
@@ -35,11 +41,9 @@ section {
   overflow-x: auto; /* scroll horizontal en móviles */
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
+  border: 1px solid #e2e8f0; /* Contiene la tabla elegantemente */
   margin-bottom: 16px;
-  backdrop-filter: blur(8px);/* 
-  box-shadow: 0 0 12px rgba(0,255,255,0.25),
-              0 0 18px rgba(255,0,255,0.15); */
-  padding: 4px;
+  background: #ffffff;
 }
 
 /* =============================== TABLAS =============================== */
@@ -47,57 +51,82 @@ section {
   width: 100%;
   min-width: 600px; /* fuerza scroll si no cabe en pantalla */
   border-collapse: collapse;
-  border-radius: 12px;
-  overflow: hidden;
 }
 
-.table th, .table td,
-.table-small th, .table-small td {
-  border: 1px solid black;
-  padding: 10px 12px;
-  text-align: left;
-  color: black;
-}
-
+/* Cabeceras sofisticadas */
 .table th, .table-small th {
+  background-color: #f1f5f9; /* Fondo gris claro diferenciador */
+  color: #475569; /* Texto gris oscuro técnico */
   font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase; /* Estilo moderno de reporte */
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0; /* Línea divisoria más fuerte */
+  padding: 14px 16px;
+  text-align: left;
+}
+
+/* Celdas limpias */
+.table td, .table-small td {
+  border-bottom: 1px solid #f1f5f9; /* Adiós a las rejillas negras pesadas, solo líneas horizontales finas */
+  padding: 14px 16px;
+  color: #334155;
+  font-size: 0.95rem;
+  vertical-align: middle;
 }
 
 .table td div, .table-small td div {
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+}
+
+.table td div:last-child, .table-small td div:last-child {
+  margin-bottom: 0;
+}
+
+/* Filas alternas (Zebra striping) para facilitar la lectura */
+.table tr:nth-child(even), .table-small tr:nth-child(even) {
+  background-color: #f8fafc;
 }
 
 /* =============================== TABLE-SMALL (50% width desktop) =============================== */
 .table-small {
   min-width: 400px;
+  max-width: 50%; /* En desktop ocupa la mitad */
 }
 
-/* =============================== HOVER =============================== */
-/* .table tr:hover, .table-small tr:hover {
-  box-shadow: 0 0 12px rgba(0,255,255,0.25) inset;
-} */
+/* =============================== HOVER EFECTO INTERACTIVO =============================== */
+.table tr:hover, .table-small tr:hover {
+  background-color: #f1f5f9 !important; /* Resalta la fila al pasar el cursor */
+  transition: background-color 0.15s ease;
+}
 
 /* =============================== RESPONSIVE =============================== */
 @media (max-width: 900px) {
   .table-small {
+    max-width: 100%;
     width: 100%;
   }
   
+  .container {
+    padding: 20px;
+  }
+
   section {
-    padding: 12px;
+    padding: 18px;
+    border-radius: 12px;
   }
   
   h1 {
-    font-size: 1.6rem;
+    font-size: 1.75rem;
   }
   
   section h2 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
   
   .table th, .table td,
   .table-small th, .table-small td {
-    padding: 8px 10px;
+    padding: 10px 12px;
     font-size: 0.9rem;
   }
 }
@@ -109,25 +138,24 @@ section {
   }
 
   h1 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
+    margin-bottom: 16px;
   }
 
   section h2 {
-    font-size: 1rem;
-  }
-
-  .table-wrapper {
-    padding: 2px;
-  }
-
-  .table th, .table td,
-  .table-small th, .table-small td {
-    padding: 6px 8px;
-    font-size: 0.85rem;
+    font-size: 1.1rem;
+    margin-bottom: 12px;
   }
 
   section {
     border-radius: 12px;
-    padding: 10px;
+    padding: 14px;
+    margin-bottom: 20px;
+  }
+
+  .table th, .table td,
+  .table-small th, .table-small td {
+    padding: 8px 10px;
+    font-size: 0.85rem;
   }
 }

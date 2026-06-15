@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,6 @@ export default function Clientes() {
     const stored = localStorage.getItem("clientesReclamadosHoy");
     return stored ? JSON.parse(stored) : [];
   });
-
 
   // ===============================
   // LIMPIAR VISITA SI EXPIRÓ
@@ -58,7 +57,7 @@ export default function Clientes() {
     );
 
   // ===============================
-  // OBTENER CLIENTES
+  // OBTENER CLIENTES Y VENTAS
   // ===============================
   const fetchClientes = async () => {
     try {
@@ -92,34 +91,34 @@ export default function Clientes() {
   }, []);
 
   // ===============================
-  // BUSCADOR
-  // ===============================
-  const clientesFiltrados = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return clientes;
-
-    return clientes.filter((c) => {
-      const nombre = (c.nombre || "").toLowerCase();
-      const dni = String(c.dni || "").toLowerCase();
-      return nombre.includes(q) || dni.includes(q);
-    });
-  }, [clientes, search]);
-
-  // ===============================
-  // CALCULAR SI ESTÁ PAGADO
+  // CALCULAR SI ESTÁ PAGADO (CORREGIDA CON REDONDEO)
   // ===============================
   const estaPagado = (venta) => {
-    const totalPagado = (venta.pagos || []).reduce(
-      (sum, p) => sum + Number(p.monto || 0),
-      0
-    );
+  const pagoInicial = Number(
+    venta.pago?.montoPagado || 0
+  );
 
-    const totalCredito =
-      venta.totalCredito ||
-      (venta.valorCuota || 0) * (venta.cuotas || 0);
+  const pagosPosteriores = (venta.pagos || []).reduce(
+    (sum, p) => {
+      const montoLimpio =
+        typeof p.monto === "string"
+          ? p.monto.replace(",", ".")
+          : p.monto;
 
-    return totalPagado >= totalCredito;
-  };
+      return sum + Number(montoLimpio || 0);
+    },
+    0
+  );
+
+  const totalPagado =
+    pagoInicial + pagosPosteriores;
+
+  const totalCredito =
+    venta.totalCredito ||
+    (venta.valorCuota || 0) * (venta.cuotas || 0);
+
+  return Math.round(totalPagado) >= Math.round(totalCredito);
+};
 
   // ===============================
   // CLIENTES VENCIDOS CON DETALLE
@@ -130,8 +129,6 @@ export default function Clientes() {
     const hoy = new Date();
 
     const resultado = clientes.map((cliente) => {
-
-      // 🚫 NO mostrar clientes bloqueados
       if (cliente.estado === "Bloqueado") return null;
 
       const ventasCliente = ventas.filter(
@@ -205,13 +202,59 @@ export default function Clientes() {
   }, [clientes, ventas]);
 
   // ===============================
+  // BUSCADOR + CÁLCULO DE METRICAS DE COMPRA (CORREGIDO AQUÍ)
+  // ===============================
+  const clientesFiltrados = useMemo(() => {
+    const clientesConTotales = clientes.map((c) => {
+      const ventasDelCliente = ventas.filter((v) => v.clienteId === c.id);
+      
+      const total = ventasDelCliente.length;
+
+      ventasDelCliente.forEach(v => {
+  console.log(
+    "VENTA",
+    v.id,
+    "estaPagado:",
+    estaPagado(v),
+    "pago:",
+    v.pago,
+    "pagos:",
+    v.pagos
+  );
+});
+      const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
+      const activas = total - terminadas;
+
+      // 🔍 Buscamos la venta activa (la que NO está totalmente pagada)
+      const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
+
+      return {
+        ...c,
+        comprasPagadas: terminadas, 
+        comprasTotales: total,
+        comprasActivas: activas,
+        comprasTerminadas: terminadas,
+        idVenta: ventaActiva ? ventaActiva.id : null, // 👈 Se lo inyectamos al objeto cliente
+      };
+    });
+
+    const q = search.trim().toLowerCase();
+    if (!q) return clientesConTotales;
+
+    return clientesConTotales.filter((c) => {
+      const nombre = (c.nombre || "").toLowerCase();
+      const dni = String(c.dni || "").toLowerCase();
+      return nombre.includes(q) || dni.includes(q);
+    });
+  }, [clientes, ventas, search]);
+
+  // ===============================
   // DOBLE CLICK → MARCAR + NAVEGAR
   // ===============================
   const handleDoubleClickCliente = (clienteId) => {
     const finDelDia = new Date();
-    finDelDia.setHours(23, 59, 59, 999); // hoy a las 23:59:59
+    finDelDia.setHours(23, 59, 59, 999);
 
-    // Array de clientes visitados hoy
     const current = [...clientesReclamadosHoy];
 
     if (!current.includes(clienteId)) {
@@ -220,9 +263,7 @@ export default function Clientes() {
       setClientesReclamadosHoy(current);
     }
 
-    // Guardamos expiración del día
     localStorage.setItem("expiraVisita", finDelDia.getTime());
-
     window.open(`/clientes/${clienteId}`, "_blank");
   };
 
@@ -294,7 +335,7 @@ export default function Clientes() {
           <table className={styles.vencidosTable}>
             <thead>
               <tr>
-                <th class="checkColumn">✅</th>
+                <th className={styles.checkColumn}>✅</th>
                 <th>Nombre</th>
                 <th>DNI</th>
                 <th className={styles.productColumn}>Producto</th>

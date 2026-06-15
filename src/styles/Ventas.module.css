@@ -1,154 +1,150 @@
-/* =============================== OVERLAY =============================== */
+/* ==========================================================================
+   🌌 OVERLAY (Fondo difuminado de pantalla)
+   ========================================================================== */
 .cartOverlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
+  background-color: rgba(15, 23, 42, 0.3); /* Capa oscura traslúcida muy suave */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
-
   padding: 16px;
   overflow-y: auto;
-
   animation: fadeIn 0.2s ease;
 }
 
-/* =============================== WRAPPER – FLOATING NEON =============================== */
+/* ==========================================================================
+   📝 CART FORM / WRAPPER (Contenedor principal en Blanco Puro)
+   ========================================================================== */
 .cartForm {
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-
-  background: linear-gradient(
-    180deg,
-    rgba(18, 28, 48, 0.95),
-    rgba(10, 16, 32, 0.95)
-  );
-
-  padding: 18px;
+  background: #ffffff; /* Fondo blanco impecable */
+  padding: 24px; /* Un toque más de aire interior */
   border-radius: 20px;
-
   display: flex;
   flex-direction: column;
   gap: 16px;
-
   position: relative;
-  border: 1px solid black;
-
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.45),
-    0 0 28px rgba(0, 255, 255, 0.25),
-    0 0 42px rgba(255, 0, 255, 0.15);
-
+  border: 1px solid #e2e8f0; /* Borde sutil gris */
+  /* Sombra natural drop-shadow multicapa premium */
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.05), 
+    0 10px 10px -5px rgba(0, 0, 0, 0.03);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: black;
-
+  color: #334155; /* Texto general gris oscuro (relaja la vista) */
   animation: slideUp 0.25s ease;
 }
 
-/* =============================== CLOSE BUTTON =============================== */
+/* ==========================================================================
+   ❌ CLOSE BUTTON (Botón de cerrar refinado)
+   ========================================================================== */
 .cartClose {
   position: absolute;
-  top: 12px;
+  top: 14px;
   right: 14px;
-
   width: 32px;
   height: 32px;
   border-radius: 50%;
-
-  border: 1px solid black;
-
-  color: black;
-  font-size: 18px;
+  border: none; /* Adiós al borde negro grueso */
+  background-color: #f1f5f9; /* Círculo gris pastel */
+  color: #64748b;
+  font-size: 16px;
   cursor: pointer;
-
   display: flex;
   align-items: center;
   justify-content: center;
-/* 
-  box-shadow:
-    0 0 10px rgba(0, 255, 255, 0.6),
-    inset 0 0 8px rgba(0, 0, 0, 0.6); */
-
+  transition: all 0.2s ease;
 }
 
 .cartClose:hover {
-  box-shadow:
-    0 0 18px rgba(0, 255, 255, 0.9),
-    0 0 28px rgba(255, 0, 255, 0.6);
+  background-color: #e2e8f0;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* =============================== CARDS =============================== */
+/* ==========================================================================
+   🃏 SECTIONS / CARDS (Subcontenedores internos)
+   ========================================================================== */
 .card {
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  padding: 1rem 1.5rem;
-  margin-bottom: 1rem;
-  border: 1px solid black;/* 
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.3),
-    0 0 12px rgba(0,255,255,0.25),
-    0 0 18px rgba(255,0,255,0.15); */
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 1.25rem;
+  border: 1px solid #e2e8f0; /* Estructura limpia libre de rejillas pesadas */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .card h2 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: black;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a; /* Título bien marcado */
   margin-bottom: 0.75rem;
+  letter-spacing: -0.01em;
 }
 
-/* =============================== GRID =============================== */
+/* ==========================================================================
+   🗂️ GRID LAYOUT
+   ========================================================================== */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
-/* =============================== INPUTS =============================== */
+/* ==========================================================================
+   ⌨️ FORM INPUTS & SELECTS
+   ========================================================================== */
 .input,
 .select {
   width: 100%;
-  padding: 0.8rem 0.9rem;
-  border: 1px solid black;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  color: black;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #cbd5e1; /* Gris medio para el campo en reposo */
+  background-color: #ffffff;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
 .input::placeholder {
-  color: black;
+  color: #94a3b8; /* Placeholder suave para que no compita con lo digitado */
 }
 
 .input:focus,
 .select:focus {
-  outline: none;
-  border-color: black;
+  border-color: #2563eb; /* Color de foco azul dinámico */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); /* Anillo de enfoque estético */
 }
 
-/* =============================== CHECKBOX =============================== */
+/* ==========================================================================
+   🔘 CHECKBOX
+   ========================================================================== */
 .checkbox {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   font-size: 0.9rem;
-  color: black;
+  color: #475569;
+  cursor: pointer;
 }
 
-/* =============================== PRODUCTOS =============================== */
+/* ==========================================================================
+   🏷️ PRODUCT LIST (Filas de resumen de productos)
+   ========================================================================== */
 .product {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px dashed black;
-  font-size: 0.95rem;
-  color: black;
+  border-bottom: 1px dashed #e2e8f0; /* Punteado gris estético */
+  font-size: 0.9rem;
+  color: #475569;
 }
 
 .product:last-child {
@@ -157,68 +153,72 @@
 
 .product span:last-child {
   font-weight: 600;
-  color: black;
+  color: #0f172a; /* El precio se destaca más oscuro */
 }
 
-/* =============================== TOTAL =============================== */
+/* ==========================================================================
+   💰 TOTAL DISPLAY
+   ========================================================================== */
 .total {
   margin-top: 1.2rem;
-  font-size: 1.4rem;
-  font-weight: 800;
+  font-size: 1.35rem;
+  font-weight: 700;
   text-align: right;
-  color: black;
+  color: #0f172a;
 }
 
-/* =============================== EMPTY =============================== */
 .empty {
-  color: black;
-  font-size: 0.95rem;
+  color: #64748b;
+  font-size: 0.9rem;
   text-align: center;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
-/* =============================== CONFIRM BUTTON =============================== */
+/* ==========================================================================
+   🚀 CONFIRM BUTTON (Acción principal)
+   ========================================================================== */
 .confirm {
   width: 100%;
-  margin-top: 2.2rem;
-  padding: 1rem;
-  border-radius: 14px;
+  margin-top: 1.5rem;
+  padding: 12px;
+  border-radius: 12px;
   border: none;
-
-  background: linear-gradient(135deg, #00ffff, #ff00ff);
-  color: black;
-
-  font-size: 1.05rem;
-  font-weight: 700;
+  background: #2563eb; /* Azul sólido brillante de alta conversión */
+  color: #ffffff; /* Texto obligatoriamente blanco */
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-/* 
-  box-shadow:
-    0 0 18px rgba(0,255,255,0.6),
-    0 0 28px rgba(255,0,255,0.4); */
-
-  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s ease;
 }
 
 .confirm:hover {
-  transform: translateY(-1px);/* 
-  box-shadow:
-    0 0 26px rgba(0,255,255,0.9),
-    0 0 40px rgba(255,0,255,0.7); */
+  background: #1d4ed8; /* Oscurece al pasar el cursor */
+  box-shadow: 0 6px 14px rgba(29, 78, 216, 0.3);
+  transform: translateY(-1px);
+}
+
+.confirm:active {
+  transform: translateY(0);
 }
 
 .confirm:disabled {
-  background: #9ca3af;
+  background: #e2e8f0;
+  color: #94a3b8;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
 }
 
-/* =============================== RESPONSIVE =============================== */
+/* ==========================================================================
+   📱 MEDIA QUERIES (Ajustes Mobile Modo Claro)
+   ========================================================================== */
 @media (max-width: 480px) {
   .cartForm {
     max-width: 95%;
     max-height: 88vh;
-    padding: 12px;
-    gap: 10px;
+    padding: 16px;
+    gap: 12px;
   }
 
   .grid {
@@ -227,29 +227,31 @@
   }
 
   .card {
-    padding: 0.75rem 1rem;
+    padding: 1rem;
     border-radius: 12px;
   }
 
   .card h2 {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .product {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   .total {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
 
   .confirm {
-    padding: 0.8rem;
+    padding: 11px;
     font-size: 0.95rem;
   }
 }
 
-/* =============================== ANIMATIONS =============================== */
+/* ==========================================================================
+   🎬 ANIMATIONS
+   ========================================================================== */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -257,7 +259,7 @@
 
 @keyframes slideUp {
   from {
-    transform: translateY(16px);
+    transform: translateY(12px);
     opacity: 0;
   }
   to {

@@ -177,6 +177,75 @@
   background:#ffe5e5;
 }
 
+/* Colocalo abajo de tu clase .cardBlocked */
+
+.cardBlocked {
+  border: 2px solid #ff3b3b;
+  background: #ffe5e5;
+}
+
+/* 🟡 Más de 5 compras totalmente pagadas (Fondo Amarillo Pastel) */
+.cardPremium {
+  border: 2px solid #eab308;
+  background: #fef9c3; 
+}
+
+/* 🟢 Más de 10 compras totalmente pagadas (Fondo Verde Pastel) */
+.cardVip {
+  border: 2px solid #22c55e;
+  background: #dcfce7;
+}
+
+/* ==========================================================================
+   📊 CONTENEDOR DE MÉTRICAS (Estilo Etiqueta / Compacto)
+   ========================================================================== */
+.metricsContainer {
+  display: flex;
+  gap: 6px; /* Más pegados */
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap; /* Permite que bajen si no hay espacio */
+}
+
+.metricBox {
+  flex: 1;
+  min-width: 65px; /* Evita que se colapsen demasiado */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px; /* Espacio entre el texto y el número */
+  padding: 3px 6px; /* Padding bien de etiqueta */
+  border-radius: 6px; /* Bordes un toque más finos */
+}
+
+.metricLabel {
+  font-size: 9px; /* Más chico tipo tag */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.metricValue {
+  font-size: 11px; /* Número sutilmente más grande que el texto */
+  font-weight: 700;
+}
+
+/* 🏢 TOTAL (Gris Neutro) */
+.boxTotal { background-color: #f1f5f9; }
+.boxTotal .metricLabel { color: #64748b; }
+.boxTotal .metricValue { color: #1e293b; }
+
+/* 🔵 ACTIVAS (Azul Pastel) */
+.boxActive { background-color: #eff6ff; }
+.boxActive .metricLabel { color: #2563eb; }
+.boxActive .metricValue { color: #1d4ed8; }
+
+/* 🟢 TERMINADAS (Verde Pastel) */
+.boxCompleted { background-color: #f0fdf4; }
+.boxCompleted .metricLabel { color: #16a34a; }
+.boxCompleted .metricValue { color: #15803d; }
+
 /* ================= MOBILE ================= */
 @media (max-width: 360px) {
   .row {
@@ -185,5 +254,22 @@
 
   .clientHeader {
     grid-template-columns: auto 1fr auto;
+  }
+
+  .metricsContainer {
+    gap: 4px; /* Reducimos el espacio entre etiquetas al mínimo */
+  }
+
+  .metricBox {
+    padding: 2px 5px; /* Ajuste milimétrico de los márgenes internos */
+    min-width: 52px;  /* Forzamos un ancho mínimo más chico */
+  }
+
+  .metricLabel {
+    font-size: 8px; /* Texto micro para evitar que la palabra salte de línea */
+  }
+
+  .metricValue {
+    font-size: 10px; /* Número compacto pero legible */
   }
 }
