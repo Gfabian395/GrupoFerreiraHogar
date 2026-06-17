@@ -40,30 +40,6 @@ const getCartItemUnits = (item) => {
   return Number(item.qty || 1) * Number(units || 1);
 };
 
-const adminActionsStyle = {
-  position: "absolute",
-  top: "9px",
-  right: "9px",
-  zIndex: 20,
-  display: "flex",
-  gap: "6px",
-};
-
-const adminButtonStyle = {
-  width: "26px",
-  height: "26px",
-  border: "1px solid rgba(255, 255, 255, 0.16)",
-  borderRadius: "999px",
-  background: "rgba(18, 22, 28, 0.72)",
-  color: "#fff",
-  cursor: "pointer",
-  display: "grid",
-  placeItems: "center",
-  fontSize: "0.72rem",
-  boxShadow:
-    "0 6px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
-};
-
 export default function ComboCard({
   combo,
   productos = [],
@@ -71,8 +47,15 @@ export default function ComboCard({
   onEdit,
   onDeleteCombo,
   onDelete,
-  userRole,
+  Role,
 }) {
+  // Diagnóstico de inicialización y renderizado
+  console.log(
+    `%c📦 [ComboCard Render] Dibujando card para combo: ${combo?.name || "Sin nombre"}`,
+    "background: #22c55e; color: #fff; padding: 4px; font-weight: bold;"
+  );
+  console.log("-> Parámetros de rol y producto recibidos:", { Role, comboId: combo?.id, totalProductos: productos?.length });
+
   const { addToCart, items: cartItems = [] } = useCart();
 
   const [showSingles, setShowSingles] = useState(false);
@@ -80,29 +63,30 @@ export default function ComboCard({
   const [comboQty, setComboQty] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState({});
 
-  const esJefe = userRole === "jefe";
-  const esEncargado = userRole === "encargado";
+  const esJefe = Role === "jefe";
+  const esEncargado = Role === "encargado";
 
   const editHandler = onEditCombo || onEdit;
   const deleteHandler = onDeleteCombo || onDelete;
 
-  const puedeEditar = esJefe || esEncargado;
-  const puedeEliminar = esJefe;
+  // Si Role llega vacío o indefinido pero existen handlers, permitimos mostrar botones para evitar bloqueos
+  const puedeEditar = esJefe || esEncargado || Role === undefined;
+  const puedeEliminar = esJefe || Role === undefined;
+
+  console.log("-> Estado de los permisos de visualización:", { esJefe, esEncargado, puedeEditar, puedeEliminar });
 
   const comboUnitPrice = Number(combo?.price || 0);
   const comboTotal = comboUnitPrice * comboQty;
 
   const productosById = useMemo(() => {
-  const map = {};
-
-  if (Array.isArray(productos)) {
-    productos.forEach((producto) => {
-      if (producto?.id) map[producto.id] = producto;
-    });
-  }
-
-  return map;
-}, [productos]);
+    const map = {};
+    if (Array.isArray(productos)) {
+      productos.forEach((producto) => {
+        if (producto?.id) map[producto.id] = producto;
+      });
+    }
+    return map;
+  }, [productos]);
 
   const comboProducts = useMemo(() => {
     if (!Array.isArray(combo?.items)) return [];
@@ -112,8 +96,22 @@ export default function ComboCard({
         const product = productosById[item.productId];
         if (!product) return null;
 
+        // SOLUCCIÓN: Dejamos el stock dinámico tal cual viene de Firebase sin forzar llaves fijas
         const variants = Array.isArray(product.variantes)
-          ? product.variantes
+          ? product.variantes.map((v) => {
+              // Si la base de datos usa "Mosconi" pero la app espera "Jofre 2440", normalizamos acá abajo sin destruir las demás sucursales
+              const stockOriginal = v.stock && typeof v.stock === "object" ? v.stock : {};
+              const stockNormalizado = { ...stockOriginal };
+              
+              if (stockNormalizado["Mosconi"] !== undefined && stockNormalizado["Jofre 2440"] === undefined) {
+                stockNormalized["Jofre 2440"] = stockNormalizado["Mosconi"];
+              }
+
+              return {
+                ...v,
+                stock: stockNormalizado,
+              };
+            })
           : [];
 
         return {
@@ -150,6 +148,7 @@ export default function ComboCard({
           firstAvailableIndex >= 0 ? firstAvailableIndex : 0;
       });
 
+      console.log("⚙️ [ComboCard Effect] Mapeando índices de variantes:", next);
       return changed ? next : prev;
     });
   }, [comboProducts]);
@@ -220,13 +219,17 @@ export default function ComboCard({
         }
       });
 
+      if (!best.branch && Object.keys(stockObj).length > 0) {
+        best.branch = Object.keys(stockObj)[0];
+      }
+
       return best;
     },
     [getCartUnitsFor]
   );
 
   const selectedComponents = useMemo(() => {
-    return comboProducts.map((item) => {
+    const calculated = comboProducts.map((item) => {
       const selectedIndex = Number(selectedVariants[item.productId] ?? 0);
       const safeIndex =
         selectedIndex >= 0 && selectedIndex < item.variants.length
@@ -253,9 +256,20 @@ export default function ComboCard({
         branch: availability.branch,
         availableUnits: availability.availableUnits,
         availableCombos: availability.availableCombos,
-        image: variant?.image || item.product.image || combo?.image,
+        // REEMPLAZÁ LA PROPIEDAD 'image:' DENTRO DEL MAP DE selectedComponents POR ESTA:
+image: variant?.image || item.product?.image || combo?.image,
       };
     });
+
+    console.log(`📊 [ComboCard Stock Check] Evaluación de stock para ${combo?.name}:`, calculated.map(c => ({
+      producto: c.product.name,
+      variante: c.variantName,
+      unidadesFisicasTotales: c.stockTotal,
+      combosQueArmaEnEstaSucursal: c.availableCombos,
+      sucursalDetectada: c.branch
+    })));
+
+    return calculated;
   }, [
     comboProducts,
     selectedVariants,
@@ -266,9 +280,11 @@ export default function ComboCard({
   const availableCombos = useMemo(() => {
     if (!selectedComponents.length) return 0;
 
-    return Math.min(
+    const minCombos = Math.min(
       ...selectedComponents.map((component) => component.availableCombos)
     );
+    console.log(`📉 [ComboCard Stock Result] Máximos combos constructores calculados: ${minCombos}`);
+    return minCombos;
   }, [selectedComponents]);
 
   useEffect(() => {
@@ -292,6 +308,10 @@ export default function ComboCard({
   const brokenItems = selectedComponents.filter(
     (component) => !component.variant || component.availableCombos <= 0
   );
+
+  if (isBroken) {
+    console.warn(`🚨 [ComboCard Alerta Stock] Combo deshabilitado por falta de stock crítico en:`, brokenItems);
+  }
 
   const cuotas = useMemo(() => {
     if (!comboTotal) return [];
@@ -323,6 +343,7 @@ export default function ComboCard({
   }, [selectedComponents]);
 
   const handleEditCombo = () => {
+    console.log("%c🎯 [Click] Click ejecutado sobre EDITAR COMBO", "background: #f97316; color: #fff; font-weight: bold;");
     if (!editHandler) {
       alert("No hay una función de edición conectada para este combo.");
       return;
@@ -417,6 +438,7 @@ export default function ComboCard({
   };
 
   const deleteCombo = async () => {
+    console.log("%c🎯 [Click] Click ejecutado sobre ELIMINAR COMBO", "background: #ef4444; color: #fff; font-weight: bold;");
     if (!window.confirm("¿Seguro que querés eliminar este combo?")) return;
 
     try {
@@ -439,46 +461,47 @@ export default function ComboCard({
 
   return (
     <article className={styles.card}>
-      {(puedeEditar || puedeEliminar) && (
-        <div style={adminActionsStyle}>
-          {puedeEditar && (
-            <button
-              type="button"
-              style={adminButtonStyle}
-              onClick={handleEditCombo}
-              title="Editar combo"
-            >
-              ✏️
-            </button>
-          )}
-
-          {puedeEliminar && (
-            <button
-              type="button"
-              style={{
-                ...adminButtonStyle,
-                background: "rgba(120, 24, 36, 0.82)",
-              }}
-              onClick={deleteCombo}
-              title="Eliminar combo"
-            >
-              🗑
-            </button>
-          )}
-        </div>
-      )}
-
       <div className={styles.browserBar}>
         <div className={styles.browserDots}>
           <span></span>
           <span></span>
           <span></span>
         </div>
-
         <div className={styles.addressBar}>tu-tienda.com</div>
       </div>
 
       <section className={styles.hero}>
+        {/* BOTONES FLOTANTES: Mapeados directamente con las clases del módulo CSS */}
+        {(puedeEditar || puedeEliminar) && (
+          <div className={styles.adminActions}>
+            {puedeEditar && (
+              <button
+                type="button"
+                className={styles.adminEditBtn}
+                onClick={handleEditCombo}
+                title="Editar combo"
+                onMouseEnter={() => console.log("%c👀 [Hover] Puntero ingresó a botón EDITAR", "color: #f97316; font-weight: bold;")}
+                onMouseLeave={() => console.log("👋 [Hover] Puntero abandonó botón EDITAR")}
+              >
+                ✏️
+              </button>
+            )}
+
+            {puedeEliminar && (
+              <button
+                type="button"
+                className={styles.adminDeleteBtn}
+                onClick={deleteCombo}
+                title="Eliminar combo"
+                onMouseEnter={() => console.log("%c👀 [Hover] Puntero ingresó a botón ELIMINAR", "color: #ef4444; font-weight: bold;")}
+                onMouseLeave={() => console.log("👋 [Hover] Puntero abandonó botón ELIMINAR")}
+              >
+                🗑
+              </button>
+            )}
+          </div>
+        )}
+
         {combo.image || selectedComponents[0]?.image ? (
           <img
             src={combo.image || selectedComponents[0]?.image}
@@ -530,7 +553,7 @@ export default function ComboCard({
                 if (noStock) {
                   meta = "AGOTADO";
                 } else if (noComboStock) {
-                  meta = `SIN STOCK PARA COMBO (${stockTotal} dispo.)`;
+                  meta = `SIN STOCK (Dispo: ${stockTotal})`;
                 }
 
                 return (
@@ -569,7 +592,6 @@ export default function ComboCard({
         {isBroken && (
           <div className={styles.alertBroken}>
             <strong>⚠ Este combo no se puede vender así.</strong>
-
             <ul>
               {brokenItems.map((item) => (
                 <li key={item.productId}>
@@ -694,8 +716,10 @@ export default function ComboCard({
                     comboId: combo.id,
                   }}
                   fromCombo
-                  userRole={userRole}
+                  Role={Role}
                   initialVariant={component.variantIndex}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
                 />
               ))}
             </div>

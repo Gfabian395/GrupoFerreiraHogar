@@ -166,9 +166,14 @@ export const Productos = () => {
       .toLowerCase()
       .includes(search.toLowerCase());
 
+    // CORRECCIÓN: Si es un combo, pasa el filtro de stock directamente
+    if (p.type === "combo") {
+      return coincideBusqueda;
+    }
+
     const totalStock = (p.variantes || []).reduce((total, variante) => {
       const stockVariante = Object.values(variante?.stock || {}).reduce(
-        (a, b) => a + b,
+        (a, b) => a + Number(b || 0),
         0
       );
 
@@ -191,12 +196,15 @@ export const Productos = () => {
   });
 
   const productosOrdenados = [...productosFiltrados].sort((a, b) => {
+    // CORRECCIÓN: Si no hay variantes (como en los combos), usa el .price base del documento
     const precioA = Math.min(
-      ...((a.variantes || []).map(v => Number(v.price || 0)))
+      ...((a.variantes || []).map(v => Number(v.price || 0))),
+      a.price ? Number(a.price) : 0
     );
 
     const precioB = Math.min(
-      ...((b.variantes || []).map(v => Number(v.price || 0)))
+      ...((b.variantes || []).map(v => Number(v.price || 0))),
+      b.price ? Number(b.price) : 0
     );
 
     if (ordenPrecio === "asc") {
@@ -789,7 +797,7 @@ export const Productos = () => {
         </button>
       </div>
 
-      {productos.length === 0 ? (
+     {productos.length === 0 ? (
         <p>No hay productos en esta categoría.</p>
       ) : (
         <div className={styles.grid}>
@@ -800,12 +808,14 @@ export const Productos = () => {
                   key={item.id}
                   combo={item}
                   productos={productos}
+                  Role={role} // CORRECCIÓN: Sincronizado con la prop 'Role' (con R mayúscula)
+                  onEdit={() => handleEditProduct(item)} // CORRECCIÓN: Habilita el botón editar en el combo
                   onDeleteCombo={
                     canDelete
                       ? (deletedId) =>
-                        setProductos((prev) =>
-                          prev.filter((p) => p.id !== deletedId)
-                        )
+                          setProductos((prev) =>
+                            prev.filter((p) => p.id !== deletedId)
+                          )
                       : null
                   }
                 />

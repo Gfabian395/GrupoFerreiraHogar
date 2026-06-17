@@ -78,16 +78,16 @@ export default function ProductCard({
   const esJefe = userRole === "jefe";
   const esEncargado = userRole === "encargado";
 
- const configuracionCuotas = [
-  { cuotas: 2, interes: 30 },
-  { cuotas: 3, interes: 50 },
-  { cuotas: 4, interes: 70 },
-  { cuotas: 6, interes: 90 },
-  { cuotas: 9, interes: 120 },
-  { cuotas: 12, interes: 150 },
-  { cuotas: 18, interes: 170 },
-  { cuotas: 24, interes: 200 },
-];
+  const configuracionCuotas = [
+    { cuotas: 2, interes: 30 },
+    { cuotas: 3, interes: 50 },
+    { cuotas: 4, interes: 70 },
+    { cuotas: 6, interes: 90 },
+    { cuotas: 9, interes: 120 },
+    { cuotas: 12, interes: 150 },
+    { cuotas: 18, interes: 170 },
+    { cuotas: 24, interes: 200 },
+  ];
 
   const formatARS = (valor) =>
     new Intl.NumberFormat("es-AR", {
@@ -122,23 +122,28 @@ export default function ProductCard({
     const user = auth.currentUser;
     if (!user) return;
 
-    const snap = await getDoc(doc(db, "usuarios", user.uid));
-    const userName = snap.exists() ? snap.data().nombre : "Desconocido";
+    try {
+      const snap = await getDoc(doc(db, "usuarios", user.uid));
+      const userName = snap.exists() ? snap.data().nombre : "Desconocido";
 
-    await addDoc(collection(db, "notificaciones"), {
-      userId: user.uid,
-      userName,
-      userEmail: user.email,
-      action,
-      detail: {
-        tipo: detail.tipo,
-        producto: producto.name,
-        variante: variant.attr,
-        formatoCompra: formatoActual,
-        ...detail,
-      },
-      timestamp: serverTimestamp(),
-    });
+      await addDoc(collection(db, "notificaciones"), {
+        userId: user.uid,
+        userName,
+        userEmail: user.email ?? "Sin Email",
+        action,
+        detail: {
+          tipo: detail.tipo ?? null,
+          producto: producto.name ?? "Producto sin nombre",
+          // Si variant.attr es undefined, Firebase guardará null sin lanzar error
+          variante: variant?.attr ?? null,
+          formatoCompra: formatoActual ?? null,
+          ...detail,
+        },
+        timestamp: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("❌ Error enviando notificación a Firebase:", error);
+    }
   };
 
   const getStockTotalVariante = (v) =>

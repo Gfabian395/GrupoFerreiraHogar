@@ -10,20 +10,18 @@
   padding: 9px;
 
   border-radius: 13px;
-  color: #f2f5f7;
+  color: #1e293b; /* Gris oscuro para máxima legibilidad */
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.075), transparent 34%),
-    linear-gradient(145deg, rgba(55, 61, 68, 0.9), rgba(28, 33, 39, 0.97));
+  background: #ffffff; /* Fondo blanco limpio */
 
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  border: 1px solid #e2e8f0; /* Borde sutil gris */
 
   box-shadow:
-    0 18px 42px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03); /* Sombras suaves de modo claro */
 
-  overflow: hidden;
+  overflow: visible; /* CORREGIDO: Impide que se recorten los botones de administración superiores */
   box-sizing: border-box;
 }
 
@@ -31,14 +29,11 @@
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      120deg,
-      rgba(255, 255, 255, 0.07),
-      transparent 24%,
-      transparent 76%,
-      rgba(255, 255, 255, 0.035)
-    );
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.5),
+    transparent 40%
+  );
   pointer-events: none;
 }
 
@@ -47,9 +42,7 @@
   position: absolute;
   inset: 1px;
   border-radius: inherit;
-  box-shadow:
-    inset 0 0 40px rgba(255, 255, 255, 0.025),
-    inset 0 0 90px rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.02);
   pointer-events: none;
 }
 
@@ -64,22 +57,16 @@
    HERO / IMAGE
 ================================ */
 .hero {
-  position: relative;
+  position: relative; /* Clave para el posicionamiento absoluto interno */
   z-index: 2;
-
   height: 112px;
   margin: 0 0 8px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border-radius: 11px;
-  overflow: hidden;
-
-  background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.35), transparent 40%),
-    linear-gradient(145deg, #d7dadd, #9fa4a9);
+  overflow: visible; /* CORREGIDO: Permite que los botones absolutos floten de forma limpia */
+  background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
 }
 
 .heroImage {
@@ -87,9 +74,7 @@
   height: 108px;
   object-fit: contain;
 
-  filter:
-    drop-shadow(0 14px 18px rgba(0, 0, 0, 0.4))
-    saturate(1.04);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.08));
 }
 
 .noImage {
@@ -97,7 +82,7 @@
   height: 100%;
   display: grid;
   place-items: center;
-  color: #30353a;
+  color: #64748b;
   font-size: 0.72rem;
   font-weight: 900;
 }
@@ -109,16 +94,16 @@
 
   display: flex;
   flex-direction: column;
+  color: #1e293b;
 
-  text-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.55),
-    0 0 14px rgba(0, 0, 0, 0.28);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8); /* Sombra clara para leer sobre la imagen */
 }
 
 .heroPrice span {
   font-size: 0.48rem;
   font-weight: 900;
   letter-spacing: 0.04em;
+  color: #64748b;
 }
 
 .heroPrice strong {
@@ -146,11 +131,8 @@
   line-height: 1;
   letter-spacing: -0.045em;
 
-  color: #f4f6f8;
-
-  text-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.26),
-    0 0 14px rgba(255, 255, 255, 0.06);
+  color: #0f172a; /* Texto principal casi negro */
+  text-shadow: none;
 }
 
 /* ===============================
@@ -169,7 +151,7 @@
   line-height: 1.05;
   letter-spacing: -0.035em;
 
-  color: #f1f4f6;
+  color: #334155;
 }
 
 .stepHeader p {
@@ -177,7 +159,7 @@
 
   font-size: 0.48rem;
   font-weight: 800;
-  color: rgba(245, 247, 248, 0.68);
+  color: #64748b; /* Gris secundario */
 }
 
 /* ===============================
@@ -200,12 +182,12 @@
 }
 
 .variantGrid::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: #f1f5f9;
   border-radius: 999px;
 }
 
 .variantGrid::-webkit-scrollbar-thumb {
-  background: rgba(235, 240, 244, 0.25);
+  background: #cbd5e1;
   border-radius: 999px;
 }
 
@@ -226,7 +208,7 @@
   cursor: pointer;
   user-select: none;
 
-  color: #f3f5f7;
+  color: #334155;
 }
 
 .swatch {
@@ -240,16 +222,12 @@
   display: grid;
   place-items: center;
 
-  background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.2), transparent 38%),
-    rgba(210, 215, 218, 0.15);
-
-  border: 1.5px solid rgba(235, 240, 244, 0.34);
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
 
   box-shadow:
-    0 7px 13px rgba(0, 0, 0, 0.26),
-    inset 0 1px 3px rgba(255, 255, 255, 0.2),
-    inset 0 -6px 12px rgba(0, 0, 0, 0.2);
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.03);
 
   overflow: visible;
 
@@ -274,32 +252,29 @@
   border-radius: 50%;
   display: block;
 
-  background:
-    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, 0.16), transparent 36%),
-    linear-gradient(145deg, #1a1d20, #4c5053);
+  background: linear-gradient(145deg, #e2e8f0, #cbd5e1);
 }
 
 .variantOption:hover .swatch {
   transform: translateY(-1px) scale(1.03);
+  border-color: #94a3b8;
 }
 
 .selected .swatch {
-  border-color: rgba(114, 241, 255, 0.95);
-
+  border-color: #0284c7; /* Azul nítido de selección */
   box-shadow:
-    0 0 0 3px rgba(114, 241, 255, 0.12),
-    0 0 12px rgba(114, 241, 255, 0.62),
-    0 0 22px rgba(114, 241, 255, 0.22),
-    inset 0 1px 3px rgba(255, 255, 255, 0.24);
+    0 0 0 3px rgba(2, 132, 199, 0.15),
+    0 2px 4px rgba(2, 132, 199, 0.2);
 }
 
 .disabled {
-  opacity: 0.48;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .disabled .swatch {
   filter: grayscale(0.95);
+  border-color: #e2e8f0;
 }
 
 .cross {
@@ -317,10 +292,10 @@
   left: 0;
 
   width: 100%;
-  height: 3px;
+  height: 2px;
   border-radius: 999px;
 
-  background: rgba(255, 255, 255, 0.6);
+  background: #ef4444; /* Cruz roja para deshabilitados */
 }
 
 .cross::before {
@@ -339,7 +314,7 @@
   line-height: 1.05;
 
   text-align: center;
-  color: rgba(255, 255, 255, 0.9);
+  color: #1e293b;
 }
 
 .variantOption small {
@@ -350,7 +325,7 @@
   line-height: 1.05;
 
   text-align: center;
-  color: rgba(245, 247, 248, 0.62);
+  color: #64748b;
 }
 
 /* ===============================
@@ -361,10 +336,10 @@
 
   border-radius: 11px;
 
-  background: rgba(255, 190, 80, 0.12);
-  border: 1px solid rgba(255, 190, 80, 0.26);
+  background: #fffbeb; /* Fondo amarillo/alerta claro */
+  border: 1px solid #fde68a;
 
-  color: #ffe0a3;
+  color: #b45309; /* Texto marrón/alerta legible */
 
   font-size: 0.52rem;
   font-weight: 800;
@@ -388,14 +363,10 @@
 
   border-radius: 11px;
 
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.03));
+  background: #f8fafc; /* Contenedores secundarios gris muy claro */
+  border: 1px solid #e2e8f0;
 
-  border: 1px solid rgba(255, 255, 255, 0.09);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 6px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .summary strong,
@@ -403,6 +374,7 @@
 .totalBox strong {
   font-size: 0.58rem;
   font-weight: 900;
+  color: #0f172a;
 }
 
 .summary span,
@@ -410,7 +382,7 @@
 .totalBox span {
   font-size: 0.5rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.62);
+  color: #64748b;
 }
 
 .qtyBox {
@@ -435,10 +407,10 @@
   height: 22px;
 
   border-radius: 50%;
-  border: 1px solid rgba(114, 241, 255, 0.34);
+  border: 1px solid #bae6fd;
 
-  background: rgba(114, 241, 255, 0.16);
-  color: #ffffff;
+  background: #e0f2fe; /* Botones más claros y legibles */
+  color: #0369a1;
 
   cursor: pointer;
 
@@ -450,13 +422,17 @@
 }
 
 .qtyControls button:disabled {
-  opacity: 0.35;
+  opacity: 0.4;
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #94a3b8;
   cursor: not-allowed;
 }
 
 .qtyControls strong {
   min-width: 16px;
   text-align: center;
+  color: #0f172a;
 }
 
 .totalBox {
@@ -473,18 +449,15 @@
   padding: 4px 7px;
   border-radius: 999px;
 
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.82);
+  border: 1px solid #cbd5e1;
+  background: #f1f5f9;
+  color: #334155;
 
   font-size: 0.48rem;
   font-weight: 900;
 
   cursor: pointer;
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 6px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .cuotasInline {
@@ -498,13 +471,13 @@
 
   border-radius: 999px;
 
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.84);
+  background: #e2e8f0;
+  color: #334155;
 
   font-size: 0.48rem;
   font-weight: 800;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #cbd5e1;
 }
 
 /* ===============================
@@ -522,7 +495,7 @@
   padding: 6px;
 
   border-radius: 11px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid transparent;
 
   color: #ffffff;
 
@@ -531,9 +504,7 @@
 
   cursor: pointer;
 
-  box-shadow:
-    0 7px 14px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 
   transition:
     transform 0.18s ease,
@@ -543,27 +514,32 @@
 
 .actions button:hover:not(:disabled) {
   transform: translateY(-1px);
+  filter: brightness(0.95);
 }
 
 .actions button:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
+  background: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  border-color: #cbd5e1;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .primary {
-  background: linear-gradient(145deg, #0ea5e9, #2563eb);
+  background: #0284c7; /* Azul sólido brillante */
 }
 
 .mpButton {
-  background: linear-gradient(145deg, #0ea5e9, #2563eb);
+  background: #009ee3; /* Azul Mercado Pago oficial */
 }
 
 .secondary {
-  background: linear-gradient(145deg, #64748b, #334155);
+  background: #64748b; /* Gris Slate */
 }
 
 .delete {
-  background: linear-gradient(145deg, #991b1b, #7f1d1d);
+  background: #dc2626; /* Rojo sólido legible */
 }
 
 /* ===============================
@@ -579,7 +555,7 @@
 
   padding: 14px;
 
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(15, 23, 42, 0.6); /* Backdrop oscuro pero traslúcido elegante */
 }
 
 .modal {
@@ -589,10 +565,10 @@
 
   border-radius: 18px;
 
-  background:
-    linear-gradient(145deg, rgba(55, 61, 68, 0.98), rgba(20, 24, 29, 0.98));
-
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  color: #1e293b;
 }
 
 .modalHeader {
@@ -606,32 +582,136 @@
 
   padding: 12px;
 
-  background: rgba(20, 24, 29, 0.96);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .modalHeader h4 {
   margin: 0;
   font-size: 0.9rem;
+  color: #0f172a;
 }
 
 .modalHeader button {
   width: 30px;
   height: 30px;
 
-  border: 0;
+  border: 1px solid #cbd5e1;
   border-radius: 999px;
 
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: #ffffff;
+  color: #64748b;
 
   cursor: pointer;
+}
+
+.modalHeader button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .modalContent {
   padding: 12px;
 }
 
+/* ==========================================================================
+   BOTONES DE ADMINISTRACIÓN FLOTANTES (EDITAR Y ELIMINAR)
+   ========================================================================== */
+
+.adminActions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 999; /* Asegura quedar por encima de las imágenes */
+  display: flex;
+  gap: 6px;
+}
+
+.adminEditBtn,
+.adminDeleteBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+/* Estilo específico para el botón Editar */
+.adminEditBtn {
+  border: 1px solid #f97316;
+  color: #f97316;
+}
+
+.adminEditBtn:hover {
+  transform: scale(1.1);
+  background-color: #fff7ed; /* Sutil fondo naranja */
+}
+
+/* Estilo específico para el botón Eliminar */
+.adminDeleteBtn {
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.adminDeleteBtn:hover {
+  transform: scale(1.1);
+  background-color: #fee2e2; /* Fondo rojo un poco más oscuro al hover */
+}
+/* ==========================================================================
+   BOTONES DE ADMINISTRACIÓN FLOTANTES (IGUALADOS A PRODUCT CARD)
+   ========================================================================== */
+
+.adminActions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 999; /* Asegura quedar por encima de las imágenes */
+  display: flex;
+  gap: 8px;
+}
+
+.adminEditBtn,
+.adminDeleteBtn {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #9ca3af;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #111827;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Efecto hover general de los botones */
+.adminEditBtn:hover,
+.adminDeleteBtn:hover {
+  transform: scale(1.05);
+}
+
+/* Comportamiento destructivo idéntico al hover de .edit */
+.adminEditBtn:hover {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Comportamiento destructivo idéntico al hover de .delete */
+.adminDeleteBtn:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
 /* ===============================
    RESPONSIVE MISMO QUE PRODUCTCARD
 ================================ */
