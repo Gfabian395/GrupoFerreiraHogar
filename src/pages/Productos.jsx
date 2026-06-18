@@ -472,7 +472,7 @@ export const Productos = () => {
     }
   };
 
-const handleGenerateQR = async () => {
+  const handleGenerateQR = async () => {
     try {
       const ref = collection(db, "categorias", categoriaId, "productos");
       const snap = await getDocs(ref);
@@ -638,7 +638,8 @@ const handleGenerateQR = async () => {
           const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
           const qr = await QRCode.toDataURL(url);
 
-          const imageUrl = variante.image || data.image || "";
+          // CORRECCIÓN: Prioriza la foto principal del producto (data.image) ante todo
+          const imageUrl = data.image || variante.image || "";
 
           html += `
         <div class="item">
