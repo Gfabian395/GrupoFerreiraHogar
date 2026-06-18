@@ -472,7 +472,7 @@ export const Productos = () => {
     }
   };
 
-  const handleGenerateQR = async () => {
+const handleGenerateQR = async () => {
     try {
       const ref = collection(db, "categorias", categoriaId, "productos");
       const snap = await getDocs(ref);
@@ -480,79 +480,128 @@ export const Productos = () => {
       let html = `
     <html>
     <head>
-      <title>QR Productos</title>
+      <title>Catálogo de Productos QR</title>
       <style>
-
-        @page{
+        @page {
           size: A4;
-          margin:10mm;
+          margin: 10mm;
         }
 
-        body{
-          font-family: Arial;
-          margin:0;
+        body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 5px;
+          background-color: #ffffff;
+          color: #1e293b;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
 
-        .container{
+        /* 4 columnas exactas por línea en A4 */
+        .container {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          justify-content: center;
+        }
+
+        /* Tarjeta Modo Claro */
+        .item {
           display: flex;
-          gap: 10px;
-          flex-direction: row;
-          flex-wrap: wrap;
-          align-content: center;
+          flex-direction: column;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 10px;
+          gap: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+          page-break-inside: avoid;
+          position: relative;
+          box-sizing: border-box;
+        }
+
+        .img-container {
+          width: 100%;
+          height: 110px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          overflow: hidden;
+          background-color: #f1f5f9;
+          border: 1px solid #e2e8f0;
+        }
+
+        .product-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .meta-info {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 13px;
+          font-weight: 700;
+          color: #0f172a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .attr {
+          font-size: 11px;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .price {
+          font-size: 13px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-top: 1px;
+        }
+
+        .qr-wrapper {
+          display: flex;
           justify-content: center;
           align-items: center;
+          margin-top: 4px;
         }
 
-        .item{
-          display:flex;
-          align-items:center;
-          border:1px solid #ddd;
-          padding:8px;
-          gap:10px;
-          height:130px;
-          width: 400px;
-          overflow:hidden;
+        /* Contenedor Cuadrado Perfecto con Bordes Suaves */
+        .qr-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          border-radius: 12px; 
+          width: 76px;
+          height: 76px;
+          box-shadow: 0 0 12px rgba(0, 180, 216, 0.25);
+          border: 2px solid #00b4d8;
         }
 
-        .qr{
-          width:110px;
-          height:110px;
+        .qr {
+          width: 64px;
+          height: 64px;
+          display: block;
         }
-
-        .product-img{
-          max-width:300px;
-          max-height:300px;
-          object-fit:contain;
-            margin-left:-60px;
-        }
-
-        .img-container{
-          width:140px;
-          height:140px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-        }
-  
-        .info{
-          flex:1;
-        }
-
-        h3{
-          margin:0;
-          font-size:14px;
-        }
-
-        .info div{
-          font-size:13px;
-        }
-
       </style>
     </head>
     <body>
 
     <div class="container">
     `;
+
+      console.log("--- INICIANDO VERIFICACIÓN DE STOCK PARA QR ---");
 
       for (const d of snap.docs) {
         const data = d.data();
@@ -561,6 +610,31 @@ export const Productos = () => {
 
         for (const [index, variante] of data.variantes.entries()) {
 
+          /* =================================================================
+             SISTEMA DE CONTROL DE STOCK (Suma todas las sucursales del objeto)
+             ================================================================= */
+          const totalStockVariante = Object.values(variante?.stock || {}).reduce(
+            (total, cantidad) => total + Number(cantidad || 0),
+            0
+          );
+
+          console.log(`Producto: ${data.name} (${variante.attr || "Estándar"}) -> Stock calculado: ${totalStockVariante}`);
+
+          // Si el stock es 0 o menor, se informa en consola y salta a la siguiente
+          if (totalStockVariante <= 0) {
+            console.warn(`[SALTEADO - SIN STOCK] ${data.name} (${variante.attr || "Estándar"}) no se incluirá.`);
+            continue;
+          }
+
+          // Flag manual por las dudas
+          if (variante.disponible === false) {
+            console.warn(`[SALTEADO - NO DISPONIBLE] ${data.name} (${variante.attr || "Estándar"}) tiene disponible: false.`);
+            continue;
+          }
+
+          // Si pasó los filtros, se confirma en la consola que va a impresión
+          console.log(`%c[A IMPRESIÓN] ${data.name} (${variante.attr || "Estándar"})`, "color: #00b4d8; font-weight: bold;");
+
           const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
           const qr = await QRCode.toDataURL(url);
 
@@ -568,30 +642,40 @@ export const Productos = () => {
 
           html += `
         <div class="item">
+          
+          ${imageUrl
+              ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
+              : `<div class="img-container" style="color: #94a3b8; font-size: 11px;">Sin foto</div>`
+            }
 
-          <img class="qr" src="${qr}" />
-
-          <div class="info">
+          <div class="meta-info">
             <h3>${data.name}</h3>
-            <div>${variante.attr || ""}</div>
-            <div>$${variante.price}</div>
+            <div class="attr">${variante.attr || "Estándar"}</div>
+            <div class="price">$${Number(variante.price).toLocaleString('es-AR')}</div>
           </div>
 
-          ${imageUrl
-              ? `<img class="product-img" src="${imageUrl}" />`
-              : ""
-            }
+          <div class="qr-wrapper">
+            <div class="qr-container">
+              <img class="qr" src="${qr}" />
+            </div>
+          </div>
 
         </div>
         `;
         }
       }
 
+      console.log("--- PROCESO DE LOGS TERMINADO ---");
+
       html += `
     </div>
 
     <script>
-      window.onload = () => window.print();
+      window.onload = () => {
+        setTimeout(() => {
+          window.print();
+        }, 300);
+      };
     </script>
 
     </body>
@@ -797,7 +881,7 @@ export const Productos = () => {
         </button>
       </div>
 
-     {productos.length === 0 ? (
+      {productos.length === 0 ? (
         <p>No hay productos en esta categoría.</p>
       ) : (
         <div className={styles.grid}>
@@ -813,9 +897,9 @@ export const Productos = () => {
                   onDeleteCombo={
                     canDelete
                       ? (deletedId) =>
-                          setProductos((prev) =>
-                            prev.filter((p) => p.id !== deletedId)
-                          )
+                        setProductos((prev) =>
+                          prev.filter((p) => p.id !== deletedId)
+                        )
                       : null
                   }
                 />
@@ -919,15 +1003,15 @@ export const Productos = () => {
       )}
 
       {showCalculator && (
-  <div
-    className={styles.calculatorOverlay}
-    onClick={() => setShowCalculator(false)}
-  >
-    <div onClick={(e) => e.stopPropagation()}>
-      <Cuotas onClose={() => setShowCalculator(false)} />
-    </div>
-  </div>
-)}
+        <div
+          className={styles.calculatorOverlay}
+          onClick={() => setShowCalculator(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <Cuotas onClose={() => setShowCalculator(false)} />
+          </div>
+        </div>
+      )}
 
       {(isJefe || isEncargado) && (
         <Drop
