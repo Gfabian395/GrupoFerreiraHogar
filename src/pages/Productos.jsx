@@ -195,28 +195,41 @@ export const Productos = () => {
     return coincideBusqueda;
   });
 
+  /* ===============================
+      FILTRO Y ORDEN DE PRODUCTOS
+   =============================== */
+
   const productosOrdenados = [...productosFiltrados].sort((a, b) => {
-    // CORRECCIÓN: Si no hay variantes (como en los combos), usa el .price base del documento
-    const precioA = Math.min(
-      ...((a.variantes || []).map(v => Number(v.price || 0))),
-      a.price ? Number(a.price) : 0
-    );
-
-    const precioB = Math.min(
-      ...((b.variantes || []).map(v => Number(v.price || 0))),
-      b.price ? Number(b.price) : 0
-    );
-
     if (ordenPrecio === "asc") {
+      const precioA = Math.min(
+        ...((a.variantes || []).map(v => Number(v.price || 0))),
+        a.price ? Number(a.price) : Infinity
+      );
+      const precioB = Math.min(
+        ...((b.variantes || []).map(v => Number(v.price || 0))),
+        b.price ? Number(b.price) : Infinity
+      );
       return precioA - precioB;
     }
 
     if (ordenPrecio === "desc") {
+      const precioA = Math.max(
+        ...((a.variantes || []).map(v => Number(v.price || 0))),
+        a.price ? Number(a.price) : -Infinity
+      );
+      const precioB = Math.max(
+        ...((b.variantes || []).map(v => Number(v.price || 0))),
+        b.price ? Number(b.price) : -Infinity
+      );
       return precioB - precioA;
     }
 
-    return 0;
+    // "ninguno": Mantiene el orden alfabético por nombre original de fetchProductos
+    return (a.name || "").localeCompare(b.name || "", "es", {
+      sensitivity: "base",
+    });
   });
+  
   /* ===============================
      NOTIFICACIONES
   =============================== */

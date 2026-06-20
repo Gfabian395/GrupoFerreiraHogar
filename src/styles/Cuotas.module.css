@@ -1,241 +1,202 @@
+.cuotasWrapper {
+  position: fixed;
+  bottom: 180px; /* Se posiciona de forma limpia sobre tus botones flotantes */
+  right: 20px;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
 .cuotasContainer {
-  width: 420px;
-  max-width: 95vw;
-
+  width: 340px;
+  max-width: calc(100vw - 40px);
   background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+}
 
-  border: 1px solid #dfe3e8;
-  border-radius: 24px;
-
-  padding: 24px;
-
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.12);
-
-  color: #222;
-
-  position: relative;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
 }
 
 .title {
-  text-align: center;
-  font-size: 1.4rem;
+  margin: 0;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #222;
-  margin-bottom: 20px;
+  color: #0f172a;
 }
 
-.closeButton {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+.headerButtons {
+  display: flex;
+  gap: 6px;
+}
 
-  width: 38px;
-  height: 38px;
-
+.closeButton, .minimizeButton {
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 50%;
-
-  background: #f1f3f5;
-  color: #444;
-
+  background: #f1f5f9;
+  color: #64748b;
   cursor: pointer;
-  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all 0.2s;
 }
 
 .closeButton:hover {
-  background: #ff4d4d;
+  background: #ef4444;
   color: white;
+}
+
+.minimizeButton:hover {
+  background: #cbd5e1;
+  color: #334155;
 }
 
 .calculatorInput {
   width: 100%;
-
-  padding: 16px;
-
-  border: 2px solid #dfe3e8;
-  border-radius: 14px;
-
-  background: white;
-  color: #111;
-
-  font-size: 1.3rem;
-  font-weight: bold;
-
+  padding: 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 1.2rem;
+  font-weight: 700;
   text-align: right;
-
   outline: none;
-
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   box-sizing: border-box;
 }
 
 .calculatorInput:focus {
-  border-color: #2196f3;
-  box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.15);
+  border-color: #3b82f6;
+  background: #fff;
 }
 
 .calculatorButtons {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .calculatorButtons button {
-  height: 60px;
-
-  border: 1px solid #dfe3e8;
-  border-radius: 14px;
-
-  background: #f8f9fa;
-  color: #222;
-
-  font-size: 1.2rem;
-  font-weight: 700;
-
+  height: 46px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
-
-  transition: 0.15s;
+  transition: background 0.1s;
 }
 
 .calculatorButtons button:hover {
-  background: #2196f3;
-  color: white;
-  border-color: #2196f3;
+  background: #f1f5f9;
+}
+
+.calculatorButtons button.opBtn {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.calculatorButtons button.opBtn:hover {
+  background: #dbeafe;
 }
 
 .calculatorButtons button:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .totalBox {
-  margin-bottom: 18px;
-
-  padding: 16px;
-
-  border-radius: 14px;
-
-  background: #e8f5e9;
-  border: 2px solid #81c784;
-
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
   text-align: center;
-
-  color: #1b5e20;
-
-  font-size: 1.4rem;
+  color: #166534;
+  font-size: 1.2rem;
   font-weight: 700;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.viewButton, .clearButton {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.viewButton {
+  background: #3b82f6;
+  color: white;
+}
+
+.viewButton:disabled {
+  background: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
 }
 
 .clearButton {
-  width: 100%;
-
-  padding: 14px;
-
-  border: none;
-  border-radius: 14px;
-
-  background: #f44336;
-  color: white;
-
-  font-size: 1rem;
-  font-weight: 700;
-
-  cursor: pointer;
-
-  margin-bottom: 20px;
-
-  transition: 0.2s;
+  background: #f1f5f9;
+  color: #64748b;
 }
 
-.clearButton:hover {
-  background: #d32f2f;
-}
+.viewButton:not(:disabled):hover { opacity: 0.9; }
+.clearButton:hover { background: #e2e8f0; color: #334155; }
 
 .resultados {
-  max-height: 300px;
+  max-height: 180px;
   overflow-y: auto;
-
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .resultados p {
   margin: 0;
-
-  padding: 14px;
-
-  border-radius: 12px;
-
-  background: #f8f9fa;
-
-  border-left: 5px solid #2196f3;
-
-  color: #222;
-
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.resultados::-webkit-scrollbar {
-  width: 8px;
-}
-
-.resultados::-webkit-scrollbar-thumb {
-  background: #2196f3;
-  border-radius: 999px;
-}
-
-.resultados::-webkit-scrollbar-track {
-  background: #eceff1;
-}
-
-.minimizeButton {
-  position: absolute;
-  top: 12px;
-  right: 58px;
-
-  width: 38px;
-  height: 38px;
-
-  border: none;
-  border-radius: 50%;
-
-  cursor: pointer;
-  font-size: 20px;
-}
-
-.miniCalculator {
-  position: fixed;
-  bottom: 25px;
-  right: 25px;
-color: #222;
-  z-index: 9999;
-
-  display: flex;
-  align-items: center;
-  gap: 10px;
-
-  padding: 12px 16px;
-
-  background: white;
-  border-radius: 14px;
-
-  box-shadow: 0 10px 30px rgba(0,0,0,.2);
-
-  font-weight: 700;
-}
-
-.miniCalculator button {
-  border: none;
-  cursor: pointer;
-  padding: 6px 10px;
+  padding: 10px;
   border-radius: 8px;
+  background: #f8fafc;
+  border-left: 4px solid #3b82f6;
+  color: #475569;
+  font-size: 0.88rem;
+  display: flex;
+  justify-content: space-between;
 }
 
-.viewButton {
-  width: 100%;
-  margin-bottom: 12px;
+.resultados::-webkit-scrollbar { width: 5px; }
+.resultados::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+@media (max-width: 360px) {
+  .cuotasWrapper {
+    bottom: 10px;
+    right: 10px;
+  }
+  .cuotasContainer {
+    width: calc(100vw - 20px);
+  }
 }
