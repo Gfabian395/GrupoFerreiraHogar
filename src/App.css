@@ -16,7 +16,7 @@ body::before {
   position: fixed;
   inset: 0;
 
-  background: url("../public/Logo---Otoño.png") center / 40% no-repeat;
+  background: url("../public/Logo---Invierno.png") center / 40% no-repeat;
 
   opacity: 0.30;
   /* ajustá a gusto */

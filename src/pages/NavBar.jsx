@@ -7,7 +7,7 @@ import { useCart } from "../context/CartContext";
 const menuItems = [
   { icon: "bx bx-grid-alt", label: "Categorias", path: "/categorias" },
   { icon: "bx bx-cart", label: "Carrito", path: "/carrito" },
-  { icon: "bx bx-user", label: "Clientes", path: "/clientes", role: ["jefe","encargado", "vendedor"] },
+  { icon: "bx bx-user", label: "Clientes", path: "/clientes", role: ["jefe", "encargado", "vendedor"] },
   { icon: "bx bx-pie-chart-alt-2", label: "Cierre de Caja", path: "/cierre-de-caja", role: ["jefe"] },
   { icon: "bx bx-cog", label: "Configuracion", path: "/configuracion"/* , role: ["jefe","vendedor"] */ },
   { icon: "bx bx-transfer", label: "Migrar clientes", path: "/admin/migrar-clientes", role: ["jefe"] },
@@ -25,7 +25,7 @@ const NavBar = ({ usuario, onLogout }) => {
       <div className={styles["logo-menu"]}>
         <h2 className={styles.logo}>Grupo Ferreira</h2>
         <img
-          src="/Logo---Otoño.png"
+          src="/Logo---Invierno.png"
           alt="Menú"
           className={styles["toggle-btn"]}
           onClick={toggleSidebar}
@@ -45,7 +45,8 @@ const NavBar = ({ usuario, onLogout }) => {
           return (
             <li
               key={index}
-              className={`${styles["list-item"]} ${isActive ? styles["item-active"] : ""}`}
+              // Busca esta línea dentro del .map de los items:
+              className={`${styles["list-item"]} ${isActive ? styles.active : ""}`}
             >
               <Link to={item.path}>
                 <i className={item.icon}></i>

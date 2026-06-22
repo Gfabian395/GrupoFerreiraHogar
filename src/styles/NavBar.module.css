@@ -10,11 +10,11 @@
 body {
   min-height: 100vh;
   position: relative;
-  color: black;
+  color: black; /* Letras negras por defecto */
 }
 
 /* ========================= */
-/* SIDEBAR */
+/* SIDEBAR (Contenedor Principal) */
 /* ========================= */
 .sidebar {
   position: fixed;
@@ -27,18 +27,54 @@ body {
   -webkit-backdrop-filter: blur(25px);
 
   border-right: 1px solid rgba(251, 191, 36, 0.15);
-/* 
-  box-shadow:
-    0 0 25px rgba(0, 0, 0, 0.6),
-    inset 0 0 20px rgba(251, 191, 36, 0.05);
- */
-  padding: 8px 14px;
+
+  /* AUMENTAMOS EL PADDING INFERIOR PARA LOS COPOS (140px) */
+  padding: 8px 14px 140px; 
   transition: 0.45s ease;
   z-index: 1000;
+  overflow: hidden; /* Para que los copos no se salgan */
 }
 
 .sidebar.active {
   width: 260px;
+}
+
+/* ========================= */
+/* COPOS DE NIEVE ANIMADOS CON CSS */
+/* ========================= */
+.sidebar::after {
+  content: "";
+  position: absolute;
+  /* Colocamos el contenedor al fondo y le damos la altura total del espacio vacío */
+  bottom: 0; 
+  left: 10px;
+  width: calc(100% - 20px);
+  height: 500px; /* Ajusta este número (ej. 450px, 520px) para que empiece más arriba o más abajo */
+  pointer-events: none;
+  z-index: 1;
+
+  /* Efecto de copos con fondos múltiples */
+  background-image: 
+    radial-gradient(ellipse 3px 3px at 15% 20%, white 100%, transparent 0%),
+    radial-gradient(ellipse 4px 4px at 50% 10%, rgba(255, 255, 255, 0.9) 100%, transparent 0%),
+    radial-gradient(ellipse 3px 3px at 80% 30%, white 100%, transparent 0%),
+    radial-gradient(ellipse 4px 4px at 30% 60%, white 100%, transparent 0%),
+    radial-gradient(ellipse 3px 3px at 70% 80%, white 100%, transparent 0%),
+    radial-gradient(ellipse 5px 5px at 10% 90%, rgba(255, 255, 255, 0.8) 100%, transparent 0%);
+  background-size: 40% 40%, 35% 35%, 45% 45%, 35% 35%, 40% 40%, 45% 45%;
+  background-repeat: repeat;
+
+  /* Animación de caída continua */
+  animation: fallingSnow 15s linear infinite;
+}
+
+@keyframes fallingSnow {
+  0% {
+    background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px;
+  }
+  100% {
+    background-position: 50px 100px, 40px 100px, 60px 100px, 40px 100px, 50px 100px, 60px 100px;
+  }
 }
 
 /* ========================= */
@@ -91,6 +127,43 @@ body {
 }
 
 /* ========================= */
+/* SELECT DE UBICACIÓN (Nuevo) */
+/* ========================= */
+.select-container {
+  padding: 10px 4px;
+  width: 100%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  margin-top: 10px;
+}
+
+.sidebar.active .select-container {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0.2s;
+}
+
+.select-route {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  background-color: #ffffff;
+  color: #000000;
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.select-route:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
+}
+
+/* ========================= */
 /* LISTA */
 /* ========================= */
 .list {
@@ -102,6 +175,8 @@ body {
   width: 100%;
   height: 52px;
   margin: 6px 0;
+  z-index: 10; /* Aseguramos que la lista esté sobre los copos */
+  position: relative;
 }
 
 .list-item a {
@@ -110,7 +185,7 @@ body {
   height: 100%;
 
   font-size: 17px;
-  color: black;
+  color: black; /* Letras negras solicitadas */
   text-decoration: none;
   border-radius: 12px;
   white-space: nowrap;
@@ -119,16 +194,19 @@ body {
   position: relative;
 }
 
-/* Hover + activo */
+/* ========================= */
+/* ESTILO INVERNAL (Hover + Activo - Más Notorio y Letras Negras) */
+/* ========================= */
 .list-item.active a,
 .list-item a:hover {
   background: linear-gradient(
     135deg,
-    rgba(251, 191, 36, 0.18),
-    rgba(146, 64, 14, 0.25)
+    rgba(186, 230, 253, 0.95), /* Azul nieve compacto */
+    rgba(125, 211, 252, 0.85)  /* Azul glaciar intenso */
   );
-  box-shadow: 0 0 18px rgba(251, 191, 36, 0.35);
-  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.45); /* Sombra ártica marcada */
+  color: #000000; /* Letras negras nítidas solicitadas */
+  font-weight: 600; /* Grosor extra para resaltar */
 }
 
 /* ICONOS */
@@ -138,8 +216,14 @@ body {
   text-align: center;
   line-height: 52px;
   font-size: 20px;
-  color: black;
+  color: black; /* Iconos negros por defecto */
   position: relative;
+}
+
+/* Mantener iconos negros en hover/active también */
+.list-item.active a i,
+.list-item a:hover i {
+  color: black;
 }
 
 /* ========================= */
@@ -183,3 +267,4 @@ body {
   box-shadow: 0 0 10px rgba(220, 38, 38, 0.7);
   pointer-events: none;
 }
+
