@@ -229,7 +229,7 @@ export const Productos = () => {
       sensitivity: "base",
     });
   });
-  
+
   /* ===============================
      NOTIFICACIONES
   =============================== */
@@ -1027,18 +1027,20 @@ export const Productos = () => {
         </div>
       )}
 
-      {(isJefe || isEncargado) && (
+      {/* 🟢 Cambiamos la condición para que "vendedor" también renderice el Drop */}
+      {(isJefe || isEncargado || role === "vendedor") && (
         <Drop
+          userRole={role} // 👈 Le pasamos el rol (si usás la versión con userRole interna)
+
+          // Métodos protegidos por rol directamente desde las props de renderizado:
           onPDFStock={(isJefe || isEncargado) ? handlePDFStock : null}
           onGenerateQR={(isJefe || isEncargado) ? handleGenerateQR : null}
           onIncreasePrices={isJefe ? handleIncreasePrices : null}
           onDecreasePrices={isJefe ? handleDecreasePrices : null}
 
-          showSinStock={(isJefe || isEncargado) ? showSinStock : undefined}
-          onToggleSinStock={(isJefe || isEncargado)
-            ? () => setShowSinStock(prev => !prev)
-            : null
-          }
+          // 🔥 Ahora disponible para Jefe, Encargado y Vendedor
+          showSinStock={showSinStock}
+          onToggleSinStock={() => setShowSinStock(prev => !prev)}
         />
       )}
     </div>

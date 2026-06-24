@@ -138,3 +138,36 @@
 .item:hover span {
     transform: translateX(0);
 }
+
+/* =================================================================
+   ESTILOS EXCLUSIVOS PARA EL ROL VENDEDOR (Un solo botón)
+================================================================= */
+
+/* 🟢 Forzamos el reposicionamiento sobre el botón morado */
+.vendedorMenu {
+  top: auto !important;          /* 👈 Anulamos el -270px que lo mandaba arriba */
+  bottom: 55px !important;       /* 👈 Lo posiciona justo encima del engranaje */
+  right: 0 !important;
+  width: 170px !important;       /* 👈 Un ancho fijo prolijo para ese botón */
+  min-width: 170px !important;
+  padding: 0 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 🟢 Ajustamos el comportamiento cuando la clase .active está presente */
+.active .vendedorMenu {
+  transform: translateY(-5px) !important; /* 👈 Animación corta y limpia al subir */
+}
+
+/* Ajuste fino al botón único del vendedor */
+.vendedorMenu .item {
+  width: 100% !important;
+  white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  padding: 12px 14px !important;
+  border: 1px solid #e0e0e0 !important; /* 👈 Un sutil borde para que se note el recuadro */
+  border-radius: 6px !important;
+}

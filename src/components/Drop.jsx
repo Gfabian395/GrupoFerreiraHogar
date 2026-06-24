@@ -7,9 +7,11 @@ export default function Drop({
   onIncreasePrices,
   onDecreasePrices,
   showSinStock,
-  onToggleSinStock
+  onToggleSinStock,
+  userRole
 }) {
   const [open, setOpen] = useState(false);
+  const isAdmin = userRole === "admin" || userRole === "jefe" || userRole === "encargado";
 
   return (
     <div className={styles.box}>
@@ -22,63 +24,44 @@ export default function Drop({
         <span className={styles.leftIcon}></span>
         <span className={styles.rightIcon}></span>
 
+        {/* 🟢 Si no es admin, le sumamos la clase styles.vendedorMenu */}
         <div
-          className={styles.items}
+          className={`${styles.items} ${!isAdmin ? styles.vendedorMenu : ""}`}
           onClick={(e) => e.stopPropagation()}
         >
 
-          {onPDFStock && (
-            <button
-              style={{ "--i": 1 }}
-              onClick={onPDFStock}
-              className={styles.item}
-            >
+          {isAdmin && onPDFStock && (
+            <button style={{ "--i": 1 }} onClick={onPDFStock} className={styles.item}>
               <span></span>
-              <i className="bx bxs-file-pdf"></i>
-              Descargar PDF Stock
+              <i className="bx bxs-file-pdf"></i> Descargar PDF Stock
             </button>
           )}
 
-          {onGenerateQR && (
-            <button
-              style={{ "--i": 2 }}
-              onClick={onGenerateQR}
-              className={styles.item}
-            >
+          {isAdmin && onGenerateQR && (
+            <button style={{ "--i": 2 }} onClick={onGenerateQR} className={styles.item}>
               <span></span>
-              <i className="bx bx-qr"></i>
-              Generar QR productos
+              <i className="bx bx-qr"></i> Generar QR productos
             </button>
           )}
 
-          {onIncreasePrices && (
-            <button
-              style={{ "--i": 3 }}
-              onClick={onIncreasePrices}
-              className={styles.item}
-            >
+          {isAdmin && onIncreasePrices && (
+            <button style={{ "--i": 3 }} onClick={onIncreasePrices} className={styles.item}>
               <span></span>
-              <i className="bx bx-trending-up"></i>
-              Aumentar precios
+              <i className="bx bx-trending-up"></i> Aumentar precios
             </button>
           )}
 
-          {onDecreasePrices && (
-            <button
-              style={{ "--i": 4 }}
-              onClick={onDecreasePrices}
-              className={styles.item}
-            >
+          {isAdmin && onDecreasePrices && (
+            <button style={{ "--i": 4 }} onClick={onDecreasePrices} className={styles.item}>
               <span></span>
-              <i className="bx bx-trending-down"></i>
-              Bajar precios
+              <i className="bx bx-trending-down"></i> Bajar precios
             </button>
           )}
 
-          {/* 🔥 BOTÓN SIN STOCK */}
+          {/* 🔥 BOTÓN SIN STOCK (Único que ve el vendedor) */}
           {onToggleSinStock && (
             <button
-              style={{ "--i": 5 }}
+              style={{ "--i": 1 }} // 👈 Le forzamos el índice 1 para que no herede retrasos de animación raros
               onClick={onToggleSinStock}
               className={`${styles.item} ${showSinStock ? styles.activeItem : ""}`}
             >
