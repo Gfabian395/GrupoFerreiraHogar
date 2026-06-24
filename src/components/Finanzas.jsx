@@ -4,6 +4,17 @@ import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import styles from "../styles/Finanzas.module.css";
 import { Loader } from "./Loader";
 
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend
+} from "recharts";
+
 const Finanzas = () => {
   const [ventas, setVentas] = useState([]);
   const [cobros, setCobros] = useState([]);
@@ -14,8 +25,22 @@ const Finanzas = () => {
   const [usuariosEmailMap, setUsuariosEmailMap] = useState({});
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
+
+  const listaSucursales = ["Los Andes 4320", "Los Andes 4034", "Jofre 2440"];
+
   const [ventasFiltradas, setVentasFiltradas] = useState([]);
   const [cobrosFiltrados, setCobrosFiltrados] = useState([]);
+  const [gastosFiltrados, setGastosFiltrados] = useState([]);
+
+  const [mostrarVentas, setMostrarVentas] = useState({});
+  const [mostrarCobros, setMostrarCobros] = useState({});
+  const [mostrarGastos, setMostrarGastos] = useState({});
+
+  const ahora = new Date();
+  const anioActual = ahora.getFullYear();
+  const mesActual = ahora.getMonth();
+  const nombreMes = ahora.toLocaleDateString("es-AR", { month: "long" });
+  const nombreMesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
 
   const formatearMonto = (monto) => Number(monto || 0).toLocaleString("es-AR");
 
@@ -30,45 +55,45 @@ const Finanzas = () => {
     return date.toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
   };
 
-  // Función para aplicar filtro de fechas
-  const aplicarFiltro = () => {
-    const desde = fechaDesde ? new Date(fechaDesde) : null;
-    const hasta = fechaHasta ? new Date(fechaHasta) : null;
-
-    setVentasFiltradas(
-      ventas.filter(v => {
-        const fechaVenta = new Date(v.fecha);
-        return (!desde || fechaVenta >= desde) && (!hasta || fechaVenta <= hasta);
-      })
-    );
-
-    setCobrosFiltrados(
-      cobros.filter(c => {
-        const fechaCobro = new Date(c.fecha);
-        return (!desde || fechaCobro >= desde) && (!hasta || fechaCobro <= hasta);
-      })
-    );
+  const obtenerObjetoFecha = (fecha) => {
+    if (!fecha) return null;
+    if (fecha?.seconds) return new Date(fecha.seconds * 1000);
+    if (typeof fecha === "string" && fecha.includes("-")) {
+      const [year, month, day] = fecha.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return new Date(fecha);
   };
 
-  // Función para borrar filtro
+  const ordenarPorFechaDescendente = (a, b) => {
+    const fechaA = obtenerObjetoFecha(a.fecha) || new Date(0);
+    const fechaB = obtenerObjetoFecha(b.fecha) || new Date(0);
+    return fechaB - fechaA;
+  };
+
+  const aplicarFiltro = () => {
+    const desde = fechaDesde ? new Date(fechaDesde + "T00:00:00") : null;
+    const hasta = fechaHasta ? new Date(fechaHasta + "T23:59:59") : null;
+
+    setVentasFiltradas(ventas.filter(v => { const f = obtenerObjetoFecha(v.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
+    setCobrosFiltrados(cobros.filter(c => { const f = obtenerObjetoFecha(c.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
+    setGastosFiltrados(gastos.filter(g => { const f = obtenerObjetoFecha(g.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
+  };
+
   const borrarFiltro = () => {
-    setFechaDesde("");
-    setFechaHasta("");
-    setVentasFiltradas(ventas);
-    setCobrosFiltrados(cobros);
+    setFechaDesde(""); setFechaHasta("");
+    setVentasFiltradas(ventas); setCobrosFiltrados(cobros); setGastosFiltrados(gastos);
   };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // CLIENTES
         const clientesSnap = await getDocs(collection(db, "clientes"));
         const clientes = {};
         clientesSnap.docs.forEach(c => (clientes[c.id] = c.data().nombre));
         setClientesMap(clientes);
 
-        // USUARIOS
         const usuariosSnap = await getDocs(collection(db, "usuarios"));
         const usuariosIdMap = {};
         const usuariosEmailMapLocal = {};
@@ -80,47 +105,103 @@ const Finanzas = () => {
         setUsuariosMap(usuariosIdMap);
         setUsuariosEmailMap(usuariosEmailMapLocal);
 
-        // VENTAS
+        // 1. OBTENER VENTAS
         const ventasSnap = await getDocs(query(collection(db, "ventas"), orderBy("createdAt", "desc")));
-        const ventasData = ventasSnap.docs.map(doc => {
-          const v = doc.data();
-          const vendedorEmail = v.vendedorReal || v.vendedor || v.cargadoPor;
-          const vendedorNombre = usuariosEmailMapLocal[vendedorEmail] || usuariosIdMap[vendedorEmail] || vendedorEmail || "Sin Nombre";
-          return { id: doc.id, ...v, clienteNombre: clientes[v.clienteId] || "Sin Nombre", vendedorNombre };
-        });
-        setVentas(ventasData);
-        setVentasFiltradas(ventasData);
 
-        // COBROS
-        const cobrosGenerados = [];
-        ventasData.forEach(venta => {
-          if (!venta.pagos) return;
-          venta.pagos.forEach(pago => {
-            const vendedorEmail = pago?.firma?.email || venta.vendedorReal || venta.vendedor || venta.cargadoPor;
-            const vendedorNombre = usuariosEmailMapLocal[vendedorEmail] || usuariosIdMap[vendedorEmail] || vendedorEmail || "Sin Nombre";
-            cobrosGenerados.push({
-              id: venta.id + "-" + pago.numero,
-              fecha: pago.fecha,
-              clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
-              cuotaNumero: pago.numero,
-              monto: pago.monto,
-              vendedorNombre
-            });
-          });
+        const todasLasVentas = ventasSnap.docs.map(doc => {
+          const v = doc.data();
+          const sellerEmail = v.vendedorReal || v.vendedor || v.cargadoPor;
+          const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
+          
+          let sucursalNombre = v.productos?.[0]?.branch || v.sucursal || "Jofre 2440";
+          if (sucursalNombre === "Mosconi") {
+            sucursalNombre = "Jofre 2440";
+          }
+
+          // MARCAMOS LAS VENTAS QUE FUERON FIADAS COMPLETAMENTE SIN PAGO INICIAL
+          const esFuturaNoCobrada = v.pago && v.pago.montoPagado === 0 && v.pago.primerCuotaPaga === false;
+
+          return { 
+            id: doc.id, 
+            ...v, 
+            clienteNombre: clientes[v.clienteId] || "Sin Nombre", 
+            vendedorNombre,
+            sucursal: sucursalNombre,
+            esFuturaNoCobrada
+          };
         });
-        cobrosGenerados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+        const ventasMesActual = todasLasVentas.filter(v => {
+          const f = obtenerObjetoFecha(v.fecha);
+          return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
+        });
+        setVentas(ventasMesActual);
+        setVentasFiltradas(ventasMesActual);
+
+        // 2. OBTENER COBROS REALES EFECTIVOS
+        const cobrosGenerados = [];
+        todasLasVentas.forEach(venta => {
+          if (venta.pago && venta.pago.primerCuotaPaga === true && venta.pago.montoPagado > 0) {
+            const fechaVentaObj = obtenerObjetoFecha(venta.fecha);
+            if (fechaVentaObj && fechaVentaObj.getFullYear() === anioActual && fechaVentaObj.getMonth() === mesActual) {
+              const sellerEmail = venta.vendedorReal || venta.vendedor || venta.cargadoPor;
+              const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
+              
+              cobrosGenerados.push({
+                id: venta.id + "-inicial",
+                fecha: venta.fecha,
+                clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
+                cuotaNumero: 1,
+                monto: Number(venta.pago.montoPagado),
+                vendedorNombre,
+                sucursal: venta.sucursal
+              });
+            }
+          }
+
+          if (venta.pagos && Array.isArray(venta.pagos)) {
+            venta.pagos.forEach(pago => {
+              const esCobroReal = pago.cobrado !== false && pago.pendiente !== true && (pago.monto > 0 || pago.montoPagado > 0);
+              if (esCobroReal) {
+                const fechaPagoObj = obtenerObjetoFecha(pago.fecha);
+                if (fechaPagoObj && fechaPagoObj.getFullYear() === anioActual && fechaPagoObj.getMonth() === mesActual) {
+                  const sellerEmail = pago?.firma?.email || venta.vendedorReal || venta.vendedor || venta.cargadoPor;
+                  const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
+                  
+                  cobrosGenerados.push({
+                    id: venta.id + "-" + (pago.numero || Math.random()),
+                    fecha: pago.fecha,
+                    clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
+                    cuotaNumero: pago.numero || "Extra",
+                    monto: Number(pago.monto || pago.montoPagado || 0),
+                    vendedorNombre,
+                    sucursal: venta.sucursal 
+                  });
+                }
+              }
+            });
+          }
+        });
         setCobros(cobrosGenerados);
         setCobrosFiltrados(cobrosGenerados);
 
-        // GASTOS
+        // 3. OBTENER GASTOS
         const gastosSnap = await getDocs(query(collection(db, "gastos"), orderBy("createdAt", "desc")));
-        const gastosData = gastosSnap.docs.map(g => {
+        const gastosMesActual = gastosSnap.docs.map(g => {
           const gasto = g.data();
-          const vendedorEmail = gasto.vendedor || gasto.usuario;
-          const registradoPor = usuariosEmailMapLocal[vendedorEmail] || usuariosIdMap[vendedorEmail] || vendedorEmail || "Sin Nombre";
-          return { id: g.id, ...gasto, registradoPor };
+          const expenseUser = gasto.vendedor || gasto.usuario;
+          const registradoPor = usuariosEmailMapLocal[expenseUser] || usuariosIdMap[expenseUser] || expenseUser || "Sin Nombre";
+          
+          let sucursalGasto = gasto.sucursal || gasto.branch || "Jofre 2440";
+          if (sucursalGasto === "Mosconi") sucursalGasto = "Jofre 2440";
+          
+          return { id: g.id, ...gasto, registradoPor, sucursal: sucursalGasto };
+        }).filter(g => {
+          const f = obtenerObjetoFecha(g.fecha);
+          return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
         });
-        setGastos(gastosData);
+        setGastos(gastosMesActual);
+        setGastosFiltrados(gastosMesActual);
 
       } catch (error) {
         console.error("Error cargando datos de Finanzas:", error);
@@ -130,182 +211,264 @@ const Finanzas = () => {
     fetchData();
   }, []);
 
-  // Totales filtrados
-  const totalVentas = ventasFiltradas.reduce((acc, v) => acc + (v.pago?.montoPagado || v.valorCuota || 0), 0);
-  const totalCobros = cobrosFiltrados.reduce((acc, c) => acc + (c.monto || 0), 0);
-  const totalGastos = gastos.reduce((acc, g) => acc + (g.monto || 0), 0);
-  const balance = totalCobros - totalGastos;
+  const obtenerDatosGraficoPorSucursal = (sucursalNombre) => {
+    const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
+    const nombresDiasCortos = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+    return Array.from({ length: diasEnMes }, (_, i) => {
+      const diaNum = i + 1;
+      const fechaEspecifica = new Date(anioActual, mesActual, diaNum);
+      const nombreDiaSemana = nombresDiasCortos[fechaEspecifica.getDay()];
+
+      const vDia = ventasFiltradas.reduce((acc, v) => {
+        const f = obtenerObjetoFecha(v.fecha);
+        return f && f.getDate() === diaNum && v.sucursal === sucursalNombre && !v.esFuturaNoCobrada
+          ? acc + (Number(v.total) || 0) 
+          : acc;
+      }, 0);
+
+      const cDia = cobrosFiltrados.reduce((acc, c) => {
+        const f = obtenerObjetoFecha(c.fecha);
+        return f && f.getDate() === diaNum && c.sucursal === sucursalNombre 
+          ? acc + (c.monto || 0) 
+          : acc;
+      }, 0);
+
+      const gDia = gastosFiltrados.reduce((acc, g) => {
+        const f = obtenerObjetoFecha(g.fecha);
+        return f && f.getDate() === diaNum && g.sucursal === sucursalNombre 
+          ? acc + (g.monto || 0) 
+          : acc;
+      }, 0);
+
+      return {
+        name: `${nombreDiaSemana} ${diaNum.toString().padStart(2, '0')}`,
+        nameCompleto: `${fechaEspecifica.toLocaleDateString("es-AR", { weekday: 'long', day: 'numeric' })}`,
+        Ventas: vDia,
+        Cobros: cDia,
+        Gastos: gDia
+      };
+    });
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const diaInfo = payload[0].payload.nameCompleto || label;
+      return (
+        <div style={{ background: "#fff", padding: "12px", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+          <p style={{ margin: "0 0 8px 0", fontWeight: "700", color: "#0f172a", textTransform: "capitalize", fontSize: "14px" }}>{diaInfo}</p>
+          {payload.map((item, idx) => (
+            <p key={idx} style={{ margin: "4px 0", fontSize: "13px", color: item.color, fontWeight: "600" }}>
+              {item.name}: ${formatearMonto(item.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const toggleVentasLocal = (loc) => setMostrarVentas(prev => ({ ...prev, [loc]: !prev[loc] }));
+  const toggleCobrosLocal = (loc) => setMostrarCobros(prev => ({ ...prev, [loc]: !prev[loc] }));
+  const toggleGastosLocal = (loc) => setMostrarGastos(prev => ({ ...prev, [loc]: !prev[loc] }));
 
   if (loading) return <Loader />;
 
   return (
-
     <div className={styles.container}>
+      <h1>Panel de Finanzas - {nombreMesCapitalizado} {anioActual}</h1>
 
-      <h1>Finanzas</h1>
-
-      {/* SELECTOR DE FECHAS CON BOTONES */}
+      {/* FILTROS GLOBALES POR FECHA */}
       <section className={styles.filtros}>
-        <label>
-          Desde:
-          <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
-        </label>
-        <label>
-          Hasta:
-          <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
-        </label>
-        <button onClick={aplicarFiltro}>Buscar</button>
-        <button onClick={borrarFiltro}>Borrar filtro</button>
-      </section>
-
-      <section className={styles.resumen}>
-
-        <h2>Resumen</h2>
-
-        <div className={styles.cards}>
-
-          <div>Total Cobrado en Ventas: <b>${formatearMonto(totalVentas)}</b></div>
-          <div>Dinero en Caja: <b>${formatearMonto(totalCobros)}</b></div>
-          <div>Gastos: <b>${formatearMonto(totalGastos)}</b></div>
-          <div>Balance Caja: <b>${formatearMonto(balance)}</b></div>
-
+        <div className={styles.filtrosFlex}>
+          <label>Desde: <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></label>
+          <label>Hasta: <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} /></label>
+          <div className={styles.botonesFiltro}>
+            <button onClick={aplicarFiltro} className={styles.btnPrimario}>Buscar Rango</button>
+            <button onClick={borrarFiltro} className={styles.btnSecundario}>Resetear</button>
+          </div>
         </div>
-
       </section>
 
-     {/* VENTAS */}
-<section>
-  <h2>Ventas</h2>
-  <div className={styles["table-wrapper"]}>
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Cliente</th>
-          <th>Cobrado</th>
-          <th>Plan de Pago</th>
-          <th>Vendedor</th>
-        </tr>
-      </thead>
-      <tbody>
-        {ventasFiltradas.map(venta => {
-          const cuotas = venta.cuotas || 1;
-          const valorCuota = venta.valorCuota || venta.pago?.montoPagado || 0;
-          const cobrado = venta.pago?.montoPagado || valorCuota;
+      {/* RENDERIZADO COMPLETO POR CADA LOCAL INDEPENDIENTE */}
+      {listaSucursales.map((sucursalNombre, idx) => {
+        // FILTRADO DE TABLA DE VENTAS CRÍTICO: 
+        // Excluimos las ventas que no se cobraron (esFuturaNoCobrada) para que directamente no aparezcan
+        const ventasSucursal = ventasFiltradas
+          .filter(v => v.sucursal === sucursalNombre && !v.esFuturaNoCobrada)
+          .sort(ordenarPorFechaDescendente);
 
-          return (
-            <tr key={venta.id}>
-              <td>{formatearFecha(venta.fecha)}</td>
-              <td>{venta.clienteNombre}</td>
-              <td>${formatearMonto(cobrado)}</td>
-              <td>{cuotas} cuotas de ${formatearMonto(valorCuota)}</td>
-              <td>{venta.vendedorNombre}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan="2"><b>Total Cobrado</b></td>
-          <td><b>${formatearMonto(totalVentas)}</b></td>
-          <td colSpan="2"></td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-</section>
+        const cobrosSucursal = cobrosFiltrados
+          .filter(c => c.sucursal === sucursalNombre)
+          .sort(ordenarPorFechaDescendente);
 
-{/* COBROS */}
-<section>
-  <h2>Cobros</h2>
-  <div className={styles["table-wrapper"]}>
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th>Cliente</th>
-          <th>Cuota</th>
-          <th>Monto</th>
-          <th>Recibido por</th>
-        </tr>
-      </thead>
-      <tbody>
-        {cobrosFiltrados.map(c => (
-          <tr key={c.id}>
-            <td>{formatearFecha(c.fecha)}</td>
-            <td>{c.clienteNombre}</td>
-            <td>Cuota {c.cuotaNumero || "-"}</td>
-            <td>${formatearMonto(c.monto)}</td>
-            <td>{c.vendedorNombre}</td>
-          </tr>
-        ))}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan="3"><b>Total Cobrado</b></td>
-          <td><b>${formatearMonto(totalCobros)}</b></td>
-          <td></td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-</section>
+        const gastosSucursal = gastosFiltrados
+          .filter(g => g.sucursal === sucursalNombre)
+          .sort(ordenarPorFechaDescendente);
 
-      {/* GASTOS */}
-      <section>
+        const totalVentasSuc = ventasSucursal.reduce((acc, v) => acc + (Number(v.total) || 0), 0);
+        const totalCobrosSuc = cobrosSucursal.reduce((acc, c) => acc + (c.monto || 0), 0);
+        const totalGastosSuc = gastosSucursal.reduce((acc, g) => acc + (g.monto || 0), 0);
+        const balanceSuc = totalCobrosSuc - totalGastosSuc;
 
-        <h2>Gastos</h2>
+        const datosGraficoSucursal = obtenerDatosGraficoPorSucursal(sucursalNombre);
 
-        <div className={styles["table-wrapper"]}>
+        return (
+          <div key={sucursalNombre} style={{ marginBottom: "60px", border: "2px solid #e2e8f0", padding: "25px", borderRadius: "20px", background: "#fff", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+            
+            {/* Header del Local */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #f1f5f9", paddingBottom: "12px", marginBottom: "20px" }}>
+              <h2 style={{ color: "#1e3a8a", margin: 0, fontSize: "1.75rem" }}>🏪 {sucursalNombre}</h2>
+              <span style={{ fontSize: "0.85rem", background: "#e0f2fe", color: "#0369a1", padding: "4px 12px", borderRadius: "20px", fontWeight: "700" }}>Sucursal Activa</span>
+            </div>
 
-          <table className={styles.table}>
+            {/* Tarjetas Informativas del Local */}
+            <div className={styles.cards} style={{ marginBottom: "25px" }}>
+              <div className={styles.cardInfo} style={{ borderLeft: "5px solid #3b82f6" }}>Emitido Ventas:<br /><b>${formatearMonto(totalVentasSuc)}</b></div>
+              <div className={styles.cardInfo} style={{ borderLeft: "5px solid #10b981" }}>Ingreso Caja:<br /><b>${formatearMonto(totalCobrosSuc)}</b></div>
+              <div className={styles.cardInfo} style={{ borderLeft: "5px solid #ef4444" }}>Gastos de Caja:<br /><b>${formatearMonto(totalGastosSuc)}</b></div>
+              <div className={styles.cardInfo} style={{ borderLeft: "5px solid #6b7280", background: balanceSuc >= 0 ? "#f0fdf4" : "#fef2f2" }}>
+                Balance Neto:<br /><b style={{ color: balanceSuc >= 0 ? "#15803d" : "#b91c1c" }}>${formatearMonto(balanceSuc)}</b>
+              </div>
+            </div>
 
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Descripción</th>
-                <th>Monto</th>
-                <th>Registrado por</th>
-              </tr>
-            </thead>
+            {/* Gráfica Exclusiva del Local */}
+            <div style={{ width: "100%", height: 320, marginTop: "10px", marginBottom: "35px" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={datosGraficoSucursal} margin={{ top: 10, right: 10, left: -5, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id={`colorVentas-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
+                    </linearGradient>
+                    <linearGradient id={`colorCobros-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.01} />
+                    </linearGradient>
+                    <linearGradient id={`colorGastos-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.01} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} tickLine={false} dy={10} />
+                  <YAxis tickFormatter={(v) => v === 0 ? "$0" : `$${(v / 1000).toLocaleString("es-AR")}k`} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
+                  <Legend verticalAlign="top" height={35} iconType="circle" iconSize={9} />
 
-            <tbody>
+                  <Area type="monotone" dataKey="Ventas" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorVentas-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
+                  <Area type="monotone" dataKey="Cobros" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorCobros-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
+                  <Area type="monotone" dataKey="Gastos" stroke="#ef4444" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorGastos-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
 
-              {gastos.map(g => (
+            {/* TABLAS DETALLADAS SUCURSALES (COLLAPSIBLES) */}
+            <div style={{ marginTop: "20px", background: "#f8fafc", padding: "15px", borderRadius: "15px", border: "1px solid #e2e8f0" }}>
+              <h3 style={{ margin: "0 0 15px 0", color: "#475569", fontSize: "1.1rem" }}>📋 Auditoría Detallada (Ordenado por Día): {sucursalNombre}</h3>
 
-                <tr key={g.id}>
+              {/* TABLA DE VENTAS DEL LOCAL */}
+              <section className={styles.seccionTablaCollapsible} style={{ marginBottom: "12px" }}>
+                <div className={styles.headerTablaFlex} style={{ background: "#fff", padding: "8px 15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#1e40af" }}>Historial Ventas Realizadas ({ventasSucursal.length})</h4>
+                  <button onClick={() => toggleVentasLocal(sucursalNombre)} className={styles.btnToggleTabla} style={{ padding: "4px 10px", fontSize: "0.8rem" }}>
+                    {mostrarVentas[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
+                  </button>
+                </div>
+                {mostrarVentas[sucursalNombre] && (
+                  <div className={styles["table-wrapper"]} style={{ marginTop: "8px" }}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr><th>Fecha</th><th>Cliente</th><th>Monto Total</th><th>Plan de Pago</th><th>Vendedor</th></tr>
+                      </thead>
+                      <tbody>
+                        {ventasSucursal.map(venta => {
+                          const cuotas = venta.cuotas || 1;
+                          const valorCuota = venta.valorCuota || venta.total || 0;
+                          return (
+                            <tr key={venta.id}>
+                              <td>{formatearFecha(venta.fecha)}</td>
+                              <td>{venta.clienteNombre}</td>
+                              <td style={{ fontWeight: "600", color: "#2563eb" }}>${formatearMonto(venta.total)}</td>
+                              <td>{cuotas} cuotas de ${formatearMonto(valorCuota)}</td>
+                              <td>{venta.vendedorNombre}</td>
+                            </tr>
+                          );
+                        })}
+                        {ventasSucursal.length === 0 && <tr><td colSpan="5" style={{ textAlign: "center", color: "#94a3b8" }}>No hay ventas registradas este mes.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
 
-                  <td>{formatearFecha(g.fecha)}</td>
-                  <td>{g.descripcion}</td>
-                  <td>${formatearMonto(g.monto)}</td>
-                  <td>{g.registradoPor}</td>
+              {/* TABLA DE COBROS DEL LOCAL */}
+              <section className={styles.seccionTablaCollapsible} style={{ marginBottom: "12px" }}>
+                <div className={styles.headerTablaFlex} style={{ background: "#fff", padding: "8px 15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#065f46" }}>Historial Cobros Caja ({cobrosSucursal.length})</h4>
+                  <button onClick={() => toggleCobrosLocal(sucursalNombre)} className={styles.btnToggleTabla} style={{ padding: "4px 10px", fontSize: "0.8rem" }}>
+                    {mostrarCobros[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
+                  </button>
+                </div>
+                {mostrarCobros[sucursalNombre] && (
+                  <div className={styles["table-wrapper"]} style={{ marginTop: "8px" }}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr><th>Fecha</th><th>Cliente</th><th>Cuota</th><th>Monto</th><th>Recibido por</th></tr>
+                      </thead>
+                      <tbody>
+                        {cobrosSucursal.map(c => (
+                          <tr key={c.id}>
+                            <td>{formatearFecha(c.fecha)}</td>
+                            <td>{c.clienteNombre}</td>
+                            <td>{typeof c.cuotaNumero === "number" ? `Cuota ${c.cuotaNumero}` : c.cuotaNumero}</td>
+                            <td style={{ fontWeight: "600", color: "#10b981" }}>${formatearMonto(c.monto)}</td>
+                            <td>{c.vendedorNombre}</td>
+                          </tr>
+                        ))}
+                        {cobrosSucursal.length === 0 && <tr><td colSpan="5" style={{ textAlign: "center", color: "#94a3b8" }}>No hay cobros registrados este mes.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
 
-                </tr>
+              {/* TABLA DE GASTOS DEL LOCAL */}
+              <section className={styles.seccionTablaCollapsible}>
+                <div className={styles.headerTablaFlex} style={{ background: "#fff", padding: "8px 15px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                  <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#991b1b" }}>Historial Gastos Caja ({gastosSucursal.length})</h4>
+                  <button onClick={() => toggleGastosLocal(sucursalNombre)} className={styles.btnToggleTabla} style={{ padding: "4px 10px", fontSize: "0.8rem" }}>
+                    {mostrarGastos[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
+                  </button>
+                </div>
+                {mostrarGastos[sucursalNombre] && (
+                  <div className={styles["table-wrapper"]} style={{ marginTop: "8px" }}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Registrado por</th></tr>
+                      </thead>
+                      <tbody>
+                        {gastosSucursal.map(g => (
+                          <tr key={g.id}>
+                            <td>{formatearFecha(g.fecha)}</td>
+                            <td>{g.descripcion}</td>
+                            <td style={{ fontWeight: "600", color: "#ef4444" }}>${formatearMonto(g.monto)}</td>
+                            <td>{g.registradoPor}</td>
+                          </tr>
+                        ))}
+                        {gastosSucursal.length === 0 && <tr><td colSpan="4" style={{ textAlign: "center", color: "#94a3b8" }}>No hay gastos registrados este mes.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </div>
 
-              ))}
-
-            </tbody>
-
-            <tfoot>
-
-              <tr>
-                <td colSpan="2"><b>Total Gastos</b></td>
-                <td><b>${formatearMonto(totalGastos)}</b></td>
-                <td></td>
-              </tr>
-
-            </tfoot>
-
-          </table>
-
-        </div>
-
-      </section>
-
+          </div>
+        );
+      })}
     </div>
-
   );
-
 };
 
 export default Finanzas;

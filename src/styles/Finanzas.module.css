@@ -2,160 +2,145 @@
 .container {
   padding: 32px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f8fafc; /* Fondo de pantalla gris/azuladizo ultra limpio */
+  background-color: #f8fafc;
   min-height: 100vh;
-  color: #334155; /* Texto principal suave */
+  color: #334155;
 }
 
-/* =============================== TITULOS =============================== */
-h1 {
+.container h1 {
   font-size: 2.25rem;
   font-weight: 700;
   letter-spacing: -0.025em;
   margin-bottom: 24px;
-  color: #0f172a; /* Slate oscuro, con mucha personalidad */
+  color: #0f172a;
 }
 
 section h2 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
   color: #1e293b;
+  margin: 0;
 }
 
-/* =============================== SECTIONS =============================== */
 section {
-  margin-bottom: 32px;
-  background: #ffffff; /* Tarjeta blanca pura que resalta sobre el fondo */
-  border: 1px solid #e2e8f0; /* Borde ultra sutil */
+  margin-bottom: 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 24px;
-  /* Sombra suave de caída para dar profundidad limpia */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
 }
 
-/* =============================== TABLE WRAPPER =============================== */
+/* FILTROS LAYOUT */
+.filtrosFlex {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filtrosFlex label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.filtrosFlex input[type="date"] {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.botonesFiltro {
+  display: flex;
+  gap: 10px;
+}
+
+.btnPrimario, .btnSecundario, .btnToggleTabla {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btnPrimario { background: #2563eb; color: #fff; }
+.btnPrimario:hover { background: #1d4ed8; }
+.btnSecundario { background: #e2e8f0; color: #475569; }
+.btnSecundario:hover { background: #cbd5e1; }
+.btnToggleTabla { background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; }
+.btnToggleTabla:hover { background: #f1f5f9; }
+
+/* CARD RESUMEN */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.cardInfo {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.95rem;
+}
+
+/* TABLAS COLAPSIBLES */
+.headerTablaFlex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .table-wrapper {
   width: 100%;
-  overflow-x: auto; /* scroll horizontal en móviles */
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border-radius: 12px;
-  border: 1px solid #e2e8f0; /* Contiene la tabla elegantemente */
-  margin-bottom: 16px;
-  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  margin-top: 16px;
 }
 
-/* =============================== TABLAS =============================== */
-.table, .table-small {
+.table {
   width: 100%;
-  min-width: 600px; /* fuerza scroll si no cabe en pantalla */
+  min-width: 700px;
   border-collapse: collapse;
 }
 
-/* Cabeceras sofisticadas */
-.table th, .table-small th {
-  background-color: #f1f5f9; /* Fondo gris claro diferenciador */
-  color: #475569; /* Texto gris oscuro técnico */
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase; /* Estilo moderno de reporte */
-  letter-spacing: 0.05em;
-  border-bottom: 2px solid #e2e8f0; /* Línea divisoria más fuerte */
-  padding: 14px 16px;
-  text-align: left;
-}
-
-/* Celdas limpias */
-.table td, .table-small td {
-  border-bottom: 1px solid #f1f5f9; /* Adiós a las rejillas negras pesadas, solo líneas horizontales finas */
-  padding: 14px 16px;
-  color: #334155;
-  font-size: 0.95rem;
-  vertical-align: middle;
-}
-
-.table td div, .table-small td div {
-  margin-bottom: 4px;
-}
-
-.table td div:last-child, .table-small td div:last-child {
-  margin-bottom: 0;
-}
-
-/* Filas alternas (Zebra striping) para facilitar la lectura */
-.table tr:nth-child(even), .table-small tr:nth-child(even) {
+.table th {
   background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 12px 16px;
 }
 
-/* =============================== TABLE-SMALL (50% width desktop) =============================== */
-.table-small {
-  min-width: 400px;
-  max-width: 50%; /* En desktop ocupa la mitad */
+.table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 14px 16px;
+  font-size: 0.95rem;
 }
 
-/* =============================== HOVER EFECTO INTERACTIVO =============================== */
-.table tr:hover, .table-small tr:hover {
-  background-color: #f1f5f9 !important; /* Resalta la fila al pasar el cursor */
-  transition: background-color 0.15s ease;
-}
+.table tr:nth-child(even) { background-color: #fdfdfd; }
+.table tr:hover { background-color: #f1f5f9 !important; }
 
-/* =============================== RESPONSIVE =============================== */
-@media (max-width: 900px) {
-  .table-small {
-    max-width: 100%;
-    width: 100%;
-  }
-  
-  .container {
-    padding: 20px;
-  }
-
-  section {
-    padding: 18px;
-    border-radius: 12px;
-  }
-  
-  h1 {
-    font-size: 1.75rem;
-  }
-  
-  section h2 {
-    font-size: 1.25rem;
-  }
-  
-  .table th, .table td,
-  .table-small th, .table-small td {
-    padding: 10px 12px;
-    font-size: 0.9rem;
-  }
-}
-
-/* =============================== MINI MOBILE =============================== */
-@media (max-width: 480px) {
-  .container {
-    padding: 12px;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    margin-bottom: 16px;
-  }
-
-  section h2 {
-    font-size: 1.1rem;
-    margin-bottom: 12px;
-  }
-
-  section {
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 20px;
-  }
-
-  .table th, .table td,
-  .table-small th, .table-small td {
-    padding: 8px 10px;
-    font-size: 0.85rem;
-  }
+/* RESPONSIVE SMARTPHONES */
+@media (max-width: 768px) {
+  .container { padding: 16px; }
+  section { padding: 16px; border-radius: 12px; }
+  .container h1 { font-size: 1.6rem; }
+  .filtrosFlex { flex-direction: column; align-items: stretch; }
+  .botonesFiltro button { flex: 1; }
+  .cards { grid-template-columns: 1fr; gap: 10px; }
 }
