@@ -134,7 +134,6 @@ export default function ProductCard({
         detail: {
           tipo: detail.tipo ?? null,
           producto: producto.name ?? "Producto sin nombre",
-          // Si variant.attr es undefined, Firebase guardará null sin lanzar error
           variante: variant?.attr ?? null,
           formatoCompra: formatoActual ?? null,
           ...detail,
@@ -316,24 +315,14 @@ export default function ProductCard({
   const handleShare = async () => {
     try {
       const variantIndex = selectedVariant;
-
       const productUrl = `${window.location.origin}/producto/${categoriaId}/${producto.id}?v=${variantIndex}`;
-
       await navigator.clipboard.writeText(productUrl);
 
       const formatoTexto =
-        formatoActual === "juego"
-          ? `Juego x${unidadesPorJuego}`
-          : "Por unidad";
+        formatoActual === "juego" ? `Juego x${unidadesPorJuego}` : "Por unidad";
 
-      const mensaje = `Mirá este producto 👇
-${producto.name} - ${variant.attr}
-Formato: ${formatoTexto}
-Precio: ${formatARS(precioSeleccionado)}
-${productUrl}`;
-
+      const mensaje = `Mirá este producto 👇\n${producto.name} - ${variant.attr}\nFormato: ${formatoTexto}\nPrecio: ${formatARS(precioSeleccionado)}\n${productUrl}`;
       const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
-
       window.open(whatsappUrl, "_blank");
     } catch (error) {
       console.error("Error compartiendo:", error);
@@ -344,13 +333,447 @@ ${productUrl}`;
     const formatoTexto =
       formatoActual === "juego" ? `Juego x${unidadesPorJuego}` : "Por unidad";
 
-    const mensaje = `Hola, quiero consultar por:
-${producto.name} - ${variant.attr}
-Formato: ${formatoTexto}
-Precio: ${formatARS(precioSeleccionado)}`;
-
+    const mensaje = `Hola, quiero consultar por:\n${producto.name} - ${variant.attr}\nFormato: ${formatoTexto}\nPrecio: ${formatARS(precioSeleccionado)}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
     window.open(whatsappUrl, "_blank");
+  };
+
+// REMPLAZÁ ESTA FUNCIÓN COMPLETA EN TU ARCHIVO
+const handlePrintPresupuesto = () => {
+    const printWindow = window.open("", "_blank", "width=400,height=600");
+    const fechaActual = new Date().toLocaleDateString("es-AR");
+    const imagenUrl = variant.image || producto.image || "";
+    const formatoTexto = formatoActual === "juego" ? ` (Juego x${unidadesPorJuego})` : "";
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Presupuesto - ${producto.name}</title>
+          <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+          <style>
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-sizing: border-box;
+            }
+            
+            /* Ajuste estricto de página para evitar saltos de hoja */
+            @page { 
+              size: 4in 6in; 
+              margin: 5mm 5mm 5mm 5mm; 
+            }
+            body {
+              font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: 100%;
+              color: #0f172a;
+              display: flex;
+              flex-direction: column;
+              background-color: #ffffff;
+              overflow: hidden;
+            }
+            
+            /* Header */
+            .header-banner {
+              background: #ffffff;
+              color: #0f2b48;
+              padding: 0 0 5px 0;
+              border-bottom: 2.5px solid #0f2b48;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-shrink: 0;
+            }
+            
+            .header-left {
+              text-align: left;
+              display: flex;
+              flex-direction: column;
+              gap: 1px;
+            }
+            
+            .main-title {
+              font-size: 24px; 
+              font-weight: 800;
+              color: #0f2b48;
+              margin: 0;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+            }
+            
+            .header-meta {
+              font-size: 11.5px;
+              color: #475569;
+              font-weight: 600;
+            }
+            
+            .logo-container {
+              background: #ffffff;
+              width: 58px; 
+              height: 58px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+              overflow: hidden;
+              flex-shrink: 0;
+            }
+            .logo-img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+            }
+            
+            /* Contenido Base optimizado en espacio */
+            .content {
+              padding: 6px 0 0 0;
+              display: flex;
+              flex-direction: column;
+              flex-grow: 1;
+              justify-content: space-between; 
+              gap: 8px; 
+            }
+
+            /* Estructura de 2 Columnas */
+            .main-grid {
+              display: flex;
+              gap: 8px;
+              align-items: stretch;
+            }
+            
+            /* Columna Izquierda */
+            .left-column {
+              width: 52%;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+            }
+            
+            .product-details {
+              text-align: left;
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+            }
+            .product-name {
+              font-size: 13.5px;
+              font-weight: 700;
+              color: #0f2b48;
+              margin: 0;
+              line-height: 1.2;
+            }
+            .product-variant {
+              font-size: 13px;
+              font-weight: 800;
+              color: #0f2b48;
+              margin: 1px 0;
+              background-color: #f1f5f9;
+              padding: 2px 6px;
+              border-radius: 4px;
+              display: inline-block;
+              width: fit-content;
+            }
+            .product-price {
+              font-size: 14px;
+              color: #0284c7;
+              font-weight: 800;
+              margin: 0;
+            }
+
+            /* Lista de Cuotas */
+            .cuotas-list {
+              display: flex;
+              flex-direction: column;
+              gap: 3px;
+            }
+            .cuota-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              font-size: 13px; 
+              background-color: #f8fafc;
+              padding: 3.5px 5px;
+              border-radius: 4px;
+              border-left: 3.5px solid #0284c7;
+            }
+            .cuota-label {
+              color: #0f172a;
+              font-weight: 700;
+              white-space: nowrap;
+            }
+            .cuota-dots {
+              flex-grow: 1;
+              border-bottom: 1.5px dotted #cbd5e1;
+              margin: 0 2px;
+              position: relative;
+              top: -3px;
+            }
+            .cuota-value {
+              font-weight: 800;
+              color: #0f2b48;
+              white-space: nowrap;
+            }
+
+            /* Columna Derecha con imagen cover */
+            .right-column {
+              width: 48%;
+              display: flex;
+              flex-direction: column;
+              gap: 5px;
+            }
+            
+            .image-wrapper {
+              width: 100%;
+              height: 100px; /* Ajuste sutil para garantizar una sola hoja */
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              background-color: #ffffff;
+              overflow: hidden;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            
+            .product-img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover; 
+              object-position: center;
+            }
+
+            /* Bloque Requisitos */
+            .requisitos-block {
+              background-color: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 4px;
+              padding: 4px 5px;
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+              flex-grow: 1;
+              justify-content: center;
+            }
+            
+            .credito-llamativo {
+              background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+              color: #ffffff;
+              font-size: 11px;
+              font-weight: 900;
+              text-align: center;
+              padding: 3px 2px;
+              border-radius: 4px;
+              text-transform: uppercase;
+              letter-spacing: 0.3px;
+            }
+            
+            .requisitos-title {
+              font-size: 9.5px;
+              font-weight: 700;
+              color: #0f2b48;
+              margin: 1px 0 0 0;
+              text-transform: uppercase;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            .requisitos-item {
+              font-size: 10px;
+              color: #1e293b;
+              font-weight: 600;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              line-height: 1.1;
+            }
+            .requisitos-item i {
+              font-size: 12px;
+              color: #0284c7;
+              flex-shrink: 0;
+            }
+            
+            /* Bloques Inferiores (Sucursales y Redes) */
+            .bottom-row {
+              display: flex;
+              gap: 6px;
+            }
+            
+            .contacto-block, .redes-block {
+              width: 50%;
+              background-color: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 4px;
+              padding: 4px 5px;
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+            }
+            .section-title {
+              font-size: 10px;
+              font-weight: 700;
+              color: #0f2b48;
+              margin: 0 0 2px 0;
+              text-transform: uppercase;
+              border-bottom: 1px solid #e2e8f0;
+              padding-bottom: 1px;
+            }
+            .contacto-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 10px;
+            }
+            .contacto-branch {
+              color: #334155;
+              font-weight: 600;
+              display: flex;
+              align-items: center;
+              gap: 2px;
+            }
+            .contacto-branch i {
+              color: #64748b;
+              font-size: 11px;
+            }
+            .contacto-phone {
+              color: #16a34a;
+              font-weight: 700;
+              display: flex;
+              align-items: center;
+              gap: 2px;
+            }
+
+            .redes-row {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              font-size: 10px;
+              color: #334155;
+              font-weight: 600;
+            }
+            .redes-row i {
+              font-size: 13px;
+              color: #0f2b48;
+              flex-shrink: 0;
+            }
+
+            /* Alerta de Validez */
+            .validez-alert {
+              background-color: #f0f9ff;
+              border: 1px solid #bae6fd;
+              color: #0369a1;
+              font-size: 11px;
+              font-weight: 700;
+              text-align: center;
+              padding: 4px;
+              border-radius: 4px;
+            }
+
+            .divider {
+              height: 1px;
+              background-color: #e2e8f0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-banner">
+            <div class="header-left">
+              <h1 class="main-title">Presupuesto</h1>
+              <div class="header-meta">Emisión: ${fechaActual}</div>
+            </div>
+            <div class="logo-container">
+              <img class="logo-img" src="/Logo---Invierno.png" alt="Logo Invierno" />
+            </div>
+          </div>
+
+          <div class="content">
+            <div class="main-grid">
+              
+              <div class="left-column">
+                <div class="product-details">
+                  <h2 class="product-name">${producto.name}${formatoTexto}</h2>
+                  <p class="product-variant">${variant.attr}</p>
+                  <p class="product-price">PRECIO CONTADO: ${formatARS(precioSeleccionado)}</p>
+                </div>
+                <div class="divider"></div>
+                <div class="cuotas-list">
+                  ${cuotas.map(c => {
+                    const parts = c.split(" cuotas ");
+                    const cantidad = parts[0] ? `${parts[0]} cuotas` : "";
+                    const monto = parts[1] || "";
+                    return `
+                      <div class="cuota-item">
+                        <span class="cuota-label">${cantidad}</span>
+                        <div class="cuota-dots"></div>
+                        <span class="cuota-value">${monto}</span>
+                      </div>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+              
+              <div class="right-column">
+                <div class="image-wrapper">
+                  ${imagenUrl ? `<img class="product-img" src="${imagenUrl}" alt="Product" />` : `<div style="font-size:12px;color:#94a3b8;">Sin Foto</div>`}
+                </div>
+                
+                <div class="requisitos-block">
+                  <div class="credito-llamativo">
+                    🔥 CRÉDITO INICIAL<br>HASTA $300.000
+                  </div>
+                  <p class="requisitos-title">Requisitos:</p>
+                  <div class="requisitos-item"><i class='bx bx-id-card'></i> DNI</div>
+                  <div class="requisitos-item"><i class='bx bx-receipt'></i> Recibo Sueldo o</div>
+                  <div class="requisitos-item"><i class='bx bx-home-alt'></i> Servicio (del mismo DNI)</div>
+                  <div class="requisitos-item"><i class='bx bx-phone'></i> 2 Números de Teléfono</div>
+                  <div class="requisitos-item"><i class='bx bx-dollar-circle'></i> Abonar la 1ra Cuota</div>
+                  <div class="requisitos-item"><i class='bx bx-camera'></i> Foto digital</div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="bottom-row">
+              <div class="contacto-block">
+                <h2 class="section-title">Sucursales</h2>
+                <div class="contacto-row">
+                  <span class="contacto-branch"><i class='bx bx-map-pin'></i> Los Andes 4320</span>
+                  <span class="contacto-phone">2846-6001</span>
+                </div>
+                <div class="contacto-row">
+                  <span class="contacto-branch"><i class='bx bx-map-pin'></i> Los Andes 4034</span>
+                  <span class="contacto-phone">2553-8824</span>
+                </div>
+                <div class="contacto-row">
+                  <span class="contacto-branch"><i class='bx bx-map-pin'></i> La Fuente 2440</span>
+                  <span class="contacto-phone">7644-7868</span>
+                </div>
+              </div>
+
+              <div class="redes-block">
+                <h2 class="section-title">Síguenos</h2>
+                <div class="redes-row"><i class='bx bxl-facebook-circle'></i> <b>Grupo Ferreira</b></div>
+                <div class="redes-row"><i class='bx bxl-instagram'></i> <b>@ferreirahogar</b></div>
+                <div class="redes-row"><i class='bx bxl-tiktok'></i> <b>@ferreirahogar1</b></div>
+              </div>
+            </div>
+
+            <div class="validez-alert">
+              ❄️ Presupuesto válido por 15 días.
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -552,6 +975,16 @@ Precio: ${formatARS(precioSeleccionado)}`;
           </div>
 
           <div className={styles.cardButtons}>
+            {/* NUEVO BOTÓN AGREGADO */}
+            <button
+              type="button"
+              className={styles.printBudget}
+              onClick={handlePrintPresupuesto}
+              style={{ backgroundColor: "#002d72", color: "#fff", fontWeight: "bold" }}
+            >
+              📄 Imprimir Presupuesto
+            </button>
+
             <button className={styles.whatsapp} onClick={handleWhatsApp}>
               Pedir por WhatsApp
             </button>
