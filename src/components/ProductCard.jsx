@@ -739,15 +739,15 @@ const handlePrintPresupuesto = () => {
                 <h2 class="section-title">Sucursales</h2>
                 <div class="contacto-row">
                   <span class="contacto-branch"><i class='bx bx-map-pin'></i> Los Andes 4320</span>
-                  <span class="contacto-phone">2846-6001</span>
+                  <span class="contacto-phone"><i class='bx bxl-whatsapp'></i>11-2846-6001</span>
                 </div>
                 <div class="contacto-row">
                   <span class="contacto-branch"><i class='bx bx-map-pin'></i> Los Andes 4034</span>
-                  <span class="contacto-phone">2553-8824</span>
+                  <span class="contacto-phone"><i class='bx bxl-whatsapp'></i>11-2553-8824</span>
                 </div>
                 <div class="contacto-row">
                   <span class="contacto-branch"><i class='bx bx-map-pin'></i> La Fuente 2440</span>
-                  <span class="contacto-phone">7644-7868</span>
+                  <span class="contacto-phone"><i class='bx bxl-whatsapp'></i>11-7644-7868</span>
                 </div>
               </div>
 
