@@ -9,5 +9,6 @@ export default defineConfig({
     outDir: 'dist',   // Vercel detecta automáticamente esta carpeta
     sourcemap: false,  // opcional, reduce tamaño
     emptyOutDir: true, // limpia dist antes de build
+    chunkSizeWarningLimit: 1000, // Eleva el límite a 1MB para quitar la advertencia de Vercel
   },
 })
