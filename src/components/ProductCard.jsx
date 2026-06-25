@@ -618,29 +618,33 @@ const handlePrintPresupuesto = () => {
               padding-bottom: 1px;
             }
             .contacto-row {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              font-size: 10px;
-            }
-            .contacto-branch {
-              color: #334155;
-              font-weight: 600;
-              display: flex;
-              align-items: center;
-              gap: 2px;
-            }
+  display: flex;
+  flex-direction: column; /* Cambia a columna para que el teléfono quede abajo de la dirección */
+  align-items: flex-start;
+  font-size: 10px;
+  margin-bottom: 4px; /* Un pequeño margen entre sucursal y sucursal */
+}
+
+/* Agrega o modifica esto para darle un toque visual más limpio */
+.contacto-branch {
+  color: #334155;
+  font-weight: 700; /* Un poco más de peso para diferenciarlo del teléfono */
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
             .contacto-branch i {
               color: #64748b;
               font-size: 11px;
             }
             .contacto-phone {
-              color: #16a34a;
-              font-weight: 700;
-              display: flex;
-              align-items: center;
-              gap: 2px;
-            }
+  color: #16a34a;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 13px; /* Alinea el teléfono justo debajo del texto de la dirección, ignorando el icono del mapa */
+}
 
             .redes-row {
               display: flex;
