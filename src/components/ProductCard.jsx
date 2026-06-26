@@ -342,7 +342,7 @@ export default function ProductCard({
 const handlePrintPresupuesto = () => {
     const printWindow = window.open("", "_blank", "width=400,height=600");
     const fechaActual = new Date().toLocaleDateString("es-AR");
-    const imagenUrl = variant.image || producto.image || "";
+    const imagenUrl = producto.image || variant.image || "";
     const formatoTexto = formatoActual === "juego" ? ` (Juego x${unidadesPorJuego})` : "";
 
     printWindow.document.write(`
