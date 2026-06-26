@@ -259,10 +259,6 @@ export default function Ventas() {
           ? vendedorReal
           : auth.currentUser.uid;
 
-        console.log("ventaDeOtro:", ventaDeOtro);
-        console.log("vendedorReal:", vendedorReal);
-        console.log("vendedorId:", vendedorId);
-
         const vendedorRef = doc(db, "usuarios", vendedorId);
         const vendedorSnap = await transaction.get(vendedorRef);
 

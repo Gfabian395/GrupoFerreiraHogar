@@ -614,8 +614,6 @@ export const Productos = () => {
     <div class="container">
     `;
 
-      console.log("--- INICIANDO VERIFICACIÓN DE STOCK PARA QR ---");
-
       for (const d of snap.docs) {
         const data = d.data();
 
@@ -631,8 +629,6 @@ export const Productos = () => {
             0
           );
 
-          console.log(`Producto: ${data.name} (${variante.attr || "Estándar"}) -> Stock calculado: ${totalStockVariante}`);
-
           // Si el stock es 0 o menor, se informa en consola y salta a la siguiente
           if (totalStockVariante <= 0) {
             console.warn(`[SALTEADO - SIN STOCK] ${data.name} (${variante.attr || "Estándar"}) no se incluirá.`);
@@ -646,8 +642,6 @@ export const Productos = () => {
           }
 
           // Si pasó los filtros, se confirma en la consola que va a impresión
-          console.log(`%c[A IMPRESIÓN] ${data.name} (${variante.attr || "Estándar"})`, "color: #00b4d8; font-weight: bold;");
-
           const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
           const qr = await QRCode.toDataURL(url);
 
@@ -678,8 +672,6 @@ export const Productos = () => {
         `;
         }
       }
-
-      console.log("--- PROCESO DE LOGS TERMINADO ---");
 
       html += `
     </div>

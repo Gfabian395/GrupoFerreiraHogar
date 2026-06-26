@@ -94,31 +94,31 @@ export default function Clientes() {
   // CALCULAR SI ESTÁ PAGADO (CORREGIDA CON REDONDEO)
   // ===============================
   const estaPagado = (venta) => {
-  const pagoInicial = Number(
-    venta.pago?.montoPagado || 0
-  );
+    const pagoInicial = Number(
+      venta.pago?.montoPagado || 0
+    );
 
-  const pagosPosteriores = (venta.pagos || []).reduce(
-    (sum, p) => {
-      const montoLimpio =
-        typeof p.monto === "string"
-          ? p.monto.replace(",", ".")
-          : p.monto;
+    const pagosPosteriores = (venta.pagos || []).reduce(
+      (sum, p) => {
+        const montoLimpio =
+          typeof p.monto === "string"
+            ? p.monto.replace(",", ".")
+            : p.monto;
 
-      return sum + Number(montoLimpio || 0);
-    },
-    0
-  );
+        return sum + Number(montoLimpio || 0);
+      },
+      0
+    );
 
-  const totalPagado =
-    pagoInicial + pagosPosteriores;
+    const totalPagado =
+      pagoInicial + pagosPosteriores;
 
-  const totalCredito =
-    venta.totalCredito ||
-    (venta.valorCuota || 0) * (venta.cuotas || 0);
+    const totalCredito =
+      venta.totalCredito ||
+      (venta.valorCuota || 0) * (venta.cuotas || 0);
 
-  return Math.round(totalPagado) >= Math.round(totalCredito);
-};
+    return Math.round(totalPagado) >= Math.round(totalCredito);
+  };
 
   // ===============================
   // CLIENTES VENCIDOS CON DETALLE
@@ -207,21 +207,11 @@ export default function Clientes() {
   const clientesFiltrados = useMemo(() => {
     const clientesConTotales = clientes.map((c) => {
       const ventasDelCliente = ventas.filter((v) => v.clienteId === c.id);
-      
+
       const total = ventasDelCliente.length;
 
       ventasDelCliente.forEach(v => {
-  console.log(
-    "VENTA",
-    v.id,
-    "estaPagado:",
-    estaPagado(v),
-    "pago:",
-    v.pago,
-    "pagos:",
-    v.pagos
-  );
-});
+      });
       const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
       const activas = total - terminadas;
 
@@ -230,7 +220,7 @@ export default function Clientes() {
 
       return {
         ...c,
-        comprasPagadas: terminadas, 
+        comprasPagadas: terminadas,
         comprasTotales: total,
         comprasActivas: activas,
         comprasTerminadas: terminadas,

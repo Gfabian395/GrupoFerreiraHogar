@@ -16,7 +16,6 @@ const Copiador = () => {
 
   const escribirLog = (msg) => {
     setLog((prev) => [...prev, String(msg)]);
-    console.log(msg);
   };
 
   // =========================================

@@ -30,7 +30,6 @@ export default function ProductoDetalle() {
         if (snap.exists()) {
           setProducto({ id: snap.id, ...snap.data() });
         } else {
-          console.log("Producto no encontrado");
         }
       } catch (error) {
         console.error("Error cargando producto:", error);

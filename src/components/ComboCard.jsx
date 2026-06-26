@@ -49,13 +49,6 @@ export default function ComboCard({
   onDelete,
   Role,
 }) {
-  // Diagnóstico de inicialización y renderizado
-  console.log(
-    `%c📦 [ComboCard Render] Dibujando card para combo: ${combo?.name || "Sin nombre"}`,
-    "background: #22c55e; color: #fff; padding: 4px; font-weight: bold;"
-  );
-  console.log("-> Parámetros de rol y producto recibidos:", { Role, comboId: combo?.id, totalProductos: productos?.length });
-
   const { addToCart, items: cartItems = [] } = useCart();
 
   const [showSingles, setShowSingles] = useState(false);
@@ -72,8 +65,6 @@ export default function ComboCard({
   // Si Role llega vacío o indefinido pero existen handlers, permitimos mostrar botones para evitar bloqueos
   const puedeEditar = esJefe || esEncargado || Role === undefined;
   const puedeEliminar = esJefe || Role === undefined;
-
-  console.log("-> Estado de los permisos de visualización:", { esJefe, esEncargado, puedeEditar, puedeEliminar });
 
   const comboUnitPrice = Number(combo?.price || 0);
   const comboTotal = comboUnitPrice * comboQty;
@@ -148,7 +139,6 @@ export default function ComboCard({
           firstAvailableIndex >= 0 ? firstAvailableIndex : 0;
       });
 
-      console.log("⚙️ [ComboCard Effect] Mapeando índices de variantes:", next);
       return changed ? next : prev;
     });
   }, [comboProducts]);
@@ -261,14 +251,6 @@ image: variant?.image || item.product?.image || combo?.image,
       };
     });
 
-    console.log(`📊 [ComboCard Stock Check] Evaluación de stock para ${combo?.name}:`, calculated.map(c => ({
-      producto: c.product.name,
-      variante: c.variantName,
-      unidadesFisicasTotales: c.stockTotal,
-      combosQueArmaEnEstaSucursal: c.availableCombos,
-      sucursalDetectada: c.branch
-    })));
-
     return calculated;
   }, [
     comboProducts,
@@ -283,7 +265,6 @@ image: variant?.image || item.product?.image || combo?.image,
     const minCombos = Math.min(
       ...selectedComponents.map((component) => component.availableCombos)
     );
-    console.log(`📉 [ComboCard Stock Result] Máximos combos constructores calculados: ${minCombos}`);
     return minCombos;
   }, [selectedComponents]);
 
@@ -343,7 +324,6 @@ image: variant?.image || item.product?.image || combo?.image,
   }, [selectedComponents]);
 
   const handleEditCombo = () => {
-    console.log("%c🎯 [Click] Click ejecutado sobre EDITAR COMBO", "background: #f97316; color: #fff; font-weight: bold;");
     if (!editHandler) {
       alert("No hay una función de edición conectada para este combo.");
       return;
@@ -438,7 +418,6 @@ image: variant?.image || item.product?.image || combo?.image,
   };
 
   const deleteCombo = async () => {
-    console.log("%c🎯 [Click] Click ejecutado sobre ELIMINAR COMBO", "background: #ef4444; color: #fff; font-weight: bold;");
     if (!window.confirm("¿Seguro que querés eliminar este combo?")) return;
 
     try {
@@ -480,8 +459,6 @@ image: variant?.image || item.product?.image || combo?.image,
                 className={styles.adminEditBtn}
                 onClick={handleEditCombo}
                 title="Editar combo"
-                onMouseEnter={() => console.log("%c👀 [Hover] Puntero ingresó a botón EDITAR", "color: #f97316; font-weight: bold;")}
-                onMouseLeave={() => console.log("👋 [Hover] Puntero abandonó botón EDITAR")}
               >
                 ✏️
               </button>
@@ -493,8 +470,6 @@ image: variant?.image || item.product?.image || combo?.image,
                 className={styles.adminDeleteBtn}
                 onClick={deleteCombo}
                 title="Eliminar combo"
-                onMouseEnter={() => console.log("%c👀 [Hover] Puntero ingresó a botón ELIMINAR", "color: #ef4444; font-weight: bold;")}
-                onMouseLeave={() => console.log("👋 [Hover] Puntero abandonó botón ELIMINAR")}
               >
                 🗑
               </button>

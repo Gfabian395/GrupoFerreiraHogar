@@ -23,9 +23,6 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     fotoUrl,
   } = cliente;
 
-  // 🔍 CONTROL: Mirá la consola de tu navegador (F12) para ver la estructura real de tu cliente si el ID no aparece.
-  console.log("Datos de este cliente:", cliente);
-
   // ===============================
   // CERRAR MENU (CLICK FUERA / ESC)
   // ===============================
