@@ -16,15 +16,15 @@ import styles from "../styles/Ventas.module.css";
    CONFIG CUOTAS
 =============================== */
 const configuracionCuotas = [
-    { cuotas: 2, interes: 30 },
-    { cuotas: 3, interes: 50 },
-    { cuotas: 4, interes: 70 },
-    { cuotas: 6, interes: 90 },
-    { cuotas: 9, interes: 120 },
-    { cuotas: 12, interes: 150 },
-    { cuotas: 18, interes: 170 },
-    { cuotas: 24, interes: 200 },
-  ];
+  { cuotas: 2, interes: 30 },
+  { cuotas: 3, interes: 50 },
+  { cuotas: 4, interes: 70 },
+  { cuotas: 6, interes: 90 },
+  { cuotas: 9, interes: 120 },
+  { cuotas: 12, interes: 150 },
+  { cuotas: 18, interes: 170 },
+  { cuotas: 24, interes: 200 },
+];
 
 const redondearMil = (v) => Math.ceil(Number(v) / 1000) * 1000;
 
@@ -154,7 +154,7 @@ export default function Ventas() {
     const ventaRef = doc(collection(db, "ventas"));
 
     const venta = {
-      id: ventaRef.id, // opcional pero recomendable
+      id: ventaRef.id,
       fecha,
       clienteId: clienteSeleccionado,
       productos: items,
@@ -170,10 +170,11 @@ export default function Ventas() {
       tipoEntrega,
       choferId: tipoEntrega === "envio" ? choferId : null,
       ventaDeOtro,
+      // CORRECCIÓN AQUÍ: Guardá el ID o email correspondiente de forma consistente
       vendedorReal: ventaDeOtro
-        ? vendedorReal
-        : auth.currentUser.email,
-      cargadoPor: auth.currentUser.email,
+        ? vendedorReal // Esto ya es el ID provisto por el <select>
+        : auth.currentUser.uid,
+      cargadoPor: auth.currentUser.uid, // Recomendable usar UID en vez de email para consistencia
       createdAt: serverTimestamp(),
     };
 
