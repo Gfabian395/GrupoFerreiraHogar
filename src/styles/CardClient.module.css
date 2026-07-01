@@ -246,6 +246,29 @@
 .boxCompleted .metricLabel { color: #16a34a; }
 .boxCompleted .metricValue { color: #15803d; }
 
+/* ==========================================================================
+   ⭐ FILA DE PUNTUACIÓN EN LA INFO DEL CLIENTE
+   ========================================================================== */
+.rowPuntuacion {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: .4rem;
+  font-size: .9rem;
+  align-items: center; /* Alinea verticalmente la estrella y el número */
+}
+
+.valuePuntuacion {
+  color: black;
+  font-weight: 700; /* Resalta el número en negrita (Ej: 7.6) */
+}
+
+.leyendaPuntuacion {
+  font-weight: 500;
+  font-size: 0.85rem;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
 /* ================= MOBILE ================= */
 @media (max-width: 360px) {
   .row {

@@ -84,6 +84,9 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
   // Intenta capturar el ID usando variantes comunes por si cambia el nombre en Firebase
   const idDeVenta = cliente.idVenta || cliente.id_venta || cliente.idVentaActiva;
 
+  // 🌟 Calculamos la nota exacta en escala de 1 a 10 adaptada al nuevo cálculo proporcional
+  const notaDecimal = cliente.score ? (cliente.score.puntos / 10).toFixed(1) : "5.0";
+
   return (
     <div className={styles.clientWrapper}>
       <article
@@ -182,6 +185,19 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
                 >
                   {telefono2}
                 </a>
+              </span>
+            </div>
+          )}
+
+          {/* 🌟 INDICADOR DE PUNTUACIÓN DECIMAL CON NUEVO FORMATO DE CSS */}
+          {cliente.score && (
+            <div className={styles.rowPuntuacion}>
+              <span className={styles.label}>⭐ Puntuación</span>
+              <span className={styles.valuePuntuacion}>
+                {notaDecimal}
+                <span className={styles.leyendaPuntuacion}>
+                  ({cliente.score.leyenda})
+                </span>
               </span>
             </div>
           )}

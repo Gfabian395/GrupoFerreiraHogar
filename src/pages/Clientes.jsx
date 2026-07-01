@@ -6,6 +6,124 @@ import AddClient from "../components/AddClient";
 import CardClient from "../components/CardClient";
 import styles from "../styles/Clientes.module.css";
 
+// ===============================
+// CALCULAR SCORE DEL CLIENTE (0 a 100)
+// ===============================
+const calcularScoreCliente = (ventasDelCliente, hoy) => {
+  if (!ventasDelCliente.length) return { puntos: 50, leyenda: "Sin historial" };
+
+  // 1. Contamos de forma limpia cuántas compras ya pagó por completo
+  const terminadas = ventasDelCliente.filter((v) => {
+    const pagoInicial = Number(v.pago?.montoPagado || 0);
+    const pagosPosteriores = (v.pagos || []).reduce((sum, p) => {
+      const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+      return sum + Number(montoLimpio || 0);
+    }, 0);
+    const totalPagado = pagoInicial + pagosPosteriores;
+    const totalCredito = v.totalCredito || (v.valorCuota || 0) * (v.cuotas || 0);
+    return Math.round(totalPagado) >= Math.round(totalCredito);
+  }).length;
+
+  // 2. Techo máximo de nota según volumen de compras (Evita el 10.0 automático con 1 compra)
+  let techoPuntaje = 70; // 1 compra terminada = Techo de 7.0 (Bueno)
+  if (terminadas >= 10) techoPuntaje = 100;    // Cliente VIP = Techo de 10.0
+  else if (terminadas >= 5) techoPuntaje = 90;   // Cliente Premium = Techo de 9.0
+  else if (terminadas >= 2) techoPuntaje = 80;   // Más de 2 compras = Techo de 8.0
+
+  let totalCuotasEvaluadas = 0;
+  let diasAtrasoAcumulados = 0;
+  let penalizacionActivaGrave = 0;
+
+  // Mapeo por si las fechas guardadas en Firebase vienen escritas en formato de texto plano
+  const mesesEs = {
+    enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+    julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+  };
+
+  const parsearFechaSegura = (fechaObj) => {
+    if (!fechaObj) return null;
+    if (fechaObj.toDate) return fechaObj.toDate();
+    if (fechaObj instanceof Date) return fechaObj;
+    
+    if (typeof fechaObj === "string") {
+      const limpio = fechaObj.toLowerCase().replace(/de\s/g, "").trim();
+      const partes = limpio.split(/\s+/);
+      if (partes.length === 3 && mesesEs[partes[1]] !== undefined) {
+        return new Date(Number(partes[2]), mesesEs[partes[1]], Number(partes[0]));
+      }
+      const d = new Date(fechaObj);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return null;
+  };
+
+  ventasDelCliente.forEach((venta) => {
+    const fechaVentaReal = parsearFechaSegura(venta.fecha);
+    if (!fechaVentaReal) return;
+
+    const pagos = venta.pagos || [];
+    let cuotasPagadasEnVenta = 0;
+    
+    // Evaluar los pagos que ya realizó históricamente
+    pagos.forEach((pago, indice) => {
+      totalCuotasEvaluadas++;
+      cuotasPagadasEnVenta++;
+      const fechaVencimientoCuota = new Date(fechaVentaReal);
+      fechaVencimientoCuota.setMonth(fechaVencimientoCuota.getMonth() + indice);
+
+      const fechaPagoReal = parsearFechaSegura(pago.fecha);
+      if (fechaPagoReal) {
+        const diasDiferencia = Math.floor((fechaPagoReal - fechaVencimientoCuota) / (1000 * 60 * 60 * 24));
+        
+        // 🌟 Aplicamos los 7 días de tolerancia pactados
+        if (diasDiferencia > 7) {
+          diasAtrasoAcumulados += (diasDiferencia - 7);
+        }
+      }
+    });
+
+    // Evaluar si actualmente tiene cuotas colgadas en esta venta activa
+    if (cuotasPagadasEnVenta < (venta.cuotas || 0)) {
+      const proxVenc = new Date(fechaVentaReal);
+      proxVenc.setMonth(proxVenc.getMonth() + cuotasPagadasEnVenta);
+      
+      const diasAtrasoActual = Math.floor((hoy - proxVenc) / (1000 * 60 * 60 * 24));
+      
+      // Si el atraso actual supera la tolerancia de 7 días
+      if (diasAtrasoActual > 7) {
+        const diasExcedidos = diasAtrasoActual - 7;
+        if (diasExcedidos > 30) {
+          penalizacionActivaGrave += 20; // Freno drástico si la deuda actual supera el mes de atraso
+        } else {
+          penalizacionActivaGrave += diasExcedidos * 0.4;
+        }
+      }
+    }
+  });
+
+  // Calculamos los descuentos reales basados en promedios equilibrados
+  let promedioAtraso = totalCuotasEvaluadas > 0 ? diasAtrasoAcumulados / totalCuotasEvaluadas : 0;
+  let restaPorHistorial = promedioAtraso * 1.5;
+
+  let scoreFinal = techoPuntaje - restaPorHistorial - penalizacionActivaGrave;
+
+  // Red de seguridad por fidelidad: Si tiene un gran récord (más de 15 compras pagadas),
+  // una deuda activa en un bache temporal no lo puede tirar abajo de Regular (6.0)
+  if (terminadas >= 15 && scoreFinal < 60) {
+    scoreFinal = 60;
+  }
+
+  scoreFinal = Math.max(0, Math.min(100, scoreFinal));
+
+  let leyenda = "Excelente";
+  if (scoreFinal >= 85) leyenda = "Excelente";
+  else if (scoreFinal >= 65) leyenda = "Bueno";
+  else if (scoreFinal >= 45) leyenda = "Regular";
+  else leyenda = "Mal pagador";
+
+  return { puntos: Math.round(scoreFinal), leyenda };
+};
+
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [search, setSearch] = useState("");
@@ -139,6 +257,8 @@ export default function Clientes() {
 
       let mayorAtraso = 0;
       let ventaMasAtrasada = null;
+      let cuotasPagadasVenta = 0;
+      let proximoVencimientoCalculado = null;
 
       ventasCliente.forEach((venta) => {
         let fechaBase;
@@ -152,33 +272,31 @@ export default function Clientes() {
         }
 
         const cuotasPagadas = venta.pagos?.length || 0;
-        fechaBase.setMonth(fechaBase.getMonth() + cuotasPagadas);
 
+        // 1. Calculamos la fecha teórica de vencimiento de la cuota que DEBE actualmente
+        const proximoVenc = new Date(fechaBase);
+        proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas);
+
+        // 2. CORRECCIÓN LÓGICA: Si el cliente ya pagó recientemente (ej. en junio pagó lo de mayo),
+        // evaluamos los días reales de atraso frente a la fecha límite real de la nueva cuota.
         const diferenciaDias = Math.floor(
-          (hoy - fechaBase) / (1000 * 60 * 60 * 24)
+          (hoy - proximoVenc) / (1000 * 60 * 60 * 24)
         );
 
-        if (diferenciaDias > mayorAtraso) {
-          mayorAtraso = diferenciaDias;
+        // Solo cuenta como atraso real si la fecha del próximo vencimiento ya pasó (diferencia > 0)
+        const atrasoReal = diferenciaDias > 0 ? diferenciaDias : 0;
+
+        if (atrasoReal > mayorAtraso) {
+          mayorAtraso = atrasoReal;
           ventaMasAtrasada = venta;
+          cuotasPagadasVenta = cuotasPagadas;
+          proximoVencimientoCalculado = proximoVenc;
         }
       });
 
-      if (mayorAtraso > 30 && ventaMasAtrasada) {
-        const fechaInicio = ventaMasAtrasada.fecha?.toDate
-          ? ventaMasAtrasada.fecha.toDate()
-          : ventaMasAtrasada.fecha
-            ? new Date(ventaMasAtrasada.fecha)
-            : null;
-
-        const cuotasPagadas = ventaMasAtrasada.pagos?.length || 0;
-
-        const proximoVencimiento = fechaInicio
-          ? new Date(
-            fechaInicio.setMonth(fechaInicio.getMonth() + cuotasPagadas)
-          )
-          : null;
-
+      // Cambiamos a > 0 o al umbral de días mínimos que consideres para clasificar como "Moroso"
+      // Si el atraso volvió a 0 (porque el próximo vencimiento es a futuro o fin de mes), no entrará aquí
+      if (mayorAtraso > 0 && ventaMasAtrasada) {
         const nombresProductos =
           ventaMasAtrasada.productos?.map((p) => p.nombre).join(", ") || "—";
 
@@ -186,9 +304,9 @@ export default function Clientes() {
           ...cliente,
           diasAtraso: mayorAtraso,
           producto: nombresProductos,
-          cuotaDebe: cuotasPagadas + 1,
+          cuotaDebe: cuotasPagadasVenta + 1,
           valorCuota: ventaMasAtrasada.valorCuota || 0,
-          proximoVencimiento,
+          proximoVencimiento: proximoVencimientoCalculado,
           vendedor: ventaMasAtrasada.vendedor || "—",
         };
       }
@@ -198,13 +316,15 @@ export default function Clientes() {
 
     return resultado
       .filter(Boolean)
-      .sort((a, b) => a.diasAtraso - b.diasAtraso);
+      .sort((a, b) => b.diasAtraso - a.diasAtraso); // Ordenados de mayor a menor atraso
   }, [clientes, ventas]);
 
   // ===============================
-  // BUSCADOR + CÁLCULO DE METRICAS DE COMPRA (CORREGIDO AQUÍ)
+  // BUSCADOR + CÁLCULO DE METRICAS DE COMPRA (INCLUYE PUNTUACIÓN)
   // ===============================
   const clientesFiltrados = useMemo(() => {
+    const hoy = new Date();
+
     const clientesConTotales = clientes.map((c) => {
       const ventasDelCliente = ventas.filter((v) => v.clienteId === c.id);
 
@@ -218,13 +338,17 @@ export default function Clientes() {
       // 🔍 Buscamos la venta activa (la que NO está totalmente pagada)
       const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
 
+      // 🌟 CALCULAMOS EL SCORE AQUÍ PARA PASARLO A LA CARD
+      const scorePagos = calcularScoreCliente(ventasDelCliente, hoy);
+
       return {
         ...c,
         comprasPagadas: terminadas,
         comprasTotales: total,
         comprasActivas: activas,
         comprasTerminadas: terminadas,
-        idVenta: ventaActiva ? ventaActiva.id : null, // 👈 Se lo inyectamos al objeto cliente
+        idVenta: ventaActiva ? ventaActiva.id : null,
+        score: scorePagos, // 👈 Inyectamos la puntuación
       };
     });
 
