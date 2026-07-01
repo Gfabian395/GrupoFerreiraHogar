@@ -19,6 +19,7 @@ import MigrarClientes from "./pages/MigrarClientes";
 import { CartProvider } from "./context/CartContext";
 import Notificaciones from "./components/Notificaciones";
 import { Loader } from "./components/Loader";
+import Alerta from "./components/Alerta"; // 👈 IMPORTANTE: Importamos tu nueva Alerta
 import "./App.css";
 import ProductoDetalle from "./components/ProductoDetalle";
 
@@ -93,7 +94,7 @@ function App() {
       activo: true,
     };
     localStorage.setItem("guestUser", JSON.stringify(guestUser));
-    setUsuario(guestUser); // ✅ Actualiza estado global
+    setUsuario(guestUser); 
     setBloqueado(false);
   };
 
@@ -122,6 +123,10 @@ function App() {
       <Router>
         <Notificaciones />
         <div className="layout">
+          
+          {/* 👈 AQUÍ: Renderiza la alerta de pantalla completa por 3 segundos */}
+          <Alerta />
+
           {bloqueado && (
             <div
               style={{

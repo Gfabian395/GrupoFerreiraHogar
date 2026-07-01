@@ -282,53 +282,53 @@ export default function ClientDetail() {
     }
   };
 
-// ===============================
-// VERIFICAR SI VENTA ESTÁ PAGADA (CORREGIDA)
-// ===============================
-const estaPagado = (venta) => {
-  const totalPagado = (venta.pagos || []).reduce(
-    (sum, p) => {
-      // Reemplaza comas por puntos por si se cargó como string regional (ej: "1500,50")
-      const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
-      return sum + Number(montoLimpio || 0);
-    },
-    0
-  );
-
-  const totalCredito =
-    venta.totalCredito ||
-    (venta.valorCuota || 0) * (venta.cuotas || 0);
-
-  // Usamos Math.round para ignorar diferencias de centavos por divisiones o flotantes
-  return Math.round(totalPagado) >= Math.round(totalCredito);
-};
-
-// ===============================
-// VENTAS ATRASADAS (IDs) (CORREGIDA)
-// ===============================
-const ventasAtrasadasIds = useMemo(() => {
-  const hoy = new Date();
-  return ventas
-    .filter((v) => {
-      const totalCredito = v.totalCredito || (v.valorCuota * v.cuotas);
-      const totalPagado = (v.pagos || []).reduce((sum, p) => {
+  // ===============================
+  // VERIFICAR SI VENTA ESTÁ PAGADA (CORREGIDA)
+  // ===============================
+  const estaPagado = (venta) => {
+    const totalPagado = (venta.pagos || []).reduce(
+      (sum, p) => {
+        // Reemplaza comas por puntos por si se cargó como string regional (ej: "1500,50")
         const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
         return sum + Number(montoLimpio || 0);
-      }, 0);
-      
-      // Aplicar redondeo aquí también para evitar falsos positivos de deuda
-      if (Math.round(totalPagado) >= Math.round(totalCredito)) return false; // ya pagada
+      },
+      0
+    );
 
-      const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
-      const cuotasPagadas = v.pagos?.length || 0;
-      const proximoVencimiento = new Date(fechaInicio);
-      proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
+    const totalCredito =
+      venta.totalCredito ||
+      (venta.valorCuota || 0) * (venta.cuotas || 0);
 
-      const diasAtraso = (hoy - proximoVencimiento) / (1000 * 60 * 60 * 24);
-      return diasAtraso > 30; // atraso > 30 días
-    })
-    .map((v) => v.id);
-}, [ventas]);
+    // Usamos Math.round para ignorar diferencias de centavos por divisiones o flotantes
+    return Math.round(totalPagado) >= Math.round(totalCredito);
+  };
+
+  // ===============================
+  // VENTAS ATRASADAS (IDs) (CORREGIDA)
+  // ===============================
+  const ventasAtrasadasIds = useMemo(() => {
+    const hoy = new Date();
+    return ventas
+      .filter((v) => {
+        const totalCredito = v.totalCredito || (v.valorCuota * v.cuotas);
+        const totalPagado = (v.pagos || []).reduce((sum, p) => {
+          const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+          return sum + Number(montoLimpio || 0);
+        }, 0);
+
+        // Aplicar redondeo aquí también para evitar falsos positivos de deuda
+        if (Math.round(totalPagado) >= Math.round(totalCredito)) return false; // ya pagada
+
+        const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
+        const cuotasPagadas = v.pagos?.length || 0;
+        const proximoVencimiento = new Date(fechaInicio);
+        proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
+
+        const diasAtraso = (hoy - proximoVencimiento) / (1000 * 60 * 60 * 24);
+        return diasAtraso > 30; // atraso > 30 días
+      })
+      .map((v) => v.id);
+  }, [ventas]);
 
   // ===============================
   // DOBLE CLICK → RESALTAR Y SCROLL
@@ -424,7 +424,7 @@ Este es un mensaje automático generado por nuestro sistema.`;
     window.open(url, "_blank");
   };
 
-// ===============================
+  // ===============================
   // REENVIAR COMPROBANTE
   // ===============================
   const reenviarComprobante = (venta) => {
@@ -452,10 +452,10 @@ Este es un mensaje automático generado por nuestro sistema.`;
     // =========================================================
     const valorCuota = Number(venta.valorCuota || 0);
     const todosLosPagos = venta.pagos || [];
-    
+
     // 1. Calcular el total acumulado de dinero pagado hasta hoy
     const totalPagadoHistorico = todosLosPagos.reduce((sum, p) => sum + Number(p.monto || 0), 0);
-    
+
     // 2. Obtener los datos específicos del último pago realizado
     const ultimoPago = todosLosPagos.length > 0 ? todosLosPagos[todosLosPagos.length - 1] : null;
     const montoUltimoPago = ultimoPago ? Number(ultimoPago.monto || 0) : 0;
@@ -464,7 +464,7 @@ Este es un mensaje automático generado por nuestro sistema.`;
     // 3. Calcular cuántas cuotas se habían completado ANTES de este último pago
     const totalAntesDeEstePago = totalPagadoHistorico - montoUltimoPago;
     const cuotasCompletasAntes = Math.floor(totalAntesDeEstePago / valorCuota);
-    
+
     // 4. Calcular cuántas cuotas se completan AHORA con este pago
     const cuotasCompletasAhora = Math.floor(totalPagadoHistorico / valorCuota);
 
@@ -473,7 +473,7 @@ Este es un mensaje automático generado por nuestro sistema.`;
     if (cuotasCompletasAhora > cuotasCompletasAntes) {
       // Si este pago logró cerrar una cuota que venía incompleta
       detalleCuota = `cuota n°${cuotasCompletasAhora} (completa)`;
-      
+
       // Si además de completar la cuota sobró plata para la que sigue
       const saldoSobrante = totalPagadoHistorico % valorCuota;
       if (saldoSobrante > 0 && cuotasCompletasAhora < Number(venta.cuotas)) {
@@ -687,7 +687,7 @@ Gracias por su pago.`;
                       )}
 
                     {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
-                    
+
                     <div style={{ marginTop: "8px" }}>
                       <button
                         onClick={() => reenviarComprobante(venta)}
@@ -807,77 +807,118 @@ Gracias por su pago.`;
               )}
             </div>
 
-            {selectedVentaId &&
-              ventasPagadas
-                .filter((v) => v.id === selectedVentaId)
-                .map((venta) => (
-                  <section key={venta.id} className={styles.saleWrapper}>
-                    <section className={styles.saleInfoCard}>
-                      <div className={styles.saleSection}>
-                        <h4>Detalles de la venta</h4>
+            {/* ================= VENTAS PAGADAS (DETALLE CORREGIDO) ================= */}
+{selectedVentaId &&
+  ventasPagadas
+    .filter((v) => v.id === selectedVentaId)
+    .map((venta) => {
+      // Calculamos los totales igual que en las pendientes para mostrar la info correcta
+      const totalCredito = venta.totalCredito || venta.valorCuota * venta.cuotas;
+      const totalPagado = (venta.pagos || []).reduce(
+        (sum, p) => sum + Number(p.monto || 0),
+        0
+      );
+      const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
 
-                        <p>
-                          <span className={styles.badge}>ID de Venta</span>
-                          <span className={styles.idDestacado}>
-                            {venta.id}
-                          </span>
-                        </p>
+      return (
+        <section key={venta.id} className={styles.saleWrapper}>
+          <section className={styles.saleInfoCard}>
+            <div className={styles.saleSection}>
+              <h4>Datos de la venta (Completada)</h4>
 
-                        {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
-                        <div style={{ marginTop: "10px" }}>
-                          <button
-                            onClick={() => reenviarComprobante(venta)}
-                            style={{
-                              background: "#1976d2",
-                              color: "white",
-                              border: "none",
-                              padding: "8px 14px",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "500",
-                            }}
-                          >
-                            📩 Reenviar comprobante de compra
-                          </button>
-                        </div>
+              <p>
+                <span className={styles.badge}>ID de Venta</span>
+                <span className={styles.idDestacado}>{venta.id}</span>
+              </p>
 
-                      </div>
-                    </section>
+              <p><span className={styles.badge}>Cliente</span>{cliente.nombre}</p>
+              <p><span className={styles.badge}>DNI</span>{cliente.dni}</p>
+              <p><span className={styles.badge}>Dirección</span>{cliente.direccion} · {cliente.entreCalles}</p>
 
-                    <section className={styles.payments}>
-                      <div className={styles.table}>
-                        <div className={`${styles.row} ${styles.head}`}>
-                          <span>Cuota</span>
-                          <span>Fecha</span>
-                          <span>Monto</span>
-                          <span>Método</span>
-                          <span>Estado</span>
-                          <span>Firma</span>
-                        </div>
+              <p>
+                <span className={styles.badge}>Vendedor</span>
+                {usuariosMap[venta.vendedor] || venta.vendedor}
+              </p>
 
-                        {Array.from({ length: venta.cuotas }).map((_, i) => {
-                          const pago = venta.pagos?.find(
-                            (p) => p.numero === i + 1
-                          );
+              <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
+              <p><span className={styles.badge}>Entrega</span>{venta.entrega || "—"}</p>
 
-                          return (
-                            <div
-                              key={i}
-                              className={`${styles.row} ${pago ? styles.paid : ""}`}
-                            >
-                              <span>#{i + 1}</span>
-                              <span>{formatearFecha(pago?.fecha)}</span>
-                              <span>${venta.valorCuota?.toLocaleString("es-AR")}</span>
-                              <span>{pago?.metodo || "—"}</span>
-                              <span>{pago ? "Pagado" : "Pendiente"}</span>
-                              <span>{getFirmaTexto(pago?.firma)}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  </section>
-                ))}
+              {venta.chofer && (
+                <p>
+                  <span className={styles.badge}>Chofer</span>
+                  {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
+                </p>
+              )}
+
+              <p>
+                <span className={styles.badge}>Productos</span>
+                {venta.productos
+                  ?.map(
+                    (p) =>
+                      `${p.nombre} (x${p.cantidad}, $${Number(
+                        p.precio
+                      ).toLocaleString("es-AR")})`
+                  )
+                  .join(", ")}
+              </p>
+
+              <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
+              <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
+              <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
+              <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
+              <p><span className={styles.badge}>Saldo pendiente $</span>{saldoPendiente.toLocaleString("es-AR")}</p>
+            </div>
+
+            {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
+            <div style={{ marginTop: "10px" }}>
+              <button
+                onClick={() => reenviarComprobante(venta)}
+                style={{
+                  background: "#1976d2",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                📩 Reenviar comprobante de compra
+              </button>
+            </div>
+          </section>
+
+          {/* ================= TABLA DE HISTORIAL DE PAGOS REALES ================= */}
+          <section className={styles.payments}>
+            <header>
+              <h4>Historial de pagos</h4>
+            </header>
+
+            <div className={styles.table}>
+              <div className={`${styles.row} ${styles.head}`}>
+                <span>Cuota</span>
+                <span>Fecha</span>
+                <span>Monto</span>
+                <span>Método</span>
+                <span>Estado</span>
+                <span>Firma</span>
+              </div>
+
+              {(venta.pagos || []).map((pago, i) => (
+                <div key={i} className={`${styles.row} ${styles.paid}`}>
+                  <span>#{pago.numero || i + 1}</span>
+                  <span>{formatearFecha(pago.fecha)}</span>
+                  <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
+                  <span>{pago.metodo || "—"}</span>
+                  <span>Pagado</span>
+                  <span>{getFirmaTexto(pago.firma)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </section>
+      );
+    })}
           </section>
         )}
 

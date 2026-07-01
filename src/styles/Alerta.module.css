@@ -1,0 +1,44 @@
+.contenedorAlerta {
+  position: fixed;
+  inset: 0; /* Cubre el 100% de la pantalla (top, bottom, left, right = 0) */
+  background-color: rgba(0, 0, 0, 0.9); /* Fondo negro con opacidad */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999; /* Por encima de navbar, modales y cualquier otra cosa */
+  animation: fadeIn 0.2s ease-out;
+}
+
+.cartelCarton {
+  background-color: #d9383a; /* Rojo alerta */
+  color: #ffffff;
+  padding: 30px 50px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  border: 4px solid #ffffff;
+}
+
+.texto {
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-weight: bold;
+  font-size: 2rem; /* Texto bien grande */
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Ajuste para que en celulares no quede gigante */
+@media (max-width: 600px) {
+  .cartelCarton {
+    padding: 20px;
+    width: 85%;
+  }
+  .texto {
+    font-size: 1.4rem;
+  }
+}
