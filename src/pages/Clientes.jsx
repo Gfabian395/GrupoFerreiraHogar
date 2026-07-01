@@ -10,9 +10,15 @@ import styles from "../styles/Clientes.module.css";
 // CALCULAR SCORE DEL CLIENTE (0 a 100)
 // ===============================
 const calcularScoreCliente = (ventasDelCliente, hoy) => {
-  if (!ventasDelCliente.length) return { puntos: 50, leyenda: "Sin historial" };
+  if (!ventasDelCliente.length) {
+    return {
+      puntos: 50,
+      leyenda: "Sin historial",
+      detalle: "Cliente nuevo sin compras registradas."
+    };
+  }
 
-  // 1. Contamos de forma limpia cuántas compras ya pagó por completo
+  // 1. Contamos cuántas compras ya pagó por completo
   const terminadas = ventasDelCliente.filter((v) => {
     const pagoInicial = Number(v.pago?.montoPagado || 0);
     const pagosPosteriores = (v.pagos || []).reduce((sum, p) => {
@@ -24,17 +30,20 @@ const calcularScoreCliente = (ventasDelCliente, hoy) => {
     return Math.round(totalPagado) >= Math.round(totalCredito);
   }).length;
 
-  // 2. Techo máximo de nota según volumen de compras (Evita el 10.0 automático con 1 compra)
-  let techoPuntaje = 70; // 1 compra terminada = Techo de 7.0 (Bueno)
-  if (terminadas >= 10) techoPuntaje = 100;    // Cliente VIP = Techo de 10.0
-  else if (terminadas >= 5) techoPuntaje = 90;   // Cliente Premium = Techo de 9.0
-  else if (terminadas >= 2) techoPuntaje = 80;   // Más de 2 compras = Techo de 8.0
+  // 2. 🌟 NUEVOS TECHOS ESTRICTOS DE CONFIANZA POR VOLUMEN COMERCIAL
+  let techoPuntaje = 55; // 0 compras terminadas (está pagando sus primeras cosas) -> Techo Máx: 5.5 (Regular)
+
+  if (terminadas >= 10) techoPuntaje = 100;    // Cliente VIP -> Techo Máx: 10.0 (Excelente)
+  else if (terminadas >= 5) techoPuntaje = 88;   // Cliente Premium -> Techo Máx: 8.8 (Bueno)
+  else if (terminadas >= 3) techoPuntaje = 78;   // Buen cliente recurrente -> Techo Máx: 7.8 (Bueno)
+  else if (terminadas >= 2) techoPuntaje = 68;   // Cumplió más de una vez -> Techo Máx: 6.8 (Bueno raspando)
+  else if (terminadas === 1) techoPuntaje = 62;  // 🌟 CORREGIDO: 1 sola compra terminada -> Techo Máx: 6.2 (Regular). No puede ser "Bueno" todavía.
 
   let totalCuotasEvaluadas = 0;
   let diasAtrasoAcumulados = 0;
   let penalizacionActivaGrave = 0;
+  let maximoAtrasoActual = 0;
 
-  // Mapeo por si las fechas guardadas en Firebase vienen escritas en formato de texto plano
   const mesesEs = {
     enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
     julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
@@ -44,7 +53,7 @@ const calcularScoreCliente = (ventasDelCliente, hoy) => {
     if (!fechaObj) return null;
     if (fechaObj.toDate) return fechaObj.toDate();
     if (fechaObj instanceof Date) return fechaObj;
-    
+
     if (typeof fechaObj === "string") {
       const limpio = fechaObj.toLowerCase().replace(/de\s/g, "").trim();
       const partes = limpio.split(/\s+/);
@@ -58,13 +67,27 @@ const calcularScoreCliente = (ventasDelCliente, hoy) => {
   };
 
   ventasDelCliente.forEach((venta) => {
+    // 🌟 CONTROL DE VENTA TOTALMENTE PAGADA
+    const pagoInicial = Number(venta.pago?.montoPagado || 0);
+    const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
+      const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+      return sum + Number(montoLimpio || 0);
+    }, 0);
+    const totalPagado = pagoInicial + pagosPosteriores;
+    const totalCredito = venta.totalCredito || (venta.valorCuota || 0) * (venta.cuotas || 0);
+
+    // 🌟 SI YA LA PAGÓ COMPLETA, SE IGNORA PARA EL SCORE (NO RESTA PUNTOS)
+    if (Math.round(totalPagado) >= Math.round(totalCredito)) {
+      return; // Saltamos la venta completamente. No evalúa atrasos viejos de acá.
+    }
+
     const fechaVentaReal = parsearFechaSegura(venta.fecha);
     if (!fechaVentaReal) return;
 
     const pagos = venta.pagos || [];
     let cuotasPagadasEnVenta = 0;
-    
-    // Evaluar los pagos que ya realizó históricamente
+
+    // Evaluar pagos históricos (Solo se ejecuta si la venta sigue abierta/activa)
     pagos.forEach((pago, indice) => {
       totalCuotasEvaluadas++;
       cuotasPagadasEnVenta++;
@@ -74,54 +97,81 @@ const calcularScoreCliente = (ventasDelCliente, hoy) => {
       const fechaPagoReal = parsearFechaSegura(pago.fecha);
       if (fechaPagoReal) {
         const diasDiferencia = Math.floor((fechaPagoReal - fechaVencimientoCuota) / (1000 * 60 * 60 * 24));
-        
-        // 🌟 Aplicamos los 7 días de tolerancia pactados
         if (diasDiferencia > 7) {
           diasAtrasoAcumulados += (diasDiferencia - 7);
         }
       }
     });
 
-    // Evaluar si actualmente tiene cuotas colgadas en esta venta activa
+    // Evaluar cuotas colgadas activas
     if (cuotasPagadasEnVenta < (venta.cuotas || 0)) {
       const proxVenc = new Date(fechaVentaReal);
       proxVenc.setMonth(proxVenc.getMonth() + cuotasPagadasEnVenta);
-      
+
       const diasAtrasoActual = Math.floor((hoy - proxVenc) / (1000 * 60 * 60 * 24));
-      
-      // Si el atraso actual supera la tolerancia de 7 días
+
       if (diasAtrasoActual > 7) {
         const diasExcedidos = diasAtrasoActual - 7;
-        if (diasExcedidos > 30) {
-          penalizacionActivaGrave += 20; // Freno drástico si la deuda actual supera el mes de atraso
+        if (diasExcedidos > maximoAtrasoActual) {
+          maximoAtrasoActual = diasExcedidos;
+        }
+
+        if (diasExcedidos > 60) {
+          penalizacionActivaGrave += 15;
+        } else if (diasExcedidos > 30) {
+          penalizacionActivaGrave += 10;
         } else {
-          penalizacionActivaGrave += diasExcedidos * 0.4;
+          penalizacionActivaGrave += diasExcedidos * 0.2;
         }
       }
     }
   });
 
-  // Calculamos los descuentos reales basados en promedios equilibrados
   let promedioAtraso = totalCuotasEvaluadas > 0 ? diasAtrasoAcumulados / totalCuotasEvaluadas : 0;
-  let restaPorHistorial = promedioAtraso * 1.5;
+  let restaPorHistorial = promedioAtraso * 0.8;
 
   let scoreFinal = techoPuntaje - restaPorHistorial - penalizacionActivaGrave;
-
-  // Red de seguridad por fidelidad: Si tiene un gran récord (más de 15 compras pagadas),
-  // una deuda activa en un bache temporal no lo puede tirar abajo de Regular (6.0)
-  if (terminadas >= 15 && scoreFinal < 60) {
-    scoreFinal = 60;
-  }
-
   scoreFinal = Math.max(0, Math.min(100, scoreFinal));
 
+  // Clasificación por puntaje
   let leyenda = "Excelente";
   if (scoreFinal >= 85) leyenda = "Excelente";
   else if (scoreFinal >= 65) leyenda = "Bueno";
   else if (scoreFinal >= 45) leyenda = "Regular";
   else leyenda = "Mal pagador";
 
-  return { puntos: Math.round(scoreFinal), leyenda };
+  // 🌟 SALVAVIDAS POR FIDELIDAD (Mínimo 3 compras completas para perdonar)
+  if (terminadas >= 3 && leyenda === "Mal pagador" && maximoAtrasoActual < 90) {
+    leyenda = "Regular";
+    scoreFinal = Math.max(50, scoreFinal);
+  }
+
+  // Detalles inteligentes según su volumen de compras
+  let detalle = "Paga dentro de los términos pactados.";
+
+  if (leyenda === "Excelente") {
+    detalle = "Historial impecable. Muy buen comportamiento de pago.";
+  } else if (leyenda === "Bueno") {
+    detalle = `Buen cliente (${terminadas} compras pagadas). Registra atrasos mínimos.`;
+  } else if (leyenda === "Regular") {
+    if (terminadas === 1) {
+      detalle = "Cliente nuevo con una sola compra terminada a término. En proceso de evaluación.";
+    } else if (terminadas === 0) {
+      detalle = "Cliente nuevo pagando sus primeras cuotas activas.";
+    } else if (terminadas >= 3 && maximoAtrasoActual > 0) {
+      detalle = `Cliente fiel (${terminadas} pagadas), revisando atraso activo de ${maximoAtrasoActual} días.`;
+    } else {
+      detalle = "Registra demoras frecuentes en los vencimientos de sus cuotas.";
+    }
+  } else {
+    if (maximoAtrasoActual > 0) {
+      detalle = `Atraso activo crítico de ${maximoAtrasoActual} días con pocas compras completadas.`;
+    } else {
+      detalle = "Historial de pagos muy irregular fuera de término.";
+    }
+  }
+
+  return { puntos: Math.round(scoreFinal), leyenda, detalle };
 };
 
 export default function Clientes() {

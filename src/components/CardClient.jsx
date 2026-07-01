@@ -70,15 +70,29 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     }
   };
 
-  // Variable para manejar la clase de estado dinámicamente
+  // Variable para manejar la clase de fondo dinámicamente según su puntuación real
   let cardStatusClass = "";
 
   if (estado === "Bloqueado") {
-    cardStatusClass = styles.cardBlocked;
-  } else if (cliente.comprasPagadas > 10) {
-    cardStatusClass = styles.cardVip;       // Más de 10 -> Verde
-  } else if (cliente.comprasPagadas > 5) {
-    cardStatusClass = styles.cardPremium;   // Más de 5 -> Amarillo
+    cardStatusClass = styles.cardBlocked; // Color gris/bloqueado
+  } else if (cliente.score) {
+    // 🎨 El color ahora depende 100% de la Leyenda comercial
+    switch (cliente.score.leyenda) {
+      case "Excelente":
+        cardStatusClass = styles.cardVip;       // Verde Brillante (Impecable)
+        break;
+      case "Bueno":
+        cardStatusClass = styles.cardPremium;   // Verde Claro / Ajustado (Confiable)
+        break;
+      case "Regular":
+        cardStatusClass = styles.cardRegular;   // Amarillo / Naranja (Alerta/Revisar)
+        break;
+      case "Mal pagador":
+        cardStatusClass = styles.cardBadPay;    // Rojo / Rosado (Peligro)
+        break;
+      default:
+        cardStatusClass = "";
+    }
   }
 
   // Intenta capturar el ID usando variantes comunes por si cambia el nombre en Firebase
@@ -89,11 +103,7 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
 
   return (
     <div className={styles.clientWrapper}>
-      <article
-        className={`${styles.clientCard} ${cardStatusClass}`}
-        onClick={handleCardClick}
-        style={{ cursor: "pointer" }}
-      >
+      <article className={`${styles.clientCard} ${cardStatusClass}`} onClick={handleCardClick}>
         {/* HEADER */}
         <header className={styles.clientHeader}>
           <div className={styles.avatar}>
@@ -192,13 +202,22 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
           {/* 🌟 INDICADOR DE PUNTUACIÓN DECIMAL CON NUEVO FORMATO DE CSS */}
           {cliente.score && (
             <div className={styles.rowPuntuacion}>
-              <span className={styles.label}>⭐ Puntuación</span>
-              <span className={styles.valuePuntuacion}>
-                {notaDecimal}
-                <span className={styles.leyendaPuntuacion}>
-                  ({cliente.score.leyenda})
+              <div className={styles.puntuacionPrincipal}>
+                <span className={styles.label}>⭐ Puntuación</span>
+                <span className={styles.valuePuntuacion}>
+                  {notaDecimal}{" "}
+                  <span className={styles.leyendaPuntuacion}>
+                    ({cliente.score.leyenda})
+                  </span>
                 </span>
-              </span>
+              </div>
+
+              {/* 🌟 AQUÍ AGREGAMOS EL DETALLE BREVE */}
+              {cliente.score.detalle && (
+                <div className={styles.detallePuntuacion}>
+                  {cliente.score.detalle}
+                </div>
+              )}
             </div>
           )}
 
