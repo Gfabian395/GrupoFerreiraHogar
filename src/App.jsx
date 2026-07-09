@@ -125,7 +125,7 @@ function App() {
         <div className="layout">
           
           {/* 👈 AQUÍ: Renderiza la alerta de pantalla completa por 3 segundos */}
-          <Alerta />
+          {/* <Alerta /> */} {/* ACA SE ACTIVA LA ALERTA EN PANTALLA PARA NO VENDER MAS DE UN PRODUCTO */}
 
           {bloqueado && (
             <div
