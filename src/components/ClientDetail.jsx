@@ -593,17 +593,18 @@ Gracias por su pago.`;
           <>
             {/* ================= VENTAS PENDIENTES ================= */}
             {ventasPendientes.map((venta) => {
-              const totalCredito = venta.totalCredito || venta.valorCuota * venta.cuotas;
+              const totalCredito =
+                venta.totalCredito || venta.valorCuota * venta.cuotas;
 
-              const totalPagado = (venta.pagos || []).reduce(
-                (sum, p) => sum + Number(p.monto || 0),
-                0
-              );
+              const totalPagado = (venta.pagos || []).reduce((sum, p) => {
+                const montoLimpio =
+                  typeof p.monto === "string"
+                    ? p.monto.replace(",", ".")
+                    : p.monto;
+                return sum + Number(montoLimpio || 0);
+              }, 0);
 
               const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
-
-              // ✅ Verificamos si la venta está atrasada
-              const isAtrasada = cliente.ventasAtrasadas?.includes(venta.id);
 
               return (
                 <section
@@ -662,7 +663,12 @@ Gracias por su pago.`;
                       <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
                       <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
                       <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
-                      <p><span className={styles.badge}>Saldo pendiente $</span>{saldoPendiente.toLocaleString("es-AR")}</p>
+
+                      {/* 💰 DEUDA INDIVIDUAL DESTACADA DE ESTA COMPRA */}
+                      <div className={styles.saleDebtPending}>
+                        <span>Deuda de esta compra:</span>
+                        <strong>${saldoPendiente.toLocaleString("es-AR")}</strong>
+                      </div>
                     </div>
 
                     {/* 🔔 BOTÓN RECORDAR CUOTA */}
@@ -687,7 +693,6 @@ Gracias por su pago.`;
                       )}
 
                     {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
-
                     <div style={{ marginTop: "8px" }}>
                       <button
                         onClick={() => reenviarComprobante(venta)}
@@ -807,118 +812,118 @@ Gracias por su pago.`;
               )}
             </div>
 
-            {/* ================= VENTAS PAGADAS (DETALLE CORREGIDO) ================= */}
-{selectedVentaId &&
-  ventasPagadas
-    .filter((v) => v.id === selectedVentaId)
-    .map((venta) => {
-      // Calculamos los totales igual que en las pendientes para mostrar la info correcta
-      const totalCredito = venta.totalCredito || venta.valorCuota * venta.cuotas;
-      const totalPagado = (venta.pagos || []).reduce(
-        (sum, p) => sum + Number(p.monto || 0),
-        0
-      );
-      const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
+            {/* ================= VENTAS PAGADAS (DETALLE) ================= */}
+            {selectedVentaId &&
+              ventasPagadas
+                .filter((v) => v.id === selectedVentaId)
+                .map((venta) => {
+                  const totalCredito =
+                    venta.totalCredito || venta.valorCuota * venta.cuotas;
 
-      return (
-        <section key={venta.id} className={styles.saleWrapper}>
-          <section className={styles.saleInfoCard}>
-            <div className={styles.saleSection}>
-              <h4>Datos de la venta (Completada)</h4>
+                  return (
+                    <section key={venta.id} className={styles.saleWrapper}>
+                      <section className={styles.saleInfoCard}>
+                        <div className={styles.saleSection}>
+                          <h4>Datos de la venta (Completada)</h4>
 
-              <p>
-                <span className={styles.badge}>ID de Venta</span>
-                <span className={styles.idDestacado}>{venta.id}</span>
-              </p>
+                          <p>
+                            <span className={styles.badge}>ID de Venta</span>
+                            <span className={styles.idDestacado}>{venta.id}</span>
+                          </p>
 
-              <p><span className={styles.badge}>Cliente</span>{cliente.nombre}</p>
-              <p><span className={styles.badge}>DNI</span>{cliente.dni}</p>
-              <p><span className={styles.badge}>Dirección</span>{cliente.direccion} · {cliente.entreCalles}</p>
+                          <p><span className={styles.badge}>Cliente</span>{cliente.nombre}</p>
+                          <p><span className={styles.badge}>DNI</span>{cliente.dni}</p>
+                          <p><span className={styles.badge}>Dirección</span>{cliente.direccion} · {cliente.entreCalles}</p>
 
-              <p>
-                <span className={styles.badge}>Vendedor</span>
-                {usuariosMap[venta.vendedor] || venta.vendedor}
-              </p>
+                          <p>
+                            <span className={styles.badge}>Vendedor</span>
+                            {usuariosMap[venta.vendedor] || venta.vendedor}
+                          </p>
 
-              <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
-              <p><span className={styles.badge}>Entrega</span>{venta.entrega || "—"}</p>
+                          <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
+                          <p><span className={styles.badge}>Entrega</span>{venta.entrega || "—"}</p>
 
-              {venta.chofer && (
-                <p>
-                  <span className={styles.badge}>Chofer</span>
-                  {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
-                </p>
-              )}
+                          {venta.chofer && (
+                            <p>
+                              <span className={styles.badge}>Chofer</span>
+                              {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
+                            </p>
+                          )}
 
-              <p>
-                <span className={styles.badge}>Productos</span>
-                {venta.productos
-                  ?.map(
-                    (p) =>
-                      `${p.nombre} (x${p.cantidad}, $${Number(
-                        p.precio
-                      ).toLocaleString("es-AR")})`
-                  )
-                  .join(", ")}
-              </p>
+                          <p>
+                            <span className={styles.badge}>Productos</span>
+                            {venta.productos
+                              ?.map(
+                                (p) =>
+                                  `${p.nombre} (x${p.cantidad}, $${Number(
+                                    p.precio
+                                  ).toLocaleString("es-AR")})`
+                              )
+                              .join(", ")}
+                          </p>
 
-              <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
-              <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
-              <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
-              <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
-              <p><span className={styles.badge}>Saldo pendiente $</span>{saldoPendiente.toLocaleString("es-AR")}</p>
-            </div>
+                          <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
+                          <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
+                          <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
+                          <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
 
-            {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
-            <div style={{ marginTop: "10px" }}>
-              <button
-                onClick={() => reenviarComprobante(venta)}
-                style={{
-                  background: "#1976d2",
-                  color: "white",
-                  border: "none",
-                  padding: "8px 14px",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                📩 Reenviar comprobante de compra
-              </button>
-            </div>
-          </section>
+                          {/* 💰 DEUDA INDIVIDUAL CERO PARA COMPRA COMPLETADA */}
+                          <div className={styles.saleDebtPaid}>
+                            <span>Deuda de esta compra:</span>
+                            <strong>$0 (Pagada)</strong>
+                          </div>
+                        </div>
 
-          {/* ================= TABLA DE HISTORIAL DE PAGOS REALES ================= */}
-          <section className={styles.payments}>
-            <header>
-              <h4>Historial de pagos</h4>
-            </header>
+                        {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
+                        <div style={{ marginTop: "10px" }}>
+                          <button
+                            onClick={() => reenviarComprobante(venta)}
+                            style={{
+                              background: "#1976d2",
+                              color: "white",
+                              border: "none",
+                              padding: "8px 14px",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              fontWeight: "500",
+                            }}
+                          >
+                            📩 Reenviar comprobante de compra
+                          </button>
+                        </div>
+                      </section>
 
-            <div className={styles.table}>
-              <div className={`${styles.row} ${styles.head}`}>
-                <span>Cuota</span>
-                <span>Fecha</span>
-                <span>Monto</span>
-                <span>Método</span>
-                <span>Estado</span>
-                <span>Firma</span>
-              </div>
+                      {/* ================= TABLA DE HISTORIAL DE PAGOS REALES ================= */}
+                      <section className={styles.payments}>
+                        <header>
+                          <h4>Historial de pagos</h4>
+                        </header>
 
-              {(venta.pagos || []).map((pago, i) => (
-                <div key={i} className={`${styles.row} ${styles.paid}`}>
-                  <span>#{pago.numero || i + 1}</span>
-                  <span>{formatearFecha(pago.fecha)}</span>
-                  <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
-                  <span>{pago.metodo || "—"}</span>
-                  <span>Pagado</span>
-                  <span>{getFirmaTexto(pago.firma)}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </section>
-      );
-    })}
+                        <div className={styles.table}>
+                          <div className={`${styles.row} ${styles.head}`}>
+                            <span>Cuota</span>
+                            <span>Fecha</span>
+                            <span>Monto</span>
+                            <span>Método</span>
+                            <span>Estado</span>
+                            <span>Firma</span>
+                          </div>
+
+                          {(venta.pagos || []).map((pago, i) => (
+                            <div key={i} className={`${styles.row} ${styles.paid}`}>
+                              <span>#{pago.numero || i + 1}</span>
+                              <span>{formatearFecha(pago.fecha)}</span>
+                              <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
+                              <span>{pago.metodo || "—"}</span>
+                              <span>Pagado</span>
+                              <span>{getFirmaTexto(pago.firma)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    </section>
+                  );
+                })}
           </section>
         )}
 
@@ -926,18 +931,23 @@ Gracias por su pago.`;
         <div className={styles.totalDebt}>
           <h3>
             Deuda Total: $
-            {ventas.reduce((total, venta) => {
-              const totalPagado = (venta.pagos || []).reduce(
-                (a, p) => a + Number(p.monto || 0),
-                0
-              );
+            {ventas
+              .reduce((total, venta) => {
+                const totalPagado = (venta.pagos || []).reduce((a, p) => {
+                  const montoLimpio =
+                    typeof p.monto === "string"
+                      ? p.monto.replace(",", ".")
+                      : p.monto;
+                  return a + Number(montoLimpio || 0);
+                }, 0);
 
-              const totalVenta =
-                venta.totalCredito ||
-                (venta.valorCuota || 0) * (venta.cuotas || 1);
+                const totalVenta =
+                  venta.totalCredito ||
+                  (venta.valorCuota || 0) * (venta.cuotas || 1);
 
-              return total + Math.max(totalVenta - totalPagado, 0);
-            }, 0).toLocaleString("es-AR")}
+                return total + Math.max(totalVenta - totalPagado, 0);
+              }, 0)
+              .toLocaleString("es-AR")}
           </h3>
         </div>
       </article>

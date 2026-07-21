@@ -28,6 +28,7 @@ export const Productos = () => {
   const [showSinStock, setShowSinStock] = useState(false);
   const isJefe = role === "jefe";
   const isEncargado = role === "encargado";
+  const canUseCalculator = isJefe || isEncargado || role === "vendedor";
   const canAddOrEdit = isJefe || isEncargado;
   const canDelete = isJefe;
   const [ordenPrecio, setOrdenPrecio] = useState("ninguno");
@@ -987,27 +988,30 @@ export const Productos = () => {
         />
       )}
 
-      {canAddOrEdit && (
-        <>
-          <button
-            className={styles.calculatorFab}
-            onClick={() => setShowCalculator(true)}
-          >
-            <i className='bx bxs-calculator'></i>
-          </button>
-
-          <button
-            className={styles.fab}
-            onClick={() => {
-              setProductoEditando(null);
-              setSelectorOpen(true);
-            }}
-          >
-            +
-          </button>
-        </>
+      {/* BOTÓN CALCULADORA (Jefe, Encargado y Vendedor) */}
+      {(isJefe || isEncargado || role === "vendedor") && (
+        <button
+          className={styles.calculatorFab}
+          onClick={() => setShowCalculator(true)}
+        >
+          <i className='bx bxs-calculator'></i>
+        </button>
       )}
 
+      {/* BOTÓN AGREGAR PRODUCTO (Solo Jefe y Encargado) */}
+      {canAddOrEdit && (
+        <button
+          className={styles.fab}
+          onClick={() => {
+            setProductoEditando(null);
+            setSelectorOpen(true);
+          }}
+        >
+          +
+        </button>
+      )}
+
+      {/* MODAL CALCULADORA */}
       {showCalculator && (
         <div
           className={styles.calculatorOverlay}
