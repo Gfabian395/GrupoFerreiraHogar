@@ -62,7 +62,6 @@ export default function ComboCard({
   const editHandler = onEditCombo || onEdit;
   const deleteHandler = onDeleteCombo || onDelete;
 
-  // Si Role llega vacío o indefinido pero existen handlers, permitimos mostrar botones para evitar bloqueos
   const puedeEditar = esJefe || esEncargado || Role === undefined;
   const puedeEliminar = esJefe || Role === undefined;
 
@@ -87,15 +86,14 @@ export default function ComboCard({
         const product = productosById[item.productId];
         if (!product) return null;
 
-        // SOLUCCIÓN: Dejamos el stock dinámico tal cual viene de Firebase sin forzar llaves fijas
         const variants = Array.isArray(product.variantes)
           ? product.variantes.map((v) => {
-              // Si la base de datos usa "Mosconi" pero la app espera "Jofre 2440", normalizamos acá abajo sin destruir las demás sucursales
               const stockOriginal = v.stock && typeof v.stock === "object" ? v.stock : {};
               const stockNormalizado = { ...stockOriginal };
               
+              // ❌ ERROR 1 SOLUCIONADO: El nombre de la variable estaba mal escrito (stockNormalized)
               if (stockNormalizado["Mosconi"] !== undefined && stockNormalizado["Jofre 2440"] === undefined) {
-                stockNormalized["Jofre 2440"] = stockNormalizado["Mosconi"];
+                stockNormalizado["Jofre 2440"] = stockNormalizado["Mosconi"]; 
               }
 
               return {
@@ -118,30 +116,8 @@ export default function ComboCard({
       .filter(Boolean);
   }, [combo?.items, productosById]);
 
-  useEffect(() => {
-    setSelectedVariants((prev) => {
-      let next = prev;
-      let changed = false;
-
-      comboProducts.forEach((item) => {
-        if (next[item.productId] !== undefined) return;
-
-        const firstAvailableIndex = item.variants.findIndex(
-          (variant) => getStockTotal(variant) >= item.requiredQty
-        );
-
-        if (!changed) {
-          next = { ...prev };
-          changed = true;
-        }
-
-        next[item.productId] =
-          firstAvailableIndex >= 0 ? firstAvailableIndex : 0;
-      });
-
-      return changed ? next : prev;
-    });
-  }, [comboProducts]);
+  // ❌ ERROR 2 SOLUCIONADO: Eliminamos el useEffect que calculaba la variante tarde. 
+  // Ahora la variante se calcula directamente en la memorización de abajo (selectedComponents)
 
   const getCartUnitsFor = useCallback(
     (productId, variantName, branch) => {
@@ -151,7 +127,8 @@ export default function ComboCard({
         if (Array.isArray(item.comboItems)) {
           units += item.comboItems.reduce((sum, comboItem) => {
             const sameProduct = comboItem.productId === productId;
-            const sameVariant = comboItem.variant === variantName;
+            // ❌ ERROR 3 SOLUCIONADO: Limpiamos los espacios en blanco para evitar falsos negativos
+            const sameVariant = String(comboItem.variant).trim() === String(variantName).trim();
             const sameBranch = comboItem.branch === branch;
 
             if (!sameProduct || !sameVariant || !sameBranch) return sum;
@@ -165,7 +142,7 @@ export default function ComboCard({
 
         const sameSimpleProduct =
           item.id === productId || item.productId === productId;
-        const sameSimpleVariant = item.variant === variantName;
+        const sameSimpleVariant = String(item.variant).trim() === String(variantName).trim();
         const sameSimpleBranch = item.branch === branch;
 
         if (sameSimpleProduct && sameSimpleVariant && sameSimpleBranch) {
@@ -181,7 +158,7 @@ export default function ComboCard({
   const getAvailabilityForVariant = useCallback(
     (productId, variant, requiredQty) => {
       const stockObj = getStockObj(variant);
-      const variantName = variant?.attr;
+      const variantName = variant?.attr?.trim();
 
       let best = {
         branch: null,
@@ -220,14 +197,25 @@ export default function ComboCard({
 
   const selectedComponents = useMemo(() => {
     const calculated = comboProducts.map((item) => {
-      const selectedIndex = Number(selectedVariants[item.productId] ?? 0);
+      // Tomamos la variante seleccionada, si es que el usuario ya eligió una
+      let selectedIndex = selectedVariants[item.productId];
+
+      // Si no eligió ninguna (primer renderizado), buscamos LA PRIMERA QUE TENGA STOCK
+      if (selectedIndex === undefined) {
+        const autoAvailableIndex = item.variants.findIndex(
+          (v) => getStockTotal(v) >= item.requiredQty
+        );
+        selectedIndex = autoAvailableIndex >= 0 ? autoAvailableIndex : 0;
+      }
+
       const safeIndex =
         selectedIndex >= 0 && selectedIndex < item.variants.length
           ? selectedIndex
           : 0;
 
       const variant = item.variants[safeIndex] ?? null;
-      const variantName = variant?.attr ?? "Sin variante";
+      // Limpiamos espacios basura que vengan de Firebase
+      const variantName = variant?.attr?.trim() ?? "Sin variante";
 
       const availability = variant
         ? getAvailabilityForVariant(item.productId, variant, item.requiredQty)
@@ -246,8 +234,7 @@ export default function ComboCard({
         branch: availability.branch,
         availableUnits: availability.availableUnits,
         availableCombos: availability.availableCombos,
-        // REEMPLAZÁ LA PROPIEDAD 'image:' DENTRO DEL MAP DE selectedComponents POR ESTA:
-image: variant?.image || item.product?.image || combo?.image,
+        image: variant?.image || item.product?.image || combo?.image,
       };
     });
 
@@ -450,7 +437,6 @@ image: variant?.image || item.product?.image || combo?.image,
       </div>
 
       <section className={styles.hero}>
-        {/* BOTONES FLOTANTES: Mapeados directamente con las clases del módulo CSS */}
         {(puedeEditar || puedeEliminar) && (
           <div className={styles.adminActions}>
             {puedeEditar && (

@@ -96,8 +96,6 @@ export default function Ventas() {
      TOTALES
   =============================== */
   const total = items.reduce((acc, i) => acc + i.price * i.qty, 0);
-
-  // ✅ BASE PARA CUOTAS (NO EXISTÍA)
   const saldoBase = total;
 
   /* ===============================
@@ -170,11 +168,8 @@ export default function Ventas() {
       tipoEntrega,
       choferId: tipoEntrega === "envio" ? choferId : null,
       ventaDeOtro,
-      // CORRECCIÓN AQUÍ: Guardá el ID o email correspondiente de forma consistente
-      vendedorReal: ventaDeOtro
-        ? vendedorReal // Esto ya es el ID provisto por el <select>
-        : auth.currentUser.uid,
-      cargadoPor: auth.currentUser.uid, // Recomendable usar UID en vez de email para consistencia
+      vendedorReal: ventaDeOtro ? vendedorReal : auth.currentUser.uid,
+      cargadoPor: auth.currentUser.uid,
       createdAt: serverTimestamp(),
     };
 
@@ -186,44 +181,40 @@ export default function Ventas() {
         // 1️⃣ LECTURAS
         // ===============================
         for (const item of items) {
+          
           // ===============================
           // SI ES COMBO
           // ===============================
           if (item.type === "combo") {
-            const comboRef = doc(
-              db,
-              "categorias",
-              item.categoriaId,
-              "productos",
-              item.id
-            );
-
+            const comboRef = doc(db, "categorias", item.categoriaId, "productos", item.id);
             const comboSnap = await transaction.get(comboRef);
-            if (!comboSnap.exists())
-              throw new Error("Combo inexistente");
+            
+            if (!comboSnap.exists()) throw new Error("Combo inexistente en la base de datos");
 
-            const comboData = comboSnap.data();
+            // ✅ CORRECCIÓN: Usamos las selecciones DEL CARRITO, que contienen 'branch' y 'variant'
+            const seleccionesCarrito = item.comboItems || [];
+            
+            if (seleccionesCarrito.length === 0) {
+              throw new Error(`El combo ${item.name} no tiene productos válidos en el carrito.`);
+            }
 
-            if (!Array.isArray(comboData.items))
-              throw new Error("Combo mal configurado");
-
-            for (const comboItem of comboData.items) {
+            for (const cartComboItem of seleccionesCarrito) {
               const productoRef = doc(
                 db,
                 "categorias",
-                comboData.categoriaId,
+                cartComboItem.categoriaId,
                 "productos",
-                comboItem.productId
+                cartComboItem.productId
               );
 
               const snap = await transaction.get(productoRef);
-              if (!snap.exists())
-                throw new Error("Producto del combo inexistente");
+              if (!snap.exists()) throw new Error(`Producto ${cartComboItem.name} del combo no existe`);
 
               productosLeidos.push({
                 item: {
-                  ...comboItem,
-                  qty: comboItem.quantity * item.qty,
+                  ...cartComboItem,
+                  // Multiplicamos lo que pide el combo por la cantidad de combos llevados
+                  qty: (cartComboItem.unitsToDiscount || cartComboItem.quantity || 1) * item.qty,
                 },
                 ref: productoRef,
                 data: snap.data(),
@@ -233,17 +224,10 @@ export default function Ventas() {
             // ===============================
             // PRODUCTO NORMAL
             // ===============================
-            const productoRef = doc(
-              db,
-              "categorias",
-              item.categoriaId,
-              "productos",
-              item.id
-            );
-
+            const productoRef = doc(db, "categorias", item.categoriaId, "productos", item.id);
             const snap = await transaction.get(productoRef);
-            if (!snap.exists())
-              throw new Error("Producto inexistente");
+            
+            if (!snap.exists()) throw new Error(`El producto ${item.name} ya no existe en la base de datos`);
 
             productosLeidos.push({
               item,
@@ -254,36 +238,27 @@ export default function Ventas() {
         }
 
         // ===============================
-        // 2️⃣ DESCONTAR STOCK
+        // 2️⃣ DESCONTAR STOCK Y VALIDAR CRÉDITO
         // ===============================
-        const vendedorId = ventaDeOtro
-          ? vendedorReal
-          : auth.currentUser.uid;
-
+        const vendedorId = ventaDeOtro ? vendedorReal : auth.currentUser.uid;
         const vendedorRef = doc(db, "usuarios", vendedorId);
         const vendedorSnap = await transaction.get(vendedorRef);
 
-        if (!vendedorSnap.exists()) {
-          throw new Error("Vendedor no encontrado");
-        }
+        if (!vendedorSnap.exists()) throw new Error("Vendedor no encontrado");
 
         const vendedorData = vendedorSnap.data();
-
         const topeTotal = 5000000;
-
         const mesActual = new Date().toISOString().slice(0, 7);
 
         let topeUsado = vendedorData.topeUsado || 0;
         const mesCredito = vendedorData.mesCredito || null;
 
-        // 🔥 reset automático mensual
+        // Reset automático mensual
         if (mesCredito !== mesActual) {
           topeUsado = 0;
         }
 
         let riesgo = 0;
-
-        // calculamos costo total de la venta
         const costoTotal = productosLeidos.reduce((acc, p) => {
           const qty = p.item.qty || 0;
           const costo = Number(p.data.purchasePrice || 0);
@@ -295,51 +270,47 @@ export default function Ventas() {
         } else if (pagoParcial) {
           riesgo = saldoFinanciado;
         } else {
-          // 🔥 SOLO cuando no paga nada → usa costo en vez de precio de venta
           riesgo = costoTotal;
         }
 
         const disponible = topeTotal - topeUsado;
-
         if (riesgo > disponible) {
           throw new Error("El vendedor no tiene crédito disponible suficiente");
         }
 
         // ===============================
-        // 3️⃣ WRITES
+        // 3️⃣ WRITES (ACTUALIZACIONES)
         // ===============================
 
         // 🔻 DESCONTAR STOCK
         for (const { item, ref, data } of productosLeidos) {
           const variantesDB = Array.isArray(data.variantes)
             ? data.variantes
-            : [
-              {
-                attr: "default",
-                stock: data.stock || {},
-              },
-            ];
+            : [{ attr: "default", stock: data.stock || {} }];
 
           const variantesActualizadas = variantesDB.map((v) => {
-            if (item.variant && v.attr !== item.variant) return v;
+            // Si el item tiene variante, afectamos solo a esa variante
+            if (item.variant && String(v.attr).trim() !== String(item.variant).trim()) return v;
 
             const nuevoStock = { ...v.stock };
             const sucursal = item.branch;
 
-            if (!nuevoStock[sucursal])
-              throw new Error(`Sin stock en ${sucursal}`);
+            // ✅ VALIDACIONES MEJORADAS PARA IDENTIFICAR EXACTAMENTE EL ERROR
+            if (!sucursal) 
+              throw new Error(`El producto "${item.name}" no tiene una sucursal asignada.`);
+            
+            if (nuevoStock[sucursal] === undefined)
+              throw new Error(`La sucursal "${sucursal}" no está cargada en el producto "${item.name}".`);
 
             if (nuevoStock[sucursal] < item.qty)
-              throw new Error(`Stock insuficiente en ${sucursal}`);
+              throw new Error(`Stock insuficiente de "${item.name}" en la sucursal "${sucursal}". Pedidos: ${item.qty}, Disponibles: ${nuevoStock[sucursal]}`);
 
             nuevoStock[sucursal] -= item.qty;
 
             return { ...v, stock: nuevoStock };
           });
 
-          transaction.update(ref, {
-            variantes: variantesActualizadas,
-          });
+          transaction.update(ref, { variantes: variantesActualizadas });
         }
 
         // 🔻 ACTUALIZAR CRÉDITO
@@ -376,7 +347,6 @@ export default function Ventas() {
           onChange={(e) => setFecha(e.target.value)}
         />
       </header>
-
 
       {/* CLIENTE */}
       <div className={styles.card}>
