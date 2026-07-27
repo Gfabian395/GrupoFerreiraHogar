@@ -91,9 +91,8 @@ export default function ComboCard({
               const stockOriginal = v.stock && typeof v.stock === "object" ? v.stock : {};
               const stockNormalizado = { ...stockOriginal };
               
-              // ❌ ERROR 1 SOLUCIONADO: El nombre de la variable estaba mal escrito (stockNormalized)
               if (stockNormalizado["Mosconi"] !== undefined && stockNormalizado["Jofre 2440"] === undefined) {
-                stockNormalizado["Jofre 2440"] = stockNormalizado["Mosconi"]; 
+                stockNormalizado["Jofre 2440"] = stockNormalizado["Mosconi"];
               }
 
               return {
@@ -116,9 +115,6 @@ export default function ComboCard({
       .filter(Boolean);
   }, [combo?.items, productosById]);
 
-  // ❌ ERROR 2 SOLUCIONADO: Eliminamos el useEffect que calculaba la variante tarde. 
-  // Ahora la variante se calcula directamente en la memorización de abajo (selectedComponents)
-
   const getCartUnitsFor = useCallback(
     (productId, variantName, branch) => {
       return cartItems.reduce((total, item) => {
@@ -127,7 +123,6 @@ export default function ComboCard({
         if (Array.isArray(item.comboItems)) {
           units += item.comboItems.reduce((sum, comboItem) => {
             const sameProduct = comboItem.productId === productId;
-            // ❌ ERROR 3 SOLUCIONADO: Limpiamos los espacios en blanco para evitar falsos negativos
             const sameVariant = String(comboItem.variant).trim() === String(variantName).trim();
             const sameBranch = comboItem.branch === branch;
 
@@ -156,7 +151,7 @@ export default function ComboCard({
   );
 
   const getAvailabilityForVariant = useCallback(
-    (productId, variant, requiredQty) => {
+    (productId, variant, physicalRequiredQty) => { // Cambiado a physicalRequiredQty
       const stockObj = getStockObj(variant);
       const variantName = variant?.attr?.trim();
 
@@ -173,8 +168,9 @@ export default function ComboCard({
           0
         );
 
+        // ✅ DIVIDIMOS EL STOCK POR LA CANTIDAD FÍSICA NECESARIA (Ej: 6 sillas)
         const availableCombos = Math.floor(
-          availableUnits / Number(requiredQty || 1)
+          availableUnits / Number(physicalRequiredQty || 1)
         );
 
         if (availableCombos > best.availableCombos) {
@@ -197,14 +193,13 @@ export default function ComboCard({
 
   const selectedComponents = useMemo(() => {
     const calculated = comboProducts.map((item) => {
-      // Tomamos la variante seleccionada, si es que el usuario ya eligió una
       let selectedIndex = selectedVariants[item.productId];
 
-      // Si no eligió ninguna (primer renderizado), buscamos LA PRIMERA QUE TENGA STOCK
       if (selectedIndex === undefined) {
-        const autoAvailableIndex = item.variants.findIndex(
-          (v) => getStockTotal(v) >= item.requiredQty
-        );
+        const autoAvailableIndex = item.variants.findIndex((v) => {
+           const mult = Number(v.unidadesPorJuego ?? item.product?.unidadesPorJuego ?? item.product?.unidadesNecesarias ?? 1);
+           return getStockTotal(v) >= (item.requiredQty * mult);
+        });
         selectedIndex = autoAvailableIndex >= 0 ? autoAvailableIndex : 0;
       }
 
@@ -214,11 +209,21 @@ export default function ComboCard({
           : 0;
 
       const variant = item.variants[safeIndex] ?? null;
-      // Limpiamos espacios basura que vengan de Firebase
       const variantName = variant?.attr?.trim() ?? "Sin variante";
 
+      // ✅ DETECTAMOS SI EL PRODUCTO ES UN "JUEGO x6" O SIMILAR
+      const multiplier = Number(
+        variant?.unidadesPorJuego ??
+        item.product?.unidadesPorJuego ??
+        item.product?.unidadesNecesarias ??
+        1
+      );
+
+      // ✅ MULTIPLICAMOS LO QUE PIDE EL COMBO POR LAS UNIDADES QUE TRAE EL JUEGO
+      const physicalQty = item.requiredQty * multiplier;
+
       const availability = variant
-        ? getAvailabilityForVariant(item.productId, variant, item.requiredQty)
+        ? getAvailabilityForVariant(item.productId, variant, physicalQty)
         : {
             branch: null,
             availableUnits: 0,
@@ -230,6 +235,8 @@ export default function ComboCard({
         variant,
         variantIndex: safeIndex,
         variantName,
+        multiplier,       // Guardamos el multiplicador
+        physicalQty,      // Guardamos la cantidad física real necesaria
         stockTotal: getStockTotal(variant),
         branch: availability.branch,
         availableUnits: availability.availableUnits,
@@ -302,10 +309,11 @@ export default function ComboCard({
   const selectionSummary = useMemo(() => {
     return selectedComponents
       .map((component) => {
-        const qtyText =
-          component.requiredQty > 1 ? `${component.requiredQty} ` : "";
+        const qtyText = component.requiredQty > 1 ? `${component.requiredQty} ` : "";
+        // Agregamos un texto si es un juego (ej: para que en el carrito diga "Juego x6")
+        const multText = component.multiplier > 1 ? ` (Juego x${component.multiplier})` : "";
 
-        return `${qtyText}${component.product.name} ${component.variantName}`;
+        return `${qtyText}${component.product.name} ${component.variantName}${multText}`;
       })
       .join(" + ");
   }, [selectedComponents]);
@@ -341,8 +349,9 @@ export default function ComboCard({
       variant: component.variantName,
       variantIndex: component.variantIndex,
       quantity: component.requiredQty,
-      unitsToDiscount: component.requiredQty,
-      totalUnitsToDiscount: component.requiredQty * comboQty,
+      // ✅ ACÁ ESTABA EL ERROR: Le mandamos la CANTIDAD FÍSICA REAL (Ej: 6) para descontar stock
+      unitsToDiscount: component.physicalQty,
+      totalUnitsToDiscount: component.physicalQty * comboQty,
       branch: component.branch,
       image: component.image,
       price: Number(component.variant?.price || 0),
@@ -491,17 +500,31 @@ export default function ComboCard({
               </h4>
               <p>
                 requiere {component.requiredQty}{" "}
-                {component.requiredQty === 1 ? "unidad" : "unidades"}
+                {component.multiplier > 1
+                  ? `juego(s) de ${component.multiplier} unidades`
+                  : component.requiredQty === 1
+                  ? "unidad"
+                  : "unidades"}
               </p>
             </header>
 
             <div className={styles.variantGrid}>
               {component.variants.map((variant, variantIndex) => {
                 const stockTotal = getStockTotal(variant);
+                
+                // Calculamos cuánto requiere físicamente ESTA variante específica
+                const varMultiplier = Number(
+                  variant?.unidadesPorJuego ??
+                  component.product?.unidadesPorJuego ??
+                  component.product?.unidadesNecesarias ??
+                  1
+                );
+                const varPhysicalQty = component.requiredQty * varMultiplier;
+
                 const availability = getAvailabilityForVariant(
                   component.productId,
                   variant,
-                  component.requiredQty
+                  varPhysicalQty
                 );
 
                 const selected = component.variantIndex === variantIndex;
@@ -557,7 +580,7 @@ export default function ComboCard({
               {brokenItems.map((item) => (
                 <li key={item.productId}>
                   {item.product.name} - {item.variantName}: requiere{" "}
-                  {item.requiredQty}, stock insuficiente.
+                  {item.physicalQty} unidades, stock insuficiente.
                 </li>
               ))}
             </ul>
