@@ -19,6 +19,7 @@ const Finanzas = () => {
   const [ventas, setVentas] = useState([]);
   const [cobros, setCobros] = useState([]);
   const [gastos, setGastos] = useState([]);
+  const [historialBalances, setHistorialBalances] = useState({}); // NUEVO ESTADO
   const [loading, setLoading] = useState(true);
   const [clientesMap, setClientesMap] = useState({});
   const [usuariosMap, setUsuariosMap] = useState({});
@@ -105,9 +106,8 @@ const Finanzas = () => {
         setUsuariosMap(usuariosIdMap);
         setUsuariosEmailMap(usuariosEmailMapLocal);
 
-        // 1. OBTENER VENTAS
+        // 1. OBTENER TODAS LAS VENTAS
         const ventasSnap = await getDocs(query(collection(db, "ventas"), orderBy("createdAt", "desc")));
-
         const todasLasVentas = ventasSnap.docs.map(doc => {
           const v = doc.data();
           const sellerEmail = v.vendedorReal || v.vendedor || v.cargadoPor;
@@ -118,7 +118,6 @@ const Finanzas = () => {
             sucursalNombre = "Jofre 2440";
           }
 
-          // MARCAMOS LAS VENTAS QUE FUERON FIADAS COMPLETAMENTE SIN PAGO INICIAL
           const esFuturaNoCobrada = v.pago && v.pago.montoPagado === 0 && v.pago.primerCuotaPaga === false;
 
           return { 
@@ -131,63 +130,48 @@ const Finanzas = () => {
           };
         });
 
-        const ventasMesActual = todasLasVentas.filter(v => {
-          const f = obtenerObjetoFecha(v.fecha);
-          return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
-        });
-        setVentas(ventasMesActual);
-        setVentasFiltradas(ventasMesActual);
-
-        // 2. OBTENER COBROS REALES EFECTIVOS
+        // 2. OBTENER TODOS LOS COBROS (Sin filtrar por mes todavía)
         const cobrosGenerados = [];
         todasLasVentas.forEach(venta => {
           if (venta.pago && venta.pago.primerCuotaPaga === true && venta.pago.montoPagado > 0) {
-            const fechaVentaObj = obtenerObjetoFecha(venta.fecha);
-            if (fechaVentaObj && fechaVentaObj.getFullYear() === anioActual && fechaVentaObj.getMonth() === mesActual) {
-              const sellerEmail = venta.vendedorReal || venta.vendedor || venta.cargadoPor;
-              const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
-              
-              cobrosGenerados.push({
-                id: venta.id + "-inicial",
-                fecha: venta.fecha,
-                clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
-                cuotaNumero: 1,
-                monto: Number(venta.pago.montoPagado),
-                vendedorNombre,
-                sucursal: venta.sucursal
-              });
-            }
+            const sellerEmail = venta.vendedorReal || venta.vendedor || venta.cargadoPor;
+            const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
+            
+            cobrosGenerados.push({
+              id: venta.id + "-inicial",
+              fecha: venta.fecha,
+              clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
+              cuotaNumero: 1,
+              monto: Number(venta.pago.montoPagado),
+              vendedorNombre,
+              sucursal: venta.sucursal
+            });
           }
 
           if (venta.pagos && Array.isArray(venta.pagos)) {
             venta.pagos.forEach(pago => {
               const esCobroReal = pago.cobrado !== false && pago.pendiente !== true && (pago.monto > 0 || pago.montoPagado > 0);
               if (esCobroReal) {
-                const fechaPagoObj = obtenerObjetoFecha(pago.fecha);
-                if (fechaPagoObj && fechaPagoObj.getFullYear() === anioActual && fechaPagoObj.getMonth() === mesActual) {
-                  const sellerEmail = pago?.firma?.email || venta.vendedorReal || venta.vendedor || venta.cargadoPor;
-                  const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
-                  
-                  cobrosGenerados.push({
-                    id: venta.id + "-" + (pago.numero || Math.random()),
-                    fecha: pago.fecha,
-                    clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
-                    cuotaNumero: pago.numero || "Extra",
-                    monto: Number(pago.monto || pago.montoPagado || 0),
-                    vendedorNombre,
-                    sucursal: venta.sucursal 
-                  });
-                }
+                const sellerEmail = pago?.firma?.email || venta.vendedorReal || venta.vendedor || venta.cargadoPor;
+                const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
+                
+                cobrosGenerados.push({
+                  id: venta.id + "-" + (pago.numero || Math.random()),
+                  fecha: pago.fecha,
+                  clienteNombre: clientes[venta.clienteId] || "Sin Nombre",
+                  cuotaNumero: pago.numero || "Extra",
+                  monto: Number(pago.monto || pago.montoPagado || 0),
+                  vendedorNombre,
+                  sucursal: venta.sucursal 
+                });
               }
             });
           }
         });
-        setCobros(cobrosGenerados);
-        setCobrosFiltrados(cobrosGenerados);
 
-        // 3. OBTENER GASTOS
+        // 3. OBTENER TODOS LOS GASTOS
         const gastosSnap = await getDocs(query(collection(db, "gastos"), orderBy("createdAt", "desc")));
-        const gastosMesActual = gastosSnap.docs.map(g => {
+        const todosLosGastos = gastosSnap.docs.map(g => {
           const gasto = g.data();
           const expenseUser = gasto.vendedor || gasto.usuario;
           const registradoPor = usuariosEmailMapLocal[expenseUser] || usuariosIdMap[expenseUser] || expenseUser || "Sin Nombre";
@@ -196,10 +180,59 @@ const Finanzas = () => {
           if (sucursalGasto === "Mosconi") sucursalGasto = "Jofre 2440";
           
           return { id: g.id, ...gasto, registradoPor, sucursal: sucursalGasto };
-        }).filter(g => {
+        });
+
+        // ==========================================
+        // NUEVA LÓGICA: CREAR HISTORIAL GLOBAL
+        // ==========================================
+        const historialTemp = {};
+
+        const procesarParaHistorial = (lista, tipo, montoKey) => {
+          lista.forEach(item => {
+            if (tipo === "ventas" && item.esFuturaNoCobrada) return;
+            const f = obtenerObjetoFecha(item.fecha);
+            if (!f || isNaN(f.getTime())) return;
+            
+            const y = f.getFullYear();
+            const m = f.getMonth(); // 0 a 11
+            
+            if (!historialTemp[y]) historialTemp[y] = {};
+            if (!historialTemp[y][m]) historialTemp[y][m] = { ventas: 0, cobros: 0, gastos: 0 };
+            
+            historialTemp[y][m][tipo] += (Number(item[montoKey]) || 0);
+          });
+        };
+
+        procesarParaHistorial(todasLasVentas, "ventas", "total");
+        procesarParaHistorial(cobrosGenerados, "cobros", "monto");
+        procesarParaHistorial(todosLosGastos, "gastos", "monto");
+        
+        setHistorialBalances(historialTemp);
+
+        // ==========================================
+        // LÓGICA ORIGINAL: FILTRAR PARA MES ACTUAL
+        // ==========================================
+        const ventasMesActual = todasLasVentas.filter(v => {
+          const f = obtenerObjetoFecha(v.fecha);
+          return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
+        });
+        
+        const cobrosMesActual = cobrosGenerados.filter(c => {
+          const f = obtenerObjetoFecha(c.fecha);
+          return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
+        });
+
+        const gastosMesActual = todosLosGastos.filter(g => {
           const f = obtenerObjetoFecha(g.fecha);
           return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
         });
+
+        setVentas(ventasMesActual);
+        setVentasFiltradas(ventasMesActual);
+        
+        setCobros(cobrosMesActual);
+        setCobrosFiltrados(cobrosMesActual);
+        
         setGastos(gastosMesActual);
         setGastosFiltrados(gastosMesActual);
 
@@ -272,6 +305,8 @@ const Finanzas = () => {
   const toggleCobrosLocal = (loc) => setMostrarCobros(prev => ({ ...prev, [loc]: !prev[loc] }));
   const toggleGastosLocal = (loc) => setMostrarGastos(prev => ({ ...prev, [loc]: !prev[loc] }));
 
+  const nombresMesesArray = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
   if (loading) return <Loader />;
 
  return (
@@ -328,9 +363,10 @@ const Finanzas = () => {
               const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
               
               const acumPorDia = lista.reduce((acc, curr) => {
-                const fechaObj = new Date(curr.fecha);
-                const diaNombre = isNaN(fechaObj.getTime()) ? "S/D" : diasSemana[fechaObj.getDay()];
+                const fechaObj = obtenerObjetoFecha(curr.fecha); 
+                const diaNombre = (!fechaObj || isNaN(fechaObj.getTime())) ? "S/D" : diasSemana[fechaObj.getDay()];
                 const monto = Number(curr[llaveMonto]) || 0;
+                
                 acc[diaNombre] = (acc[diaNombre] || 0) + monto;
                 return acc;
               }, {});
@@ -371,7 +407,7 @@ const Finanzas = () => {
             </div>
           </div>
 
-          {/* Gráfica Exclusiva del Local (Con contenedor para Scroll Horizontal en Smartphone) */}
+          {/* Gráfica Exclusiva del Local */}
           <div className={styles.chartWrapper}>
             <div className={styles.chartContainer}>
               <ResponsiveContainer width="100%" height="100%">
@@ -408,7 +444,6 @@ const Finanzas = () => {
           <div className={styles.auditoriaWrapper}>
             <h3>📋 Auditoría Detallada (Ordenado por Día): {sucursalNombre}</h3>
 
-            {/* TABLA DE VENTAS DEL LOCAL */}
             <section className={styles.seccionTablaCollapsible}>
               <div className={styles.headerTablaFlex}>
                 <h4>Historial Ventas Realizadas ({ventasSucursal.length})</h4>
@@ -443,7 +478,6 @@ const Finanzas = () => {
               )}
             </section>
 
-            {/* TABLA DE COBROS DEL LOCAL */}
             <section className={styles.seccionTablaCollapsible}>
               <div className={styles.headerTablaFlex}>
                 <h4>Historial Cobros Caja ({cobrosSucursal.length})</h4>
@@ -474,7 +508,6 @@ const Finanzas = () => {
               )}
             </section>
 
-            {/* TABLA DE GASTOS DEL LOCAL */}
             <section className={styles.seccionTablaCollapsible}>
               <div className={styles.headerTablaFlex}>
                 <h4>Historial Gastos Caja ({gastosSucursal.length})</h4>
@@ -508,8 +541,78 @@ const Finanzas = () => {
         </div>
       );
     })}
+
+    {/* ==============================================================
+        NUEVA SECCIÓN: HISTORIAL DE BALANCES GLOBALES (AÑOS Y MESES) 
+        ============================================================== */}
+    <div className={styles.sucursalCard} style={{ marginTop: "2rem" }}>
+      <div className={styles.sucursalHeader} style={{ marginBottom: "1rem" }}>
+        <h2>📅 Historial General de Balances</h2>
+        <span className={styles.sucursalBadge} style={{ background: "#334155", color: "white" }}>Datos Históricos Globales</span>
+      </div>
+
+      {Object.keys(historialBalances).length === 0 ? (
+        <p style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>No hay datos históricos disponibles.</p>
+      ) : (
+        Object.keys(historialBalances)
+          .sort((a, b) => b - a) // Años más recientes primero
+          .map(year => {
+            const mesesDelAnio = historialBalances[year];
+            return (
+              <div key={year} style={{ marginBottom: "2.5rem" }}>
+                <h3 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", color: "#334155", marginBottom: "15px" }}>
+                  Año {year}
+                </h3>
+                
+                <div className={styles["table-wrapper"]}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Mes</th>
+                        <th>Emitido Ventas</th>
+                        <th>Ingresos (Cobros)</th>
+                        <th>Gastos de Caja</th>
+                        <th>Balance Neto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.keys(mesesDelAnio)
+                        .sort((a, b) => b - a) // Meses más recientes primero (Diciembre a Enero)
+                        .map(monthIndex => {
+                          const datosMes = mesesDelAnio[monthIndex];
+                          const balanceMes = datosMes.cobros - datosMes.gastos;
+                          
+                          return (
+                            <tr key={`${year}-${monthIndex}`}>
+                              <td style={{ fontWeight: "700", textTransform: "capitalize", color: "#0f172a" }}>
+                                {nombresMesesArray[monthIndex]}
+                              </td>
+                              <td className={styles.textoDestacadoVentas}>
+                                ${formatearMonto(datosMes.ventas)}
+                              </td>
+                              <td className={styles.textoDestacadoCobros}>
+                                ${formatearMonto(datosMes.cobros)}
+                              </td>
+                              <td className={styles.textoDestacadoGastos}>
+                                ${formatearMonto(datosMes.gastos)}
+                              </td>
+                              <td className={balanceMes >= 0 ? styles.balancePositivo : styles.balanceNegativo} style={{ fontWeight: "bold" }}>
+                                ${formatearMonto(balanceMes)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })
+      )}
+    </div>
+
   </div>
-);
+ );
 };
 
 export default Finanzas;
