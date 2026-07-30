@@ -325,7 +325,8 @@ export default function Clientes() {
 
         // 1. Calculamos la fecha teórica de vencimiento de la cuota que DEBE actualmente
         const proximoVenc = new Date(fechaBase);
-        proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas);
+        // Le sumamos 1 para que la primera cuota venza al mes siguiente de la compra
+        proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas + 1);
 
         // 2. CORRECCIÓN LÓGICA: Si el cliente ya pagó recientemente (ej. en junio pagó lo de mayo),
         // evaluamos los días reales de atraso frente a la fecha límite real de la nueva cuota.
