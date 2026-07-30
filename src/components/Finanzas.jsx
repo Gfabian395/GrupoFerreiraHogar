@@ -36,10 +36,8 @@ const Finanzas = () => {
   
   const [refreshKey, setRefreshKey] = useState(0); 
   
-  // NUEVO: Estado para saber en qué sucursal se abrió el formulario
   const [sucursalFormularioAbierto, setSucursalFormularioAbierto] = useState(null);
   
-  // NUEVO: Agregamos la categoría al estado inicial
   const [nuevoGasto, setNuevoGasto] = useState({
     descripcion: "",
     monto: "",
@@ -106,8 +104,8 @@ const Finanzas = () => {
       await addDoc(collection(db, "gastos"), {
         descripcion: nuevoGasto.descripcion,
         monto: Number(nuevoGasto.monto),
-        categoria: nuevoGasto.categoria, // Guardamos la categoría (Sueldo, Comisión, etc)
-        sucursal: sucursalFormularioAbierto, // Toma la sucursal del botón que tocaste
+        categoria: nuevoGasto.categoria, 
+        sucursal: sucursalFormularioAbierto, 
         fecha: nuevoGasto.fecha,
         createdAt: serverTimestamp(),
         usuario: "Usuario Actual", 
@@ -116,7 +114,7 @@ const Finanzas = () => {
       alert("Gasto cargado exitosamente");
       
       setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
-      setSucursalFormularioAbierto(null); // Cierra el formulario
+      setSucursalFormularioAbierto(null); 
       setRefreshKey(prev => prev + 1);
       
     } catch (error) {
@@ -342,7 +340,6 @@ const Finanzas = () => {
   <div className={styles.container}>
     <h1>Panel de Finanzas - {nombreMesCapitalizado} {anioActual}</h1>
 
-    {/* FILTROS GLOBALES POR FECHA */}
     <section className={styles.filtros}>
       <div className={styles.filtrosFlex}>
         <label>Desde: <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></label>
@@ -354,9 +351,8 @@ const Finanzas = () => {
       </div>
     </section>
 
-    {/* RENDERIZADO COMPLETO POR CADA LOCAL INDEPENDIENTE */}
     {listaSucursales.map((sucursalNombre, idx) => {
-      // FILTRADO DE DATOS
+      
       const ventasSucursal = ventasFiltradas
         .filter(v => v.sucursal === sucursalNombre && !v.esFuturaNoCobrada)
         .sort(ordenarPorFechaDescendente);
@@ -376,25 +372,50 @@ const Finanzas = () => {
 
       const datosGraficoSucursal = obtenerDatosGraficoPorSucursal(sucursalNombre);
 
+      // --- LÓGICA DE RANKING DE VENDEDORES ---
+      const ventasParaRanking = ventasFiltradas.filter(v => v.sucursal === sucursalNombre);
+      const rankingVendedoresMap = {};
+
+      ventasParaRanking.forEach(venta => {
+        const vendedor = venta.vendedorNombre;
+        if (!rankingVendedoresMap[vendedor]) {
+          rankingVendedoresMap[vendedor] = { 
+            nombre: vendedor, 
+            cantidadVentas: 0, 
+            cantidadCobradas: 0, 
+            totalDinero: 0 
+          };
+        }
+        
+        rankingVendedoresMap[vendedor].cantidadVentas += 1;
+        
+        // Si la venta SÍ tiene la primera cuota paga
+        if (!venta.esFuturaNoCobrada) {
+          rankingVendedoresMap[vendedor].cantidadCobradas += 1;
+          rankingVendedoresMap[vendedor].totalDinero += (Number(venta.total) || 0);
+        }
+      });
+
+      const rankingVendedores = Object.values(rankingVendedoresMap)
+        .sort((a, b) => b.totalDinero - a.totalDinero);
+      // ----------------------------------------
+
       return (
         <div key={sucursalNombre} className={styles.sucursalCard}>
           
-          {/* Header del Local modificado para alojar el Botón */}
           <div className={styles.sucursalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
               <h2 style={{ margin: 0 }}>🏪 {sucursalNombre}</h2>
               <span className={styles.sucursalBadge}>Sucursal Activa</span>
             </div>
             
-            {/* BOTÓN INDIVIDUAL POR SUCURSAL */}
             <button 
               className={styles.btnPrimario} 
               style={{ backgroundColor: sucursalFormularioAbierto === sucursalNombre ? "#ef4444" : "" }}
               onClick={() => {
                 if (sucursalFormularioAbierto === sucursalNombre) {
-                  setSucursalFormularioAbierto(null); // Cierra si ya estaba abierto
+                  setSucursalFormularioAbierto(null);
                 } else {
-                  // Resetea el form y lo abre para esta sucursal
                   setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
                   setSucursalFormularioAbierto(sucursalNombre);
                 }
@@ -404,7 +425,6 @@ const Finanzas = () => {
             </button>
           </div>
 
-          {/* FORMULARIO INYECTADO SOLO EN LA SUCURSAL SELECCIONADA */}
           {sucursalFormularioAbierto === sucursalNombre && (
             <form onSubmit={handleCargarGasto} style={{ background: "#f8fafc", padding: "20px", borderRadius: "8px", margin: "15px 0", border: "2px dashed #cbd5e1" }}>
               <h3 style={{ margin: "0 0 15px 0", color: "#334155" }}>Registrar Gasto en {sucursalNombre}</h3>
@@ -421,7 +441,6 @@ const Finanzas = () => {
                   />
                 </label>
 
-                {/* NUEVO SELECTOR DE CATEGORÍA */}
                 <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
                   Categoría:
                   <select 
@@ -468,7 +487,6 @@ const Finanzas = () => {
             </form>
           )}
 
-          {/* SUBTÍTULO: 3 RANKINGS DINÁMICOS */}
           {(() => {
             const obtenerTopDia = (lista, llaveMonto) => {
               if (!lista || lista.length === 0) return { dia: "Sin datos", monto: 0 };
@@ -509,7 +527,6 @@ const Finanzas = () => {
             );
           })()}
 
-          {/* Tarjetas Informativas del Local */}
           <div className={styles.cards}>
             <div className={`${styles.cardInfo} ${styles.cardVentas}`}>Emitido Ventas:<br /><b>${formatearMonto(totalVentasSuc)}</b></div>
             <div className={`${styles.cardInfo} ${styles.cardCobros}`}>Ingreso Caja:<br /><b>${formatearMonto(totalCobrosSuc)}</b></div>
@@ -519,7 +536,6 @@ const Finanzas = () => {
             </div>
           </div>
 
-          {/* Gráfica Exclusiva del Local */}
           <div className={styles.chartWrapper}>
             <div className={styles.chartContainer}>
               <ResponsiveContainer width="100%" height="100%">
@@ -552,7 +568,51 @@ const Finanzas = () => {
             </div>
           </div>
 
-          {/* TABLAS DETALLADAS SUCURSALES (COLLAPSIBLES) */}
+          {/* TABLA DE RANKING DE VENDEDORES (NUEVO) */}
+          <div className={styles.auditoriaWrapper} style={{ marginTop: "20px", marginBottom: "20px" }}>
+            <h3 style={{ color: "#3b82f6" }}>🏆 Ranking de Vendedores: {sucursalNombre}</h3>
+            <div className={styles["table-wrapper"]}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Puesto</th>
+                    <th>Vendedor</th>
+                    <th>Ventas Totales</th>
+                    <th>Con 1ra Cuota Paga</th>
+                    <th>Efectividad</th>
+                    <th>Dinero Generado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankingVendedores.map((vend, i) => (
+                    <tr key={i}>
+                      <td style={{ fontSize: "1.2rem", textAlign: "center" }}>
+                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}º`}
+                      </td>
+                      <td style={{ fontWeight: "bold" }}>{vend.nombre}</td>
+                      <td>{vend.cantidadVentas} prods.</td>
+                      <td>{vend.cantidadCobradas} cobradas</td>
+                      <td>
+                        <span style={{ 
+                          background: (vend.cantidadCobradas / vend.cantidadVentas) >= 0.8 ? '#bbf7d0' : '#fef08a', 
+                          padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' 
+                        }}>
+                          {vend.cantidadVentas > 0 ? Math.round((vend.cantidadCobradas / vend.cantidadVentas) * 100) : 0}%
+                        </span>
+                      </td>
+                      <td className={styles.textoDestacadoVentas}>
+                        ${formatearMonto(vend.totalDinero)}
+                      </td>
+                    </tr>
+                  ))}
+                  {rankingVendedores.length === 0 && (
+                    <tr><td colSpan="6" className={styles.tablaVacia}>No hay ventas registradas.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div className={styles.auditoriaWrapper}>
             <h3>📋 Auditoría Detallada (Ordenado por Día): {sucursalNombre}</h3>
 
@@ -631,7 +691,6 @@ const Finanzas = () => {
                 <div className={styles["table-wrapper"]}>
                   <table className={styles.table}>
                     <thead>
-                      {/* NUEVO: Columna de Categoría agregada en la tabla */}
                       <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th></tr>
                     </thead>
                     <tbody>
@@ -663,9 +722,6 @@ const Finanzas = () => {
       );
     })}
 
-    {/* ==============================================================
-        HISTORIAL DE BALANCES GLOBALES (AÑOS Y MESES) 
-        ============================================================== */}
     <div className={styles.sucursalCard} style={{ marginTop: "2rem" }}>
       <div className={styles.sucursalHeader} style={{ marginBottom: "1rem" }}>
         <h2>📅 Historial General de Balances</h2>
