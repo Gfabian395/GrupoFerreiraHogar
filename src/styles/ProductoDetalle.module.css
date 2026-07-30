@@ -1,205 +1,202 @@
 /* ============================= */
-/* 🌌 BACKGROUND LIMPIO          */
+/* 🌌 BACKGROUND Y TIPOGRAFÍA    */
 /* ============================= */
-.container {
-  min-height: 100vh;
-  padding: 60px 20px;
+body {
+  margin: 0;
+  background-color: #f4f7f9; /* Fondo gris/azulado muy suave */
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #1a1a1a;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: "Poppins", sans-serif;
-  color: black;
-}
-
-/* ============================= */
-/* 💎 WRAPPER DEL EFECTO GLOW    */
-/* ============================= */
-.cardWrapper {
-  position: relative;
-  border-radius: 40px;
-  padding: 4px;
-}
-
-/* Glow externo ESTABLE */
-.cardWrapper::before {
-  content: "";
-  position: absolute;
-  inset: -10px;
-  border-radius: 45px;
-
-  background: linear-gradient(
-    90deg,
-    #00ffff,
-    #ff00ff,
-    #00ff99,
-    #00ffff
-  );
-  background-size: 300% 300%;
-
-  animation: borderFlow 8s linear infinite;
-
-  filter: blur(25px); /* bajamos blur para estabilidad */
-  opacity: 0.6;
-  z-index: 0;
-
-  /* 🔥 FIX GPU ANTI-FLICKER */
-  transform: translateZ(0);
-  will-change: transform, opacity;
-  backface-visibility: hidden;
-}
-
-@keyframes borderFlow {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  min-height: 100vh;
 }
 
 /* ============================= */
 /* 💎 CARD PROTAGONISTA          */
 /* ============================= */
 .card {
-  position: relative;
-  z-index: 2;
-  border-radius: 30px;
-  background: white;
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 60px 140px rgba(0, 0, 0, 0.9);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
-  /* 🔥 GPU layer */
-  transform: translateZ(0);
-  will-change: transform;
-}
-
-.card:hover {
-  transform: translateY(-6px) translateZ(0);
-  box-shadow: 0 80px 180px rgba(0, 0, 0, 1);
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px;
+  width: 100%;
+  max-width: 380px; /* Ancho similar al de una modal o móvil */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05); /* Sombra súper suave y elegante */
+  box-sizing: border-box;
 }
 
 /* ============================= */
-/* 🏷 TITULO                     */
-/* ============================= */
-.title {
-  font-size: 2.8rem;
-  font-weight: 800;
-  margin-bottom: 30px;
-
-  background: linear-gradient(90deg, #00ffff, #ff00ff);
-  -webkit-text-fill-color: transparent;
-
-  letter-spacing: 1px;
-  text-shadow:
-    0 0 10px rgba(0,255,255,0.4),
-    0 0 20px rgba(255,0,255,0.3);
-}
-
-/* ============================= */
-/* 📦 GRID                       */
-/* ============================= */
-.content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 50px;
-}
-
-@media (max-width: 900px) {
-  .content {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================= */
-/* 🖼 IMAGEN ESTABLE             */
+/* 🖼 IMAGEN DEL PRODUCTO        */
 /* ============================= */
 .imageWrapper {
-  border-radius: 25px;
-  overflow: hidden;
-  position: relative;
-
-  transform: translateZ(0);
-  will-change: transform;
+  background-color: #f1f3f5; /* Fondo gris claro para destacar el producto */
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
 .imageWrapper img {
   width: 100%;
-  display: block;
-  transition: transform 0.6s ease;
-
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
+  max-width: 250px;
+  height: auto;
+  object-fit: contain;
+  transition: transform 0.3s ease;
 }
 
 .imageWrapper:hover img {
-  transform: scale(1.05) translateZ(0);
+  transform: scale(1.05);
 }
 
 /* ============================= */
-/* 💰 PRECIO                     */
+/* 🏷 TEXTOS: TÍTULO Y PRECIO    */
 /* ============================= */
-.price {
-  font-size: 2.4rem;
-  font-weight: 800;
-
-  background: linear-gradient(90deg, #00ffcc, #00ffff);
-  -webkit-text-fill-color: transparent;
-
-  text-shadow:
-    0 0 15px rgba(0,255,204,0.6),
-    0 0 30px rgba(0,255,255,0.4);
-}
-
-/* ============================= */
-/* 🔘 BOTONES                    */
-/* ============================= */
-.buttonPrimary {
-  padding: 16px 35px;
-  border-radius: 60px;
-  border: none;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-
-  background: linear-gradient(90deg, #00ffff, #ff00ff);
-  color: black;
-  letter-spacing: 1px;
-
-  transition: transform 0.3s ease;
-
-  transform: translateZ(0);
-}
-
-.buttonPrimary:hover {
-  transform: translateY(-4px) scale(1.04) translateZ(0);
-}
-
-.buttonSecondary {
-  padding: 16px 35px;
-  border-radius: 60px;
-  border: 2px solid #00ffff;
-  background: transparent;
-  color: #00ffff;
+.title {
+  font-size: 1.5rem;
   font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #111827;
+}
+
+.price {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #10b981; /* Verde esmeralda limpio */
+  margin: 0 0 24px 0;
+}
+
+/* ============================= */
+/* 🎛 PASOS Y CONTROLES (UI)     */
+/* ============================= */
+.stepLabel {
+  font-size: 0.9rem;
+  color: #374151;
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* Selector de colores */
+.colorPicker {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
   cursor: pointer;
-  transition: 0.3s ease;
+  transition: transform 0.2s, border-color 0.2s;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.buttonSecondary:hover {
-  background: #00ffff;
-  color: black;
+.colorSwatch:hover {
+  transform: scale(1.1);
+}
+
+.colorSwatch.active {
+  border-color: #3b82f6; /* Borde azul de selección */
+}
+
+/* Dropdown */
+.selectFormat {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 24px;
+  outline: none;
+  cursor: pointer;
 }
 
 /* ============================= */
-/* 🏷 BADGE                      */
+/* 📦 GRILLA DE STOCK            */
 /* ============================= */
-.badge {
-  padding: 10px 18px;
-  border-radius: 25px;
+.stockGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.stockItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stockLocation {
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(0,255,255,0.4);
+.stockQuantity {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
 
-  color: #00ffff;
+/* ============================= */
+/* 🔘 BOTONES ACCIÓN             */
+/* ============================= */
+.actionGroup {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* Botones secundarios (Imprimir / WhatsApp) */
+.btnSecondary {
+  flex: 1;
+  padding: 12px 8px;
+  background-color: #3b5a82; /* Azul pizarra de la imagen */
+  color: #ffffff;
+}
+
+.btnSecondary:hover {
+  background-color: #2c466b;
+}
+
+/* Botón principal (Mercado Pago) */
+.btnPrimary {
+  width: 100%;
+  padding: 14px;
+  background-color: #1e3a8a; /* Azul más oscuro para destacar */
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.btnPrimary:hover {
+  background-color: #1e40af;
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase/firebaseConfig";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import styles from "../styles/Finanzas.module.css";
 import { Loader } from "./Loader";
 
@@ -19,32 +19,41 @@ const Finanzas = () => {
   const [ventas, setVentas] = useState([]);
   const [cobros, setCobros] = useState([]);
   const [gastos, setGastos] = useState([]);
-  const [historialBalances, setHistorialBalances] = useState({}); // NUEVO ESTADO
+  const [historialBalances, setHistorialBalances] = useState({});
   const [loading, setLoading] = useState(true);
   const [clientesMap, setClientesMap] = useState({});
   const [usuariosMap, setUsuariosMap] = useState({});
   const [usuariosEmailMap, setUsuariosEmailMap] = useState({});
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
-
   const listaSucursales = ["Los Andes 4320", "Los Andes 4034", "Jofre 2440"];
-
   const [ventasFiltradas, setVentasFiltradas] = useState([]);
   const [cobrosFiltrados, setCobrosFiltrados] = useState([]);
   const [gastosFiltrados, setGastosFiltrados] = useState([]);
-
   const [mostrarVentas, setMostrarVentas] = useState({});
   const [mostrarCobros, setMostrarCobros] = useState({});
   const [mostrarGastos, setMostrarGastos] = useState({});
+  
+  const [refreshKey, setRefreshKey] = useState(0); 
+  
+  // NUEVO: Estado para saber en qué sucursal se abrió el formulario
+  const [sucursalFormularioAbierto, setSucursalFormularioAbierto] = useState(null);
+  
+  // NUEVO: Agregamos la categoría al estado inicial
+  const [nuevoGasto, setNuevoGasto] = useState({
+    descripcion: "",
+    monto: "",
+    categoria: "General", 
+    fecha: new Date().toISOString().split("T")[0] 
+  });
 
   const ahora = new Date();
   const anioActual = ahora.getFullYear();
   const mesActual = ahora.getMonth();
   const nombreMes = ahora.toLocaleDateString("es-AR", { month: "long" });
   const nombreMesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
-
   const formatearMonto = (monto) => Number(monto || 0).toLocaleString("es-AR");
-
+  
   const formatearFecha = (fecha) => {
     if (!fecha) return "-";
     let date;
@@ -55,7 +64,7 @@ const Finanzas = () => {
     } else date = new Date(fecha);
     return date.toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
   };
-
+  
   const obtenerObjetoFecha = (fecha) => {
     if (!fecha) return null;
     if (fecha?.seconds) return new Date(fecha.seconds * 1000);
@@ -65,13 +74,13 @@ const Finanzas = () => {
     }
     return new Date(fecha);
   };
-
+  
   const ordenarPorFechaDescendente = (a, b) => {
     const fechaA = obtenerObjetoFecha(a.fecha) || new Date(0);
     const fechaB = obtenerObjetoFecha(b.fecha) || new Date(0);
     return fechaB - fechaA;
   };
-
+  
   const aplicarFiltro = () => {
     const desde = fechaDesde ? new Date(fechaDesde + "T00:00:00") : null;
     const hasta = fechaHasta ? new Date(fechaHasta + "T23:59:59") : null;
@@ -80,12 +89,42 @@ const Finanzas = () => {
     setCobrosFiltrados(cobros.filter(c => { const f = obtenerObjetoFecha(c.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
     setGastosFiltrados(gastos.filter(g => { const f = obtenerObjetoFecha(g.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
   };
-
+  
   const borrarFiltro = () => {
     setFechaDesde(""); setFechaHasta("");
     setVentasFiltradas(ventas); setCobrosFiltrados(cobros); setGastosFiltrados(gastos);
   };
 
+  const handleCargarGasto = async (e) => {
+    e.preventDefault();
+    if (!nuevoGasto.descripcion || !nuevoGasto.monto) {
+      alert("Por favor completa la descripción y el monto.");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "gastos"), {
+        descripcion: nuevoGasto.descripcion,
+        monto: Number(nuevoGasto.monto),
+        categoria: nuevoGasto.categoria, // Guardamos la categoría (Sueldo, Comisión, etc)
+        sucursal: sucursalFormularioAbierto, // Toma la sucursal del botón que tocaste
+        fecha: nuevoGasto.fecha,
+        createdAt: serverTimestamp(),
+        usuario: "Usuario Actual", 
+      });
+
+      alert("Gasto cargado exitosamente");
+      
+      setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
+      setSucursalFormularioAbierto(null); // Cierra el formulario
+      setRefreshKey(prev => prev + 1);
+      
+    } catch (error) {
+      console.error("Error al guardar el gasto:", error);
+      alert("Hubo un error al cargar el gasto.");
+    }
+  };
+  
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -106,7 +145,6 @@ const Finanzas = () => {
         setUsuariosMap(usuariosIdMap);
         setUsuariosEmailMap(usuariosEmailMapLocal);
 
-        // 1. OBTENER TODAS LAS VENTAS
         const ventasSnap = await getDocs(query(collection(db, "ventas"), orderBy("createdAt", "desc")));
         const todasLasVentas = ventasSnap.docs.map(doc => {
           const v = doc.data();
@@ -130,7 +168,6 @@ const Finanzas = () => {
           };
         });
 
-        // 2. OBTENER TODOS LOS COBROS (Sin filtrar por mes todavía)
         const cobrosGenerados = [];
         todasLasVentas.forEach(venta => {
           if (venta.pago && venta.pago.primerCuotaPaga === true && venta.pago.montoPagado > 0) {
@@ -169,7 +206,6 @@ const Finanzas = () => {
           }
         });
 
-        // 3. OBTENER TODOS LOS GASTOS
         const gastosSnap = await getDocs(query(collection(db, "gastos"), orderBy("createdAt", "desc")));
         const todosLosGastos = gastosSnap.docs.map(g => {
           const gasto = g.data();
@@ -182,11 +218,7 @@ const Finanzas = () => {
           return { id: g.id, ...gasto, registradoPor, sucursal: sucursalGasto };
         });
 
-        // ==========================================
-        // NUEVA LÓGICA: CREAR HISTORIAL GLOBAL
-        // ==========================================
         const historialTemp = {};
-
         const procesarParaHistorial = (lista, tipo, montoKey) => {
           lista.forEach(item => {
             if (tipo === "ventas" && item.esFuturaNoCobrada) return;
@@ -194,7 +226,7 @@ const Finanzas = () => {
             if (!f || isNaN(f.getTime())) return;
             
             const y = f.getFullYear();
-            const m = f.getMonth(); // 0 a 11
+            const m = f.getMonth(); 
             
             if (!historialTemp[y]) historialTemp[y] = {};
             if (!historialTemp[y][m]) historialTemp[y][m] = { ventas: 0, cobros: 0, gastos: 0 };
@@ -209,9 +241,6 @@ const Finanzas = () => {
         
         setHistorialBalances(historialTemp);
 
-        // ==========================================
-        // LÓGICA ORIGINAL: FILTRAR PARA MES ACTUAL
-        // ==========================================
         const ventasMesActual = todasLasVentas.filter(v => {
           const f = obtenerObjetoFecha(v.fecha);
           return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
@@ -242,7 +271,7 @@ const Finanzas = () => {
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [refreshKey]); 
 
   const obtenerDatosGraficoPorSucursal = (sucursalNombre) => {
     const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
@@ -350,11 +379,94 @@ const Finanzas = () => {
       return (
         <div key={sucursalNombre} className={styles.sucursalCard}>
           
-          {/* Header del Local */}
-          <div className={styles.sucursalHeader}>
-            <h2>🏪 {sucursalNombre}</h2>
-            <span className={styles.sucursalBadge}>Sucursal Activa</span>
+          {/* Header del Local modificado para alojar el Botón */}
+          <div className={styles.sucursalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0 }}>🏪 {sucursalNombre}</h2>
+              <span className={styles.sucursalBadge}>Sucursal Activa</span>
+            </div>
+            
+            {/* BOTÓN INDIVIDUAL POR SUCURSAL */}
+            <button 
+              className={styles.btnPrimario} 
+              style={{ backgroundColor: sucursalFormularioAbierto === sucursalNombre ? "#ef4444" : "" }}
+              onClick={() => {
+                if (sucursalFormularioAbierto === sucursalNombre) {
+                  setSucursalFormularioAbierto(null); // Cierra si ya estaba abierto
+                } else {
+                  // Resetea el form y lo abre para esta sucursal
+                  setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
+                  setSucursalFormularioAbierto(sucursalNombre);
+                }
+              }}
+            >
+              {sucursalFormularioAbierto === sucursalNombre ? "❌ Cancelar Carga" : "➕ Cargar Gasto Acá"}
+            </button>
           </div>
+
+          {/* FORMULARIO INYECTADO SOLO EN LA SUCURSAL SELECCIONADA */}
+          {sucursalFormularioAbierto === sucursalNombre && (
+            <form onSubmit={handleCargarGasto} style={{ background: "#f8fafc", padding: "20px", borderRadius: "8px", margin: "15px 0", border: "2px dashed #cbd5e1" }}>
+              <h3 style={{ margin: "0 0 15px 0", color: "#334155" }}>Registrar Gasto en {sucursalNombre}</h3>
+              <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                
+                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
+                  Fecha:
+                  <input 
+                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                    type="date" 
+                    value={nuevoGasto.fecha} 
+                    onChange={(e) => setNuevoGasto({...nuevoGasto, fecha: e.target.value})} 
+                    required
+                  />
+                </label>
+
+                {/* NUEVO SELECTOR DE CATEGORÍA */}
+                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
+                  Categoría:
+                  <select 
+                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", minWidth: "150px" }}
+                    value={nuevoGasto.categoria} 
+                    onChange={(e) => setNuevoGasto({...nuevoGasto, categoria: e.target.value})}
+                  >
+                    <option value="General">General / Varios</option>
+                    <option value="Sueldos">Sueldos</option>
+                    <option value="Comisiones por Ventas">Comisiones por Ventas</option>
+                    <option value="Insumos">Insumos y Limpieza</option>
+                    <option value="Servicios">Servicios (Luz, Internet, etc)</option>
+                  </select>
+                </label>
+
+                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold", flexGrow: 1 }}>
+                  Descripción:
+                  <input 
+                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                    type="text" 
+                    placeholder={nuevoGasto.categoria === "Comisiones por Ventas" ? "Ej: Comisión a Juan por venta #123" : "Ej: Detalle del gasto"} 
+                    value={nuevoGasto.descripcion} 
+                    onChange={(e) => setNuevoGasto({...nuevoGasto, descripcion: e.target.value})} 
+                    required
+                  />
+                </label>
+
+                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
+                  Monto ($):
+                  <input 
+                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                    type="number" 
+                    placeholder="Ej: 5000" 
+                    value={nuevoGasto.monto} 
+                    onChange={(e) => setNuevoGasto({...nuevoGasto, monto: e.target.value})} 
+                    required
+                  />
+                </label>
+
+                <button type="submit" className={styles.btnPrimario} style={{ padding: "10px 20px", height: "fit-content" }}>
+                  Guardar Gasto
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* SUBTÍTULO: 3 RANKINGS DINÁMICOS */}
           {(() => {
@@ -519,18 +631,27 @@ const Finanzas = () => {
                 <div className={styles["table-wrapper"]}>
                   <table className={styles.table}>
                     <thead>
-                      <tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Registrado por</th></tr>
+                      {/* NUEVO: Columna de Categoría agregada en la tabla */}
+                      <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th></tr>
                     </thead>
                     <tbody>
                       {gastosSucursal.map(g => (
                         <tr key={g.id}>
                           <td>{formatearFecha(g.fecha)}</td>
+                          <td>
+                            <span style={{ 
+                              background: g.categoria === 'Sueldos' ? '#fef08a' : g.categoria === 'Comisiones por Ventas' ? '#bbf7d0' : '#e2e8f0', 
+                              padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' 
+                            }}>
+                              {g.categoria || 'General'}
+                            </span>
+                          </td>
                           <td>{g.descripcion}</td>
                           <td className={styles.textoDestacadoGastos}>${formatearMonto(g.monto)}</td>
                           <td>{g.registradoPor}</td>
                         </tr>
                       ))}
-                      {gastosSucursal.length === 0 && <tr><td colSpan="4" className={styles.tablaVacia}>No hay gastos registrados este mes.</td></tr>}
+                      {gastosSucursal.length === 0 && <tr><td colSpan="5" className={styles.tablaVacia}>No hay gastos registrados este mes.</td></tr>}
                     </tbody>
                   </table>
                 </div>
@@ -543,7 +664,7 @@ const Finanzas = () => {
     })}
 
     {/* ==============================================================
-        NUEVA SECCIÓN: HISTORIAL DE BALANCES GLOBALES (AÑOS Y MESES) 
+        HISTORIAL DE BALANCES GLOBALES (AÑOS Y MESES) 
         ============================================================== */}
     <div className={styles.sucursalCard} style={{ marginTop: "2rem" }}>
       <div className={styles.sucursalHeader} style={{ marginBottom: "1rem" }}>
@@ -555,7 +676,7 @@ const Finanzas = () => {
         <p style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>No hay datos históricos disponibles.</p>
       ) : (
         Object.keys(historialBalances)
-          .sort((a, b) => b - a) // Años más recientes primero
+          .sort((a, b) => b - a)
           .map(year => {
             const mesesDelAnio = historialBalances[year];
             return (
@@ -577,7 +698,7 @@ const Finanzas = () => {
                     </thead>
                     <tbody>
                       {Object.keys(mesesDelAnio)
-                        .sort((a, b) => b - a) // Meses más recientes primero (Diciembre a Enero)
+                        .sort((a, b) => b - a) 
                         .map(monthIndex => {
                           const datosMes = mesesDelAnio[monthIndex];
                           const balanceMes = datosMes.cobros - datosMes.gastos;
