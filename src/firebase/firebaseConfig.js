@@ -1,21 +1,21 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getAuth } from "firebase/auth"; // 👈 FALTA ESTO
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC0HbSUzBydOw_xmLAosPhH6tzSUXRsXvs",
-  authDomain: "gfh2-0-42d45.firebaseapp.com",
-  projectId: "gfh2-0-42d45",
-  storageBucket: "gfh2-0-42d45.firebasestorage.app",
-  messagingSenderId: "307822228388",
-  appId: "1:307822228388:web:05af42c71ac0bfd5a58731"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
 
 const db = getFirestore(app);
 const storage = getStorage(app);
-const auth = getAuth(app); // 👈 AHORA SÍ
+const auth = getAuth(app); 
 
 export { db, storage, auth };

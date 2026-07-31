@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 
 // 🔴 Firebase VIEJO (solo lectura)
 const firebaseConfigViejo = {
-  apiKey: "AIzaSyDVFZ4a-WpIdI91izdKmx1auy5jX7YXKDI",
-  authDomain: "ferreirahogar-376dd.firebaseapp.com",
-  projectId: "ferreirahogar-376dd",
-  storageBucket: "ferreirahogar-376dd.firebasestorage.app",
-  messagingSenderId: "820729807208",
-  appId: "1:820729807208:web:e9328c90439287cf4356dd",
+  apiKey: import.meta.env.VITE_FIREBASE_VIEJO_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_VIEJO_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_VIEJO_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_VIEJO_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_VIEJO_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_VIEJO_APP_ID,
 };
 
 // ⚠️ el nombre "viejo" es CLAVE
