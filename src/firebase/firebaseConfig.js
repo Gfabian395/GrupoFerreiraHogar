@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
@@ -12,7 +12,12 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
+// 🔍 DEBUG: Si en la consola del navegador dice "undefined", 
+// recuerda quitar las comillas en el .env y reiniciar el servidor (Ctrl+C -> npm run dev)
+console.log("CLAVE API LEÍDA:", firebaseConfig.apiKey);
+
+// 🛡️ PREVENCIÓN: Evita que Firebase se inicialice múltiples veces cuando Vite recarga (HMR)
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const db = getFirestore(app);
 const storage = getStorage(app);
