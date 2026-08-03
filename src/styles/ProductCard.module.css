@@ -2,9 +2,9 @@
    PRODUCT WRAPPER - GRID FRIENDLY
 ================================ */
 .productWrapper {
-  width: 50%;
-  display: inline-flex;
-  justify-content: center;
+  width: 20%;
+  display: inline-block; /* CORREGIDO: Evita el colapso extraño que genera inline-flex */
+  min-width: 240px; /* CORREGIDO: Fuerza un ancho mínimo por si el contenedor padre falla */
   padding: 12px;
   box-sizing: border-box;
   vertical-align: top;
@@ -19,6 +19,8 @@
   min-height: 0;
   padding: 20px; /* Reducido un poco para dar más espacio al contenido */
   border-radius: 12px;
+  
+  display: grid; /* CORREGIDO: Crucial para que las siguientes dos líneas funcionen */
   grid-template-columns: 1fr;
   gap: 16px;
 
@@ -403,9 +405,6 @@
 }
 
 /* ===============================
-   STOCK BY BRANCH
-================================ */
-/* ===============================
    STOCK BY BRANCH - FIXED LAYOUT
 ================================ */
 .stock {
@@ -415,18 +414,18 @@
 
 .branch {
   display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 10px 12px; /* Un poco menos de espacio arriba/abajo para balancear */
-    border-radius: 8px;
-    background: #f9fafb;
-    border: 1.5px solid #d1d5db;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 12px; /* Un poco menos de espacio arriba/abajo para balancear */
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1.5px solid #d1d5db;
 
-    /* --- CORRECCIÓN horizontal --- */
-    width: 85%;         /* Ocupa menos espacio del ancho total de la card */
-    max-width: 240px;   /* Evita que se estire demasiado en pantallas grandes */
-    margin: 0 auto;     /* Centra la cajita de la sucursal horizontalmente */
-    box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+  /* --- CORRECCIÓN horizontal --- */
+  width: 85%;         /* Ocupa menos espacio del ancho total de la card */
+  max-width: 240px;   /* Evita que se estire demasiado en pantallas grandes */
+  margin: 0 auto;     /* Centra la cajita de la sucursal horizontalmente */
+  box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
 }
 
 .branchMeta {
@@ -487,10 +486,6 @@
 }
 
 /* Colores de estado simplificados en los bordes */
-.ok { border-color: #16a34a !important; }
-.low { border-color: #ea580c !important; }
-.out { border-color: #dc2626 !important; opacity: 0.7; }
-
 .ok { border-color: #16a34a !important; }
 .low { border-color: #ea580c !important; }
 .out { border-color: #dc2626 !important; opacity: 0.7; }
@@ -613,11 +608,3 @@
     font-size: 0.85rem;
   }
 }
-
-/* Computadoras y Tablets (Alineación de columnas para el resto de pantallas) */
-@media (min-width: 600px) { .productWrapper { width: 33.333%; } }
-@media (min-width: 900px) { .productWrapper { width: 25%; } }
-@media (min-width: 1200px) { .productWrapper { width: 20%; } }
-@media (min-width: 1500px) { .productWrapper { width: 16.666%; } }
-@media (min-width: 1900px) { .productWrapper { width: 14.285%; } }
-@media (min-width: 2400px) { .productWrapper { width: 12.5%; } }
