@@ -29,3 +29,15 @@ body::before {
   position: relative;
   z-index: 1;
 }
+
+/* Ajuste responsivo exclusivo para smartphones */
+@media (max-width: 768px) {
+  .content {
+    display: flex;
+    margin-left: 10%;
+    width: calc(80%);
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
