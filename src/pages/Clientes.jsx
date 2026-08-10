@@ -182,6 +182,16 @@ export default function Clientes() {
   const [ventas, setVentas] = useState([]);
   const navigate = useNavigate();
   const [filtroVendedor, setFiltroVendedor] = useState("");
+  
+  // NUEVO ESTADO: Fecha por defecto = HOY
+  const [filtroFecha, setFiltroFecha] = useState(() => {
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  });
+
   const [clientesReclamadosHoy, setClientesReclamadosHoy] = useState(() => {
     const stored = localStorage.getItem("clientesReclamadosHoy");
     return stored ? JSON.parse(stored) : [];
@@ -488,6 +498,21 @@ export default function Clientes() {
             </option>
           ))}
         </select>
+
+        {/* NUEVO FILTRO DE FECHA */}
+        <label style={{ marginLeft: "20px" }}>Fecha de venc. : </label>
+        <input
+          type="date"
+          value={filtroFecha}
+          onChange={(e) => setFiltroFecha(e.target.value)}
+          className={styles.searchInput}
+        />
+        <button 
+          onClick={() => setFiltroFecha("")} 
+          className={styles.btnVerTodos}
+        >
+          Ver Todos
+        </button>
       </div>
 
       {/* CLIENTES VENCIDOS */}
@@ -514,7 +539,25 @@ export default function Clientes() {
 
             <tbody>
               {clientesVencidos
-                .filter(c => !filtroVendedor || c.vendedor === filtroVendedor)
+                .filter(c => {
+                  // 1. Validar filtro de vendedor
+                  const pasaVendedor = !filtroVendedor || c.vendedor === filtroVendedor;
+
+                  // 2. Validar filtro de fecha (compara con "Próximo Vencimiento")
+                  let pasaFecha = true;
+                  if (filtroFecha && c.proximoVencimiento) {
+                    const fechaVenc = new Date(c.proximoVencimiento);
+                    const anio = fechaVenc.getFullYear();
+                    const mes = String(fechaVenc.getMonth() + 1).padStart(2, '0');
+                    const dia = String(fechaVenc.getDate()).padStart(2, '0');
+                    const fechaFormateada = `${anio}-${mes}-${dia}`;
+                    
+                    pasaFecha = fechaFormateada === filtroFecha;
+                  }
+
+                  // Retorna true solo si cumple AMBAS condiciones
+                  return pasaVendedor && pasaFecha;
+                })
                 .map((c) => (
                   <tr key={c.id} className={styles.vencidosRow}>
                     <td>
