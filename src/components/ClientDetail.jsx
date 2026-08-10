@@ -551,6 +551,129 @@ Gracias por su pago.`;
   };
 
   // ===============================
+  // RENDER DE TABLA DE PAGOS (NUEVO)
+  // ===============================
+  const renderTablePagos = (venta, permitirAgregar) => {
+    // 1. Calculamos a qué cuota pertenece cada pago
+    const valorCuotaSeguro = Number(venta.valorCuota) || 1;
+    let acumuladoPagos = 0;
+
+    const pagosConCuota = (venta.pagos || []).map((pago, i) => {
+      const monto = Number(typeof pago.monto === "string" ? pago.monto.replace(",", ".") : pago.monto || 0);
+      
+      const cuotaInicio = Math.floor(acumuladoPagos / valorCuotaSeguro) + 1;
+      acumuladoPagos += monto;
+      let cuotaFin = Math.ceil(acumuladoPagos / valorCuotaSeguro);
+      if (cuotaFin < cuotaInicio) cuotaFin = cuotaInicio; // Evitar desfases si el monto es 0
+
+      // Definimos la etiqueta visual (Ej: "Cuota 1" o "Cuotas 1 a 3")
+      const labelCuota = cuotaInicio === cuotaFin 
+        ? `Cuota ${cuotaInicio}` 
+        : `Cuotas ${cuotaInicio} a ${cuotaFin}`;
+
+      return {
+        ...pago,
+        indexReal: pago.numero || i + 1,
+        labelCuota
+      };
+    });
+
+    // 2. Calculamos el resumen de cuotas para el mensaje
+    const totalPagado = acumuladoPagos;
+    const cuotasPagas = Math.floor(totalPagado / valorCuotaSeguro);
+    const totalCuotas = Number(venta.cuotas) || 0;
+    const cuotasRestantes = Math.max(totalCuotas - cuotasPagas, 0);
+
+    return (
+      <section className={styles.payments}>
+        <header style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "flex-start" }}>
+          <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h4>Historial de pagos</h4>
+            {permitirAgregar && (
+              <button onClick={() => handleAddPagoClick(venta.id)}>
+                ➕ Agregar pago
+              </button>
+            )}
+          </div>
+
+          {/* 🔥 DETALLE BREVE SOLICITADO */}
+          <div style={{
+            background: "#e0f2fe",
+            color: "#0369a1",
+            padding: "10px 14px",
+            borderRadius: "6px",
+            fontWeight: "500",
+            fontSize: "14px",
+            width: "100%",
+            boxSizing: "border-box"
+          }}>
+            ℹ️ Van {cuotasPagas} cuotas pagas de {totalCuotas}, restan {cuotasRestantes} cuotas para terminar.
+          </div>
+        </header>
+
+        <div className={styles.table}>
+          <div className={`${styles.row} ${styles.head}`}>
+            <span>Cuota / Detalle</span>
+            <span>Fecha</span>
+            <span>Monto</span>
+            <span>Método</span>
+            <span>Estado</span>
+            <span>Firma</span>
+          </div>
+
+          {/* Renderizamos los pagos calculados */}
+          {pagosConCuota.map((pago, i) => (
+            <div key={i} className={`${styles.row} ${styles.paid}`}>
+              {/* Agrupación visual de cuota y n° de pago */}
+              <span style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
+                <strong style={{ color: "#0f172a" }}>{pago.labelCuota}</strong>
+                <small style={{ color: "#64748b", fontSize: "12px" }}>Pago #{pago.indexReal}</small>
+              </span>
+              
+              <span>{formatearFecha(pago.fecha)}</span>
+              <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
+              <span>{pago.metodo || "—"}</span>
+              <span>Pagado</span>
+              <span>{getFirmaTexto(pago.firma)}</span>
+            </div>
+          ))}
+
+          {/* Formulario para agregar un nuevo pago */}
+          {permitirAgregar && addingPagoId === venta.id && (
+            <div className={`${styles.row} ${styles.addPagoRow}`}>
+              <input
+                type="date"
+                value={nuevoPago.fecha}
+                onChange={(e) => setNuevoPago({ ...nuevoPago, fecha: e.target.value })}
+              />
+              <input
+                type="number"
+                placeholder="Monto"
+                value={nuevoPago.monto}
+                onChange={(e) => setNuevoPago({ ...nuevoPago, monto: e.target.value })}
+              />
+              <select
+                value={nuevoPago.metodo}
+                onChange={(e) => setNuevoPago({ ...nuevoPago, metodo: e.target.value })}
+              >
+                <option value="" disabled hidden>Método</option>
+                <option value="Efectivo">💵 Efectivo</option>
+                <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito</option>
+                <option value="Tarjeta de Débito">💳 Tarjeta de Débito</option>
+                <option value="Transferencia">🏦 Transferencia</option>
+                <option value="QR">📱 QR</option>
+                <option value="Link de Pago">🔗 Link de Pago</option>
+              </select>
+              <button onClick={() => handleSavePago(venta.id)}>Guardar</button>
+              <button onClick={() => setAddingPagoId(null)}>Cancelar</button>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  };
+
+  // ===============================
   // RENDER
   // ===============================
   return (
@@ -712,76 +835,7 @@ Gracias por su pago.`;
                   </section>
 
                   {/* ================= PAGOS ================= */}
-                  <section className={styles.payments}>
-                    <header>
-                      <h4>Historial de pagos</h4>
-                      <button onClick={() => handleAddPagoClick(venta.id)}>
-                        ➕ Agregar pago
-                      </button>
-                    </header>
-
-                    <div className={styles.table}>
-                      <div className={`${styles.row} ${styles.head}`}>
-                        <span>Cuota</span>
-                        <span>Fecha</span>
-                        <span>Monto</span>
-                        <span>Método</span>
-                        <span>Estado</span>
-                        <span>Firma</span>
-                      </div>
-
-                      {(venta.pagos || []).map((pago, i) => (
-                        <div key={i} className={`${styles.row} ${styles.paid}`}>
-                          <span>#{pago.numero || i + 1}</span>
-                          <span>{formatearFecha(pago.fecha)}</span>
-                          <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
-                          <span>{pago.metodo || "—"}</span>
-                          <span>Pagado</span>
-                          <span>{getFirmaTexto(pago.firma)}</span>
-                        </div>
-                      ))}
-
-                      {addingPagoId === venta.id && (
-                        <div className={`${styles.row} ${styles.addPagoRow}`}>
-                          <input
-                            type="date"
-                            value={nuevoPago.fecha}
-                            onChange={(e) =>
-                              setNuevoPago({ ...nuevoPago, fecha: e.target.value })
-                            }
-                          />
-                          <input
-                            type="number"
-                            placeholder="Monto"
-                            value={nuevoPago.monto}
-                            onChange={(e) =>
-                              setNuevoPago({ ...nuevoPago, monto: e.target.value })
-                            }
-                          />
-                          <select
-                            value={nuevoPago.metodo}
-                            onChange={(e) =>
-                              setNuevoPago({ ...nuevoPago, metodo: e.target.value })
-                            }
-                          >
-                            <option value="" disabled hidden>Método</option>
-                            <option value="Efectivo">💵 Efectivo</option>
-                            <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito</option>
-                            <option value="Tarjeta de Débito">💳 Tarjeta de Débito</option>
-                            <option value="Transferencia">🏦 Transferencia</option>
-                            <option value="QR">📱 QR</option>
-                            <option value="Link de Pago">🔗 Link de Pago</option>
-                          </select>
-                          <button onClick={() => handleSavePago(venta.id)}>
-                            Guardar
-                          </button>
-                          <button onClick={() => setAddingPagoId(null)}>
-                            Cancelar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </section>
+                  {renderTablePagos(venta, true)}
                 </section>
               );
             })}
@@ -894,33 +948,7 @@ Gracias por su pago.`;
                       </section>
 
                       {/* ================= TABLA DE HISTORIAL DE PAGOS REALES ================= */}
-                      <section className={styles.payments}>
-                        <header>
-                          <h4>Historial de pagos</h4>
-                        </header>
-
-                        <div className={styles.table}>
-                          <div className={`${styles.row} ${styles.head}`}>
-                            <span>Cuota</span>
-                            <span>Fecha</span>
-                            <span>Monto</span>
-                            <span>Método</span>
-                            <span>Estado</span>
-                            <span>Firma</span>
-                          </div>
-
-                          {(venta.pagos || []).map((pago, i) => (
-                            <div key={i} className={`${styles.row} ${styles.paid}`}>
-                              <span>#{pago.numero || i + 1}</span>
-                              <span>{formatearFecha(pago.fecha)}</span>
-                              <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
-                              <span>{pago.metodo || "—"}</span>
-                              <span>Pagado</span>
-                              <span>{getFirmaTexto(pago.firma)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
+                      {renderTablePagos(venta, false)}
                     </section>
                   );
                 })}

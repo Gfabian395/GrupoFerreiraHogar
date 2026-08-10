@@ -5,29 +5,24 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 1.5rem 1rem;
-  background-color: #f1f5f9;
+  padding: 2rem 1rem;
+  background-color: #f8fafc; /* Fondo ligeramente más claro y limpio */
   min-height: 100vh;
   box-sizing: border-box;
+  font-family: system-ui, -apple-system, sans-serif; /* Tipografía moderna por defecto */
 }
 
 .paymentCard {
   background: #ffffff;
   border-radius: 1.5rem;
-  padding: 2rem;
+  padding: 2.5rem 2rem;
   display: grid;
-  gap: 1.5rem;
-  border: 1px solid #e2e8f0;
+  gap: 2rem;
+  border: 1px solid #f1f5f9;
   width: 100%;
-  max-width: 900px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  max-width: 950px;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.05), 0 10px 15px -5px rgba(15, 23, 42, 0.02);
   box-sizing: border-box;
-}
-
-.paymentCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
 }
 
 /* ==========================================================================
@@ -36,45 +31,48 @@
 .clientHeader {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 1rem;
+  gap: 1.25rem;
   align-items: center;
-  border-bottom: 2px solid #f1f5f9;
-  padding-bottom: 1.2rem;
+  border-bottom: 2px dashed #e2e8f0; /* Borde punteado más moderno */
+  padding-bottom: 1.5rem;
 }
 
 .avatar img {
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  border: 2px solid #e2e8f0;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .avatar img:hover {
-  transform: scale(1.05);
+  transform: scale(1.1) rotate(3deg);
 }
 
 .identity {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .identity h3 {
   color: #0f172a;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .identity span {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #475569;
+  font-weight: 500;
 }
 
 .identity .address {
-  font-size: 0.8rem;
-  color: #64748b;
+  font-size: 0.85rem;
+  color: #94a3b8;
 }
 
 /* ==========================================================================
@@ -82,53 +80,75 @@
    ========================================================================== */
 .status {
   font-size: 0.75rem;
-  padding: 0.35rem 0.75rem;
+  padding: 0.4rem 0.85rem;
   border-radius: 999px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   white-space: nowrap;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .ok {
   background: #dcfce7;
-  color: #16a34a;
+  color: #15803d;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);
 }
 
 .blocked {
   background: #fee2e2;
-  color: #dc2626;
+  color: #b91c1c;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
 }
 
 /* ==========================================================================
-   📦 SALE WRAPPER & INFO CARD (Tarjetas de compras individuales)
+   📦 SALE WRAPPER & INFO CARD (Separación Notoria)
    ========================================================================== */
 .saleWrapper {
+  position: relative;
   display: grid;
   gap: 1.5rem;
-  padding: 1.5rem;
-  margin-bottom: 2.2rem; /* Separación notoria entre compras */
-  border-radius: 1rem;
-  border: 1px solid #cbd5e1;
-  border-left: 6px solid #2563eb; /* Borde de acento azul */
+  padding: 2rem;
+  margin-bottom: 3.5rem; /* Separación extrema entre compras */
+  border-radius: 1.25rem;
+  border: 1px solid #e2e8f0;
+  border-left: 8px solid #3b82f6; /* Borde más grueso y brillante */
   background-color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.25s ease;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+/* Conector visual entre tarjetas de compra (Efecto Timeline) */
+.saleWrapper:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: -3.5rem;
+  left: 2rem;
+  width: 4px;
+  height: 3.5rem;
+  background-image: linear-gradient(to bottom, #cbd5e1 50%, transparent 50%);
+  background-size: 4px 14px; /* Línea punteada */
+  opacity: 0.6;
+}
+
+.saleWrapper:last-child {
+  margin-bottom: 0;
 }
 
 .saleWrapper:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
 }
 
 .resaltado {
-  border-color: #2563eb;
-  border-left-color: #1d4ed8;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  border-left-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
 }
 
 .destacado {
   animation: flash 3s ease;
-  border-color: #22c55e;
-  border-left-color: #15803d;
+  border-left-color: #16a34a;
 }
 
 .saleInfoCard {
@@ -138,88 +158,87 @@
 
 .saleSection h4 {
   margin: 0 0 1rem 0;
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
   color: #0f172a;
-  font-size: 1.1rem;
-  font-weight: 700;
-  border-bottom: 2px solid #f1f5f9;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .saleSection p {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   color: #334155;
   margin: 0.5rem 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .badge {
   display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 0.375rem;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .idDestacado {
-  font-weight: 700;
-  color: #2563eb;
+  font-weight: 800;
+  color: #1d4ed8;
   background-color: #eff6ff;
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
   border: 1px solid #bfdbfe;
 }
 
-/* Deuda por compra individual (Pendiente) */
-.saleDebtPending {
-  margin-top: 12px;
-  padding: 12px 16px;
-  background-color: #fef2f2;
-  border-left: 5px solid #ef4444;
-  border-radius: 8px;
+/* Deuda por compra individual */
+.saleDebtPending, .saleDebtPaid {
+  margin-top: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.saleDebtPending {
+  background: linear-gradient(to right, #fef2f2, #fff);
+  border-left: 6px solid #ef4444;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.05);
 }
 
 .saleDebtPending span {
-  font-weight: 600;
+  font-weight: 700;
   color: #991b1b;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .saleDebtPending strong {
-  font-weight: 700;
-  font-size: 1.15rem;
+  font-weight: 800;
+  font-size: 1.25rem;
   color: #dc2626;
 }
 
-/* Deuda por compra individual (Pagada/Cero) */
 .saleDebtPaid {
-  margin-top: 12px;
-  padding: 12px 16px;
-  background-color: #f0fdf4;
-  border-left: 5px solid #22c55e;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  background: linear-gradient(to right, #f0fdf4, #fff);
+  border-left: 6px solid #22c55e;
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.05);
 }
 
 .saleDebtPaid span {
-  font-weight: 600;
+  font-weight: 700;
   color: #166534;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .saleDebtPaid strong {
-  font-weight: 700;
-  font-size: 1.15rem;
+  font-weight: 800;
+  font-size: 1.25rem;
   color: #15803d;
 }
 
@@ -228,7 +247,8 @@
    ========================================================================== */
 .payments {
   display: grid;
-  gap: 0.8rem;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
 }
 
 .payments header {
@@ -239,25 +259,27 @@
 
 .payments header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: #0f172a;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .payments header button {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
   border-radius: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
   transition: all 0.2s ease;
 }
 
 .payments header button:hover {
-  background-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
 }
 
 /* ESTRUCTURA DE LA TABLA */
@@ -265,19 +287,25 @@
   display: grid;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  padding: 0.75rem;
-  font-size: 0.825rem;
+  padding: 1rem;
+  font-size: 0.875rem;
   align-items: center;
-  gap: 0.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  gap: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
   color: #334155;
   background-color: #ffffff;
+  transition: background-color 0.2s ease;
+}
+
+.row:not(.head):not(.addPagoRow):hover {
+  background-color: #f8fafc;
 }
 
 .row:last-child {
@@ -285,10 +313,13 @@
 }
 
 .row.head {
-  font-weight: 600;
+  font-weight: 700;
   color: #475569;
-  background-color: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
+  background-color: #f1f5f9;
+  border-bottom: 2px solid #cbd5e1;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
 }
 
 .row.paid {
@@ -297,40 +328,44 @@
 }
 
 /* ==========================================================================
-   ➕ ADD PAYMENT ROW (Formulario en línea)
+   ➕ ADD PAYMENT ROW
    ========================================================================== */
 .addPagoRow {
   background-color: #f8fafc;
-  padding: 0.75rem;
-  gap: 0.5rem;
+  padding: 1rem;
+  gap: 0.75rem;
+  border-top: 2px dashed #cbd5e1;
 }
 
 .addPagoRow input,
 .addPagoRow select {
-  padding: 0.45rem 0.5rem;
-  border-radius: 0.375rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
-  color: #1e293b;
-  font-size: 0.8rem;
+  color: #0f172a;
+  font-size: 0.85rem;
   width: 100%;
   box-sizing: border-box;
   outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .addPagoRow input:focus,
 .addPagoRow select:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .addPagoRow button {
-  padding: 0.45rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 0.375rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
   border: none;
   cursor: pointer;
   color: #ffffff;
+  transition: all 0.2s ease;
 }
 
 .addPagoRow button:nth-of-type(1) {
@@ -338,6 +373,7 @@
 }
 .addPagoRow button:nth-of-type(1):hover {
   background-color: #1e293b;
+  transform: translateY(-1px);
 }
 
 .addPagoRow button:nth-of-type(2) {
@@ -345,71 +381,76 @@
 }
 .addPagoRow button:nth-of-type(2):hover {
   background-color: #475569;
+  transform: translateY(-1px);
 }
 
 /* ==========================================================================
-   ✅ PAID SUMMARY (Resumen inferior de completados)
+   ✅ PAID SUMMARY
    ========================================================================== */
 .paidSummary {
-  margin-top: 1.5rem;
-  padding: 1.25rem;
-  background-color: #f8fafc;
-  border-radius: 1rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
+  border-radius: 1.25rem;
   border: 1px solid #e2e8f0;
 }
 
 .paidSummary h4 {
-  font-size: 0.95rem;
-  margin: 0 0 0.8rem 0;
+  font-size: 1.05rem;
+  margin: 0 0 1rem 0;
   color: #166534;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .paidItemsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .paidItem {
   color: #15803d;
-  background-color: #f0fdf4;
+  background-color: #ffffff;
   border: 1px solid #bbf7d0;
-  font-size: 0.85rem;
-  font-weight: 500;
-  border-radius: 0.5rem;
-  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
   transition: all 0.2s ease;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .paidItem:hover {
-  transform: translateY(-1px);
-  background-color: #dcfce7;
+  transform: translateY(-2px);
+  background-color: #f0fdf4;
+  box-shadow: 0 4px 8px rgba(34, 197, 94, 0.1);
 }
 
 /* ==========================================================================
    💰 DEUDA TOTAL ACUMULADA
    ========================================================================== */
 .totalDebt {
-  margin-top: 1.5rem;
-  padding-top: 1.2rem;
-  border-top: 2px solid #e2e8f0;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed #cbd5e1;
   text-align: right;
+  background-color: #fff;
 }
 
 .totalDebt h3 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: 1.75rem;
   color: #0f172a;
-  font-weight: 700;
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 /* Animaciones */
 @keyframes flash {
-  0% { background-color: #dcfce7; }
-  100% { background-color: transparent; }
+  0% { background-color: #dcfce7; box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.2); }
+  100% { background-color: transparent; box-shadow: 0 0 0 0 transparent; }
 }
 
 /* ==========================================================================
@@ -422,16 +463,19 @@
 
   .table .row:not(.addPagoRow) {
     grid-template-columns: 1fr;
-    gap: 0.25rem;
-    padding: 1rem;
-    border-bottom: 2px solid #e2e8f0;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border-bottom: 4px solid #f1f5f9;
   }
 
   .table .row span::before {
-    font-weight: 600;
+    font-weight: 700;
     color: #64748b;
     display: inline-block;
     width: 90px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
   }
 
   .table .row:not(.addPagoRow) span:nth-child(1)::before { content: "Cuota: "; }
@@ -443,13 +487,30 @@
 
   .addPagoRow {
     grid-template-columns: 1fr !important;
-    gap: 0.6rem;
+    gap: 0.8rem;
+    padding: 1.25rem;
   }
 }
 
 @media (max-width: 480px) {
+  .paymentWrapper {
+    padding: 1rem 0.5rem;
+  }
+
   .paymentCard {
-    padding: 1.25rem 1rem;
+    padding: 1.5rem 1rem;
+    border-radius: 1rem;
+  }
+
+  .saleWrapper {
+    padding: 1.25rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .saleWrapper:not(:last-child)::after {
+    left: 1.25rem;
+    height: 2.5rem;
+    bottom: -2.5rem;
   }
 
   .clientHeader {
