@@ -123,6 +123,8 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
     vendedor,
     entrega,
     sucursal,
+    // Nos aseguramos de capturar el descuento si existe
+    descuento: venta.descuento || 0 
   };
 };
 
@@ -168,6 +170,7 @@ export default function ClientDetail() {
     };
     fetchCliente();
   }, [id, navigate]);
+
   // ===============================
   // FETCH USUARIOS
   // ===============================
@@ -782,6 +785,24 @@ Gracias por su pago.`;
                           .join(", ")}
                       </p>
 
+                      {/* 🟢 CARTELCITO DE DESCUENTO 🟢 */}
+                      {venta.descuento > 0 && (
+                        <div style={{
+                          background: "#dcfce7",
+                          color: "#166534",
+                          padding: "6px 12px",
+                          borderRadius: "4px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          marginTop: "8px",
+                          marginBottom: "8px",
+                          display: "inline-block",
+                          border: "1px solid #bbf7d0"
+                        }}>
+                          🎉 Descuento aplicado: ${venta.descuento.toLocaleString("es-AR")}
+                        </div>
+                      )}
+
                       <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
                       <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
                       <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
@@ -915,6 +936,24 @@ Gracias por su pago.`;
                               )
                               .join(", ")}
                           </p>
+                          
+                          {/* 🟢 CARTELCITO DE DESCUENTO EN VENTAS PAGADAS 🟢 */}
+                          {venta.descuento > 0 && (
+                            <div style={{
+                              background: "#dcfce7",
+                              color: "#166534",
+                              padding: "6px 12px",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              marginTop: "8px",
+                              marginBottom: "8px",
+                              display: "inline-block",
+                              border: "1px solid #bbf7d0"
+                            }}>
+                              🎉 Descuento aplicado: ${venta.descuento.toLocaleString("es-AR")}
+                            </div>
+                          )}
 
                           <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
                           <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>

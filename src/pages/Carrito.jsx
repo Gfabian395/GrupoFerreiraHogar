@@ -7,23 +7,39 @@ import { SiMercadopago } from "react-icons/si";
 export default function Carrito() {
   const { items, updateQty, removeItem } = useCart();
   const [loading, setLoading] = useState(false);
+  const [descuento, setDescuento] = useState(""); // <-- ESTADO PARA DESCUENTO
   const navigate = useNavigate();
-
-  const total = items.reduce(
-    (acc, item) => acc + item.price * item.qty,
-    0
-  );
 
   const totalItems = items.reduce(
     (acc, i) => acc + i.qty,
     0
   );
 
+  // Subtotal original (sin descuentos)
+  const subtotal = items.reduce(
+    (acc, item) => acc + item.price * item.qty,
+    0
+  );
+
+  // Descuento a aplicar y total final (evitando que dé negativo)
+  const descuentoAplicado = Number(descuento) || 0;
+  const total = Math.max(0, subtotal - descuentoAplicado);
+
   const handlePagarCarrito = async () => {
     if (items.length === 0) return;
 
+    // Validación MP: No permite cobros de $0
+    if (total <= 0) {
+      alert("El total es $0. Mercado Pago no permite pagos gratuitos. Usá 'Finalizar compra' para registrarlo en el sistema.");
+      return;
+    }
+
     try {
       setLoading(true);
+
+      // Factor para repartir el descuento entre los productos. 
+      // Ej: Si subtotal es 10.000 y total es 8.000, el factor es 0.8 (pagás el 80%)
+      const factorDescuento = subtotal > 0 ? (total / subtotal) : 1;
 
       const response = await fetch("/api/crear-preferencia", {
         method: "POST",
@@ -34,7 +50,9 @@ export default function Carrito() {
           items: items.map((item) => ({
             id: item.id,
             title: item.name,
-            price: item.price,
+            // CLAVE PARA MERCADO PAGO: Aplicamos el factor y usamos Math.round() 
+            // para enviar números enteros exactos. Cero decimales.
+            price: Math.round(item.price * factorDescuento),
             quantity: item.qty,
             variant: item.variant,
             branch: item.branch,
@@ -43,17 +61,25 @@ export default function Carrito() {
         }),
       });
 
-      const data = await response.json();
+      // Leemos como texto primero para evitar que React crashee si el backend falla
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        throw new Error(responseText || `Error HTTP: ${response.status}`);
+      }
+
+      // Parseamos seguro
+      const data = JSON.parse(responseText);
 
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
-        alert("Error iniciando pago");
+        alert("Error: El backend no devolvió el init_point de Mercado Pago");
         setLoading(false);
       }
     } catch (error) {
       console.error("Error pagando carrito:", error);
-      alert("Error procesando el pago");
+      alert("Error contactando al servidor. Revisá la consola.");
       setLoading(false);
     }
   };
@@ -128,6 +154,24 @@ export default function Carrito() {
           </div>
 
           <div className={styles.row}>
+            <span>Subtotal</span>
+            <span>${subtotal.toLocaleString("es-AR")}</span>
+          </div>
+
+          <div className={styles.row}>
+            <span>Descuento ($)</span>
+            <input 
+              type="number" 
+              min="0"
+              className={styles.input} 
+              style={{ width: "90px", padding: "4px", textAlign: "right" }}
+              value={descuento}
+              onChange={(e) => setDescuento(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+
+          <div className={styles.row}>
             <span>Total</span>
             <strong>${total.toLocaleString("es-AR")}</strong>
           </div>
@@ -146,7 +190,8 @@ export default function Carrito() {
           <button
             className={styles.checkout}
             disabled={items.length === 0}
-            onClick={() => navigate("/ventas")}
+            // Navegamos pasando el descuento por state
+            onClick={() => navigate("/ventas", { state: { descuentoPreCargado: descuento } })}
           >
             Finalizar compra
           </button>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // <-- AGREGADO useLocation
 import {
   collection,
   getDocs,
@@ -30,6 +30,7 @@ const redondearMil = (v) => Math.ceil(Number(v) / 1000) * 1000;
 
 export default function Ventas() {
   const navigate = useNavigate();
+  const location = useLocation(); // <-- PARA LEER DATOS DEL ROUTER
   const { items, clearCart } = useCart();
 
   /* ===============================
@@ -52,7 +53,8 @@ export default function Ventas() {
   const [ventaDeOtro, setVentaDeOtro] = useState(false);
   const [vendedorReal, setVendedorReal] = useState("");
 
-  // PAGOS
+  // ESTADOS DE DESCUENTO Y PAGO (Leemos si vino del carrito)
+  const [descuento, setDescuento] = useState(location.state?.descuentoPreCargado || "");
   const [primerCuotaPaga, setPrimerCuotaPaga] = useState(false);
   const [pagoParcial, setPagoParcial] = useState(false);
   const [montoPagoParcial, setMontoPagoParcial] = useState("");
@@ -93,9 +95,11 @@ export default function Ventas() {
   );
 
   /* ===============================
-     TOTALES
+     TOTALES Y DESCUENTOS
   =============================== */
-  const total = items.reduce((acc, i) => acc + i.price * i.qty, 0);
+  const subtotal = items.reduce((acc, i) => acc + i.price * i.qty, 0);
+  const descuentoAplicado = Number(descuento) || 0;
+  const total = Math.max(0, subtotal - descuentoAplicado);
   const saldoBase = total;
 
   /* ===============================
@@ -156,7 +160,9 @@ export default function Ventas() {
       fecha,
       clienteId: clienteSeleccionado,
       productos: items,
-      total,
+      subtotal, // <-- Guardamos el subtotal original
+      descuento: descuentoAplicado, // <-- Guardamos el descuento
+      total, // <-- Guardamos el total post-descuento
       cuotas,
       valorCuota,
       pago: {
@@ -191,7 +197,6 @@ export default function Ventas() {
             
             if (!comboSnap.exists()) throw new Error("Combo inexistente en la base de datos");
 
-            // ✅ CORRECCIÓN: Usamos las selecciones DEL CARRITO, que contienen 'branch' y 'variant'
             const seleccionesCarrito = item.comboItems || [];
             
             if (seleccionesCarrito.length === 0) {
@@ -213,7 +218,6 @@ export default function Ventas() {
               productosLeidos.push({
                 item: {
                   ...cartComboItem,
-                  // Multiplicamos lo que pide el combo por la cantidad de combos llevados
                   qty: (cartComboItem.unitsToDiscount || cartComboItem.quantity || 1) * item.qty,
                 },
                 ref: productoRef,
@@ -295,7 +299,6 @@ export default function Ventas() {
             const nuevoStock = { ...v.stock };
             const sucursal = item.branch;
 
-            // ✅ VALIDACIONES MEJORADAS PARA IDENTIFICAR EXACTAMENTE EL ERROR
             if (!sucursal) 
               throw new Error(`El producto "${item.name}" no tiene una sucursal asignada.`);
             
@@ -438,6 +441,33 @@ export default function Ventas() {
             ))}
           </select>
         )}
+      </div>
+
+      {/* DESCUENTO Y RESUMEN */}
+      <div className={styles.card}>
+        <h2>Resumen</h2>
+        
+        <div style={{ marginBottom: "15px" }}>
+          <strong>Subtotal: </strong> ${subtotal.toLocaleString("es-AR")}
+        </div>
+        
+        <div style={{ marginBottom: "15px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>
+            Descuento ($ ARS):
+          </label>
+          <input
+            type="number"
+            min="0"
+            className={styles.input}
+            placeholder="0"
+            value={descuento}
+            onChange={(e) => setDescuento(e.target.value)}
+          />
+        </div>
+        
+        <div style={{ fontSize: "1.2em" }}>
+          <strong>Total final: </strong> ${total.toLocaleString("es-AR")}
+        </div>
       </div>
 
       {/* PAGOS */}
