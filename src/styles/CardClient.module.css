@@ -292,6 +292,39 @@
   padding-left: 4px;
 }
 
+/* ===============================
+   ALERTA DE CLIENTE BLOQUEADO
+   =============================== */
+.alertaBloqueo {
+  background-color: #fef2f2; /* Fondo rojo muy suave */
+  border: 1.5px solid #ef4444; /* Borde rojo llamativo */
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+}
+
+.alertaBloqueoHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #dc2626; /* Texto rojo intenso */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.alertaBloqueoTexto {
+  font-size: 13px;
+  color: #7f1d1d; /* Tono oscuro para que sea legible */
+  line-height: 1.4;
+  word-break: break-word;
+}
+
 /* ================= MOBILE ================= */
 @media (max-width: 360px) {
 

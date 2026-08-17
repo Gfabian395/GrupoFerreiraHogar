@@ -21,6 +21,8 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     telefono2,
     estado,
     fotoUrl,
+    motivoBloqueo,
+    observaciones, // 👈 Capturamos las observaciones del cliente
   } = cliente;
 
   // ===============================
@@ -58,48 +60,97 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     return numero.replace(/\D/g, ""); // elimina todo lo que no sea número
   };
 
+  // ===============================
+  // EDITAR OBSERVACIONES
+  // ===============================
+  const editarObservaciones = async () => {
+    const nuevaNota = prompt("Ingrese las observaciones para este cliente:", observaciones || "");
+
+    if (nuevaNota === null) return; // Si cancela, no hace nada
+
+    try {
+      await updateDoc(doc(db, "clientes", id), {
+        observaciones: nuevaNota.trim(),
+      });
+
+      window.location.reload();
+    } catch (error) {
+      console.error("Error guardando observaciones:", error);
+      alert("No se pudieron guardar las observaciones.");
+    }
+  };
+
+  // ===============================
+  // BLOQUEAR CLIENTE CON MOTIVO (<= 50 palabras)
+  // ===============================
   const bloquearCliente = async () => {
+    const motivo = prompt("Ingrese el motivo del bloqueo (máximo 50 palabras):");
+
+    if (motivo === null) return; // Si cancela, no hace nada
+
+    const palabras = motivo.trim().split(/\s+/);
+    if (palabras.length > 50) {
+      alert("El motivo no puede superar las 50 palabras.");
+      return;
+    }
+
     try {
       await updateDoc(doc(db, "clientes", id), {
         estado: "Bloqueado",
+        motivoBloqueo: motivo.trim() || "Sin motivo especificado",
       });
 
-      window.location.reload(); // o refrescar clientes
+      window.location.reload();
     } catch (error) {
       console.error("Error bloqueando cliente:", error);
     }
   };
 
-  // Variable para manejar la clase de fondo dinámicamente según su puntuación real
+  // ===============================
+  // DESBLOQUEAR CLIENTE
+  // ===============================
+  const desbloquearCliente = async () => {
+    try {
+      await updateDoc(doc(db, "clientes", id), {
+        estado: "Activo",
+        motivoBloqueo: "", // Limpiamos el motivo al desbloquear
+      });
+
+      window.location.reload();
+    } catch (error) {
+      console.error("Error desbloqueando cliente:", error);
+    }
+  };
+
+  // Variable para manejar la clase de fondo dinámicamente según su estado o puntuación
   let cardStatusClass = "";
 
   if (estado === "Bloqueado") {
     cardStatusClass = styles.cardBlocked; // Color gris/bloqueado
-  } else if (cliente.score) {
-    // 🎨 El color ahora depende 100% de la Leyenda comercial
+  } else if (cliente.score && cliente.score.leyenda !== "Sin historial") {
     switch (cliente.score.leyenda) {
       case "Excelente":
-        cardStatusClass = styles.cardVip;       // Verde Brillante (Impecable)
+        cardStatusClass = styles.cardVip;
         break;
       case "Bueno":
-        cardStatusClass = styles.cardPremium;   // Verde Claro / Ajustado (Confiable)
+        cardStatusClass = styles.cardPremium;
         break;
       case "Regular":
-        cardStatusClass = styles.cardRegular;   // Amarillo / Naranja (Alerta/Revisar)
+        cardStatusClass = styles.cardRegular;
         break;
       case "Mal pagador":
-        cardStatusClass = styles.cardBadPay;    // Rojo / Rosado (Peligro)
+        cardStatusClass = styles.cardBadPay;
         break;
       default:
         cardStatusClass = "";
     }
   }
 
-  // Intenta capturar el ID usando variantes comunes por si cambia el nombre en Firebase
   const idDeVenta = cliente.idVenta || cliente.id_venta || cliente.idVentaActiva;
 
-  // 🌟 Calculamos la nota exacta en escala de 1 a 10 adaptada al nuevo cálculo proporcional
-  const notaDecimal = cliente.score ? (cliente.score.puntos / 10).toFixed(1) : "5.0";
+  // Verificamos si realmente tiene historial o compras para mostrar puntuación
+  const tieneHistorial = cliente.score && cliente.score.leyenda !== "Sin historial";
+  const notaDecimal = tieneHistorial ? (cliente.score.puntos / 10).toFixed(1) : null;
 
   return (
     <div className={styles.clientWrapper}>
@@ -139,16 +190,40 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
             {open && (
               <div className={styles.menuDropdown}>
                 <button onClick={() => onEdit(cliente)}>✏️ Editar cliente</button>
-                <button>📝 Observaciones</button>
+                
+                {/* 📝 BOTÓN DE OBSERVACIONES ACTIVO */}
                 <button
-                  className={styles.danger}
                   onClick={(e) => {
                     e.stopPropagation();
-                    bloquearCliente();
+                    setOpen(false);
+                    editarObservaciones();
                   }}
                 >
-                  🚫 Bloquear cliente
+                  📝 Observaciones
                 </button>
+
+                {estado === "Bloqueado" ? (
+                  <button
+                    style={{ color: "#16a34a", fontWeight: "bold" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      desbloquearCliente();
+                    }}
+                  >
+                    ✅ Desbloquear cliente
+                  </button>
+                ) : (
+                  <button
+                    className={styles.danger}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      bloquearCliente();
+                    }}
+                  >
+                    🚫 Bloquear cliente
+                  </button>
+                )}
+
                 <button className={styles.danger} onClick={() => onDelete(cliente)}>
                   🗑 Eliminar
                 </button>
@@ -199,8 +274,8 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
             </div>
           )}
 
-          {/* 🌟 INDICADOR DE PUNTUACIÓN DECIMAL CON NUEVO FORMATO DE CSS */}
-          {cliente.score && (
+          {/* 🌟 INDICADOR DE PUNTUACIÓN (SOLO SI TIENE HISTORIAL REAL Y NO ESTÁ BLOQUEADO) */}
+          {estado !== "Bloqueado" && tieneHistorial && (
             <div className={styles.rowPuntuacion}>
               <div className={styles.puntuacionPrincipal}>
                 <span className={styles.label}>⭐ Puntuación</span>
@@ -212,12 +287,49 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
                 </span>
               </div>
 
-              {/* 🌟 AQUÍ AGREGAMOS EL DETALLE BREVE */}
               {cliente.score.detalle && (
                 <div className={styles.detallePuntuacion}>
                   {cliente.score.detalle}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ℹ️ SI ES NUEVO SIN HISTORIAL Y ACTIVO */}
+          {estado !== "Bloqueado" && !tieneHistorial && (
+            <div className={styles.rowPuntuacion}>
+              <div className={styles.puntuacionPrincipal}>
+                <span className={styles.label}>⭐ Puntuación</span>
+                <span className={styles.valuePuntuacion} style={{ fontSize: "13px", color: "#64748b" }}>
+                  Sin calificar (Cliente nuevo)
+                </span>
+              </div>
+              <div className={styles.detallePuntuacion}>
+                Cliente nuevo sin compras registradas.
+              </div>
+            </div>
+          )}
+
+          {/* 🚫 AVISO VISUAL DE ALERTA LLAMATIVA SI ESTÁ BLOQUEADO */}
+          {estado === "Bloqueado" && (
+            <div className={styles.alertaBloqueo}>
+              <div className={styles.alertaBloqueoHeader}>
+                <span>🚫</span>
+                <span>Cliente Bloqueado</span>
+              </div>
+              <div className={styles.alertaBloqueoTexto}>
+                {motivoBloqueo || "Sin motivo especificado"}
+              </div>
+            </div>
+          )}
+
+          {/* 📝 OBSERVACIONES DEL CLIENTE (VISIBLES EN LA TARJETA) */}
+          {observaciones && (
+            <div className={styles.row} style={{ marginTop: "8px", background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", display: "flex", flexDirection: "column", gap: "2px" }}>
+              <span className={styles.label} style={{ fontWeight: "600", fontSize: "12px" }}>📝 Observaciones:</span>
+              <span className={styles.value} style={{ fontSize: "12px", color: "#334155", wordBreak: "break-word" }}>
+                {observaciones}
+              </span>
             </div>
           )}
 

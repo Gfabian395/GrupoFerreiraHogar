@@ -9,7 +9,16 @@ import styles from "../styles/Clientes.module.css";
 // ===============================
 // CALCULAR SCORE DEL CLIENTE (0 a 100)
 // ===============================
-const calcularScoreCliente = (ventasDelCliente, hoy) => {
+const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
+  // 🔥 Si el cliente está bloqueado, anulamos el puntaje comercial y mostramos estado de bloqueo
+  if (cliente.estado === "Bloqueado") {
+    return {
+      puntos: 0,
+      leyenda: "Bloqueado",
+      detalle: "Cliente bloqueado del sistema."
+    };
+  }
+
   if (!ventasDelCliente.length) {
     return {
       puntos: 50,
@@ -399,8 +408,8 @@ export default function Clientes() {
       // 🔍 Buscamos la venta activa (la que NO está totalmente pagada)
       const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
 
-      // 🌟 CALCULAMOS EL SCORE AQUÍ PARA PASARLO A LA CARD
-      const scorePagos = calcularScoreCliente(ventasDelCliente, hoy);
+      // 🌟 PASAMOS EL CLIENTE ENTERO PARA VALIDAR SI ESTÁ BLOQUEADO EN EL SCORE
+      const scorePagos = calcularScoreCliente(c, ventasDelCliente, hoy);
 
       return {
         ...c,
