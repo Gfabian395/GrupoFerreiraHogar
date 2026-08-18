@@ -16,13 +16,12 @@
   height: 56px;
   border-radius: 50%;
 
-  border: 2px solid #f59e0b;
-  background: radial-gradient(circle at top left,
-      #fbbf24,
-      #92400e);
-  color: black;
+  /* Gradiente moderno y limpio, sin marrones */
+  background: linear-gradient(135deg, #fbbf24 0%, #ea580c 100%);
+  color: #ffffff;
+  border: none;
 
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   cursor: pointer;
 
@@ -30,20 +29,20 @@
   align-items: center;
   justify-content: center;
 
-  box-shadow:
-    0 0 18px rgba(245, 158, 11, 0.6),
-    0 12px 30px rgba(0, 0, 0, 0.35);
-
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.4);
   z-index: 999;
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
 }
 
-/* ===== ACTIVE ===== */
+/* ===== ACTIVE Y HOVER ===== */
+.addCategoryBtn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.5);
+}
+
 .addCategoryBtn:active {
-  transform: scale(0.95);
-  box-shadow:
-    0 0 12px rgba(245, 158, 11, 0.4),
-    0 8px 20px rgba(0, 0, 0, 0.3);
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);
 }
 
 /* ===== EFECTO PULSO SUAVE ===== */
@@ -52,7 +51,7 @@
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  border: 2px solid rgba(245, 158, 11, 0.4);
+  border: 2px solid rgba(234, 88, 12, 0.4);
   opacity: 0;
   animation: pulseGlow 2.5s infinite;
 }
@@ -73,26 +72,32 @@
 .searchInput {
   width: 440px;
   max-width: 70%;
-  padding: 14px 18px;
+  padding: 14px 20px;
 
   font-size: 1rem;
-  color: black;
-  border-radius: 16px;
-  border: 2px solid rgba( 194, 148, 54);
+  
+  /* Diseño claro: Fondo blanco, texto oscuro */
+  background-color: #ffffff; 
+  color: #1f2937; /* Gris muy oscuro, casi negro, ideal para lectura */
+  
+  border-radius: 12px;
+  border: 2px solid #e5e7eb; /* Borde gris sutil */
   outline: none;
 
-  box-shadow:
-    0 0 10px rgba(251, 191, 36, 0.45),
-    0 0 22px rgba(251, 191, 36, 0.25),
-    inset 0 0 6px rgba(251, 191, 36, 0.2);
-
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   transition: all 0.25s ease;
+}
+
+/* FOCO DEL INPUT */
+.searchInput:focus {
+  border-color: #f59e0b; /* Resalta en naranja al hacer clic */
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15), 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 /* PLACEHOLDER */
 .searchInput::placeholder {
-  color: rgba(194, 148, 54);
-  letter-spacing: 0.4px;
+  color: #9ca3af; /* Gris claro estándar */
+  letter-spacing: 0.3px;
 }
 
 /* ===============================
@@ -101,46 +106,72 @@
 
 .searchResults {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   width: 440px;
   max-width: 92%;
 
-  background: #3f1d0d;
-  border-radius: 14px;
-  overflow: hidden;
+  /* Fondo blanco absoluto para máximo contraste */
+  background: #ffffff;
+  border-radius: 12px;
+  
+  max-height: 350px; 
+  overflow-y: auto; 
+  overflow-x: hidden;
 
-  box-shadow:
-    0 0 25px rgba(251, 191, 36, 0.35),
-    inset 0 0 8px rgba(251, 191, 36, 0.15);
+  /* Sombra amplia para que "flote" sobre el resto del contenido */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e7eb;
 
   animation: dropdownFade 0.2s ease;
 }
 
+/* Estilización del Scrollbar */
+.searchResults::-webkit-scrollbar {
+  width: 6px;
+}
+.searchResults::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 0 12px 12px 0;
+}
+.searchResults::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.searchResults::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* ITEM */
 .searchItem {
-  padding: 14px 18px;
+  padding: 14px 20px;
   cursor: pointer;
-
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.2s ease;
+  border-bottom: 1px solid #f3f4f6; /* Separador gris súper sutil */
+  transition: all 0.2s ease;
 }
 
 .searchItem:last-child {
   border-bottom: none;
 }
 
+/* HOVER DEL ITEM */
+.searchItem:hover {
+  background-color: #fffbeb; /* Un fondo ámbar levísimo al pasar el mouse */
+  padding-left: 24px;
+}
+
 /* TEXTO */
 .searchItem strong {
   display: block;
-  color: black;
+  color: #111827; /* Letra fuerte y notoria */
   font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .searchItem span {
   display: block;
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 0.8rem;
-  color: rgba(253, 230, 138, 0.6);
+  color: #6b7280; /* Gris intermedio para subtítulos/categorías */
 }
 
 /* ===============================
@@ -150,9 +181,8 @@
 @keyframes dropdownFade {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-8px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -161,16 +191,14 @@
 
 @keyframes pulseGlow {
   0% {
-    transform: scale(0.85);
+    transform: scale(0.9);
     opacity: 0;
   }
-
-  40% {
-    opacity: 0.6;
+  50% {
+    opacity: 0.4;
   }
-
   100% {
-    transform: scale(1.2);
+    transform: scale(1.3);
     opacity: 0;
   }
 }
@@ -179,10 +207,18 @@
    MOBILE
 ================================ */
 @media (max-width: 480px) {
+  .searchInput {
+    width: 90%;
+    max-width: 90%;
+  }
+  .searchResults {
+    width: 90%;
+    max-width: 90%;
+  }
   .addCategoryBtn {
-    width: 48px;
-    height: 48px;
-    font-size: 18px;
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
     bottom: 16px;
     right: 16px;
   }
