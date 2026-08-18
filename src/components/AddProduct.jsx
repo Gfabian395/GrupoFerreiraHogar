@@ -21,7 +21,10 @@ const createEmptyVariant = () => ({
   price: "",
   priceJuego: "",
   unidadesPorJuego: "",
+  tipoVariante: "modelo", // "modelo" o "color"
+  modeloPadre: "", // Novedad: vincula el color con su modelo
   image: "",
+  colorHex: "#000000",
   stock4320: 0,
   stock4034: 0,
   stock2440: 0,
@@ -41,7 +44,10 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       price: v.price ?? "",
       priceJuego: v.priceJuego ?? "",
       unidadesPorJuego: v.unidadesPorJuego ?? "",
+      tipoVariante: v.tipoVariante || (v.colorHex ? "color" : "modelo"),
+      modeloPadre: v.modelo || "", // Carga el modelo vinculado si existe
       image: v.image || "",
+      colorHex: v.colorHex || "#000000",
       stock4320: v.stock?.["Los Andes 4320"] ?? 0,
       stock4034: v.stock?.["Los Andes 4034"] ?? 0,
       stock2440:
@@ -104,7 +110,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       !name.trim() ||
       variantes.some((v) => v.attr.trim() === "" || v.price === "")
     ) {
-      alert("Completa todos los campos obligatorios.");
+      alert("Completa todos los campos obligatorios de las variantes.");
       return;
     }
 
@@ -133,24 +139,28 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         imageURL = await getDownloadURL(storageRef);
       }
 
-      const variantesConImagen = await Promise.all(
+      const variantesProcesadas = await Promise.all(
         variantes.map(async (v, i) => {
-          let image = v.image || "";
+          let variantImageURL = v.image || "";
 
-          if (variantImages[i]) {
+          if (v.tipoVariante === "modelo" && variantImages[i]) {
             const fileName = `${Date.now()}-${variantImages[i].name}`;
             const storageRef = ref(storage, `variants/${fileName}`);
             await uploadBytes(storageRef, variantImages[i]);
-            image = await getDownloadURL(storageRef);
+            variantImageURL = await getDownloadURL(storageRef);
           }
 
           return {
             attr: v.attr,
+            tipoVariante: v.tipoVariante,
+            // Aquí está la magia: vinculamos el color a su modelo padre
+            modelo: v.tipoVariante === "color" ? (v.modeloPadre || "") : v.attr,
             price: Number(v.price),
             priceJuego: v.priceJuego !== "" ? Number(v.priceJuego) : null,
             unidadesPorJuego:
               v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
-            image,
+            image: v.tipoVariante === "modelo" ? variantImageURL : (v.image || ""),
+            colorHex: v.tipoVariante === "color" ? v.colorHex : "",
             stock: {
               "Los Andes 4320": Number(v.stock4320),
               "Los Andes 4034": Number(v.stock4034),
@@ -164,7 +174,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         name,
         tag,
         image: imageURL,
-        variantes: variantesConImagen,
+        variantes: variantesProcesadas,
       };
 
       if (!producto) {
@@ -196,7 +206,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       console.error(error);
       alert("Ocurrió un error. Revisá la consola.");
     } finally {
-      loading(false);
+      setLoading(false);
     }
   };
 
@@ -208,12 +218,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         onSubmit={(e) => {
           e.preventDefault();
           handleSubmit();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleSubmit();
-          }
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -233,7 +237,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         </label>
 
         <label>
-          Badge
+          Badge (Etiqueta principal)
           <input
             type="text"
             value={tag}
@@ -242,7 +246,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         </label>
 
         <label>
-          Imagen principal
+          Imagen principal general del producto
           <input
             type="file"
             accept="image/*"
@@ -250,26 +254,127 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           />
         </label>
 
+        {producto?.image && !imageFile && (
+          <img
+            src={producto.image}
+            alt="Principal"
+            style={{ width: 80, marginTop: 4, borderRadius: 6 }}
+          />
+        )}
+
         <fieldset>
-          <legend>Variedades</legend>
+          <legend>Variedades / Opciones</legend>
 
           {variantes.map((v, i) => (
             <div key={i} className={styles.variant}>
+              
+              {/* SELECTOR DEL TIPO DE VARIANTE */}
               <label>
-                Modelo o Color
-                <input
-                  type="text"
-                  value={v.attr}
+                Tipo de variante
+                <select
+                  value={v.tipoVariante}
                   onChange={(e) =>
-                    handleVariantChange(
-                      i,
-                      "attr",
-                      formatText(e.target.value)
-                    )
+                    handleVariantChange(i, "tipoVariante", e.target.value)
                   }
-                />
+                >
+                  <option value="modelo">Modelo (Crea un grupo / Fila nueva)</option>
+                  <option value="color">Color (Se agrupa dentro de un modelo)</option>
+                </select>
               </label>
 
+              {/* SI ES COLOR: PREGUNTAR A QUÉ MODELO PERTENECE */}
+              {v.tipoVariante === "color" && (
+                <label>
+                  ¿A qué modelo pertenece este color?
+                  <select
+                    value={v.modeloPadre}
+                    onChange={(e) => handleVariantChange(i, "modeloPadre", e.target.value)}
+                    style={{ border: "2px solid #3b82f6", backgroundColor: "#eff6ff" }}
+                  >
+                    <option value="">-- Modelo General del Producto --</option>
+                    {variantes
+                      .filter(m => m.tipoVariante === 'modelo' && m.attr)
+                      .map((m, idx) => (
+                        <option key={idx} value={m.attr}>{m.attr}</option>
+                      ))}
+                  </select>
+                </label>
+              )}
+
+              {/* CAMPO CONDICIONAL SEGÚN EL TIPO SELECCIONADO */}
+              {v.tipoVariante === "color" ? (
+                <>
+                  <label>
+                    Nombre del color (Ej: Azul, Rojo)
+                    <input
+                      type="text"
+                      value={v.attr}
+                      onChange={(e) =>
+                        handleVariantChange(
+                          i,
+                          "attr",
+                          formatText(e.target.value)
+                        )
+                      }
+                      placeholder="Ej: Azul marino"
+                    />
+                  </label>
+
+                  <label>
+                    Seleccionar Color (Código RGB / Hex)
+                    <input
+                      type="color"
+                      value={v.colorHex || "#000000"}
+                      onChange={(e) =>
+                        handleVariantChange(i, "colorHex", e.target.value)
+                      }
+                      style={{ width: "100%", height: "40px", cursor: "pointer" }}
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label>
+                    Nombre del Modelo (Ej: Kratos 1, Ferri-throne)
+                    <input
+                      type="text"
+                      value={v.attr}
+                      onChange={(e) =>
+                        handleVariantChange(
+                          i,
+                          "attr",
+                          formatText(e.target.value)
+                        )
+                      }
+                      placeholder="Ej: Exhibidora 437lts"
+                    />
+                  </label>
+
+                  <label>
+                    Subir foto de este modelo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setVariantImages({
+                          ...variantImages,
+                          [i]: e.target.files[0],
+                        })
+                      }
+                    />
+                  </label>
+
+                  {v.image && (
+                    <img
+                      src={v.image}
+                      alt={v.attr}
+                      style={{ width: 80, marginTop: 6, borderRadius: 6 }}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* PRECIOS Y STOCK (COMUNES) */}
               <label>
                 Precio por unidad
                 <input
@@ -313,28 +418,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   placeholder="Ej: 6"
                 />
               </label>
-
-              <label>
-                Imagen de la variante
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) =>
-                    setVariantImages({
-                      ...variantImages,
-                      [i]: e.target.files[0],
-                    })
-                  }
-                />
-              </label>
-
-              {v.image && (
-                <img
-                  src={v.image}
-                  alt={v.attr}
-                  style={{ width: 80, marginTop: 6, borderRadius: 6 }}
-                />
-              )}
 
               <label>
                 Stock Los Andes 4320

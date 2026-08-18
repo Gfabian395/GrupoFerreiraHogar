@@ -3,8 +3,8 @@
 ================================ */
 .productWrapper {
   width: 20%;
-  display: inline-block; /* CORREGIDO: Evita el colapso extraño que genera inline-flex */
-  min-width: 240px; /* CORREGIDO: Fuerza un ancho mínimo por si el contenedor padre falla */
+  display: inline-block;
+  min-width: 240px;
   padding: 12px;
   box-sizing: border-box;
   vertical-align: top;
@@ -17,21 +17,16 @@
   position: relative;
   width: 100%;
   min-height: 0;
-  padding: 20px; /* Reducido un poco para dar más espacio al contenido */
+  padding: 20px;
   border-radius: 12px;
-  
-  display: grid; /* CORREGIDO: Crucial para que las siguientes dos líneas funcionen */
+  display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
-
-  /* Máximo contraste para baja visión */
   color: #111827; 
   background: #ffffff;
   font-family: Arial, Helvetica, sans-serif; 
-  
   border: 2px solid #d1d5db; 
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -39,453 +34,185 @@
 /* ===============================
    ADMIN ACTIONS
 ================================ */
-.productActions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 5;
-  display: flex;
-  gap: 8px;
-}
-
-.productActions button {
-  width: 32px;
-  height: 32px;
-  border: 2px solid #9ca3af;
-  border-radius: 8px;
-  background: #f3f4f6;
-  color: #111827;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-}
-
-.productActions button:hover {
-  transform: scale(1.05);
-  background: #e5e7eb;
-}
-
-.delete:hover {
-  background: #dc2626 !important;
-  color: #ffffff !important;
-  border-color: #b91c1c !important;
-}
-
-.edit:hover {
-  background: #2563eb !important;
-  color: #ffffff !important;
-  border-color: #1d4ed8 !important;
-}
+.productActions { position: absolute; top: 10px; right: 10px; z-index: 5; display: flex; gap: 8px; }
+.productActions button { width: 32px; height: 32px; border: 2px solid #9ca3af; border-radius: 8px; background: #f3f4f6; color: #111827; cursor: pointer; display: grid; place-items: center; font-size: 1rem; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s ease; }
+.productActions button:hover { transform: scale(1.05); background: #e5e7eb; }
+.delete:hover { background: #dc2626 !important; color: #ffffff !important; border-color: #b91c1c !important; }
+.edit:hover { background: #2563eb !important; color: #ffffff !important; border-color: #1d4ed8 !important; }
 
 /* ===============================
    FIGURE / IMAGE
 ================================ */
-.productFigure {
-  position: relative;
-  z-index: 2;
-  height: 160px; /* Ajustado para prevenir empuje vertical excesivo */
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f9fafb;
-  border-radius: 8px;
-}
-
-.productFigure img {
-  width: 100%;
-  height: 140px;
-  object-fit: contain;
-  transition: transform 0.2s ease;
-}
-
-.productFigure img:hover {
-  transform: scale(1.05);
-}
+.productFigure { position: relative; z-index: 2; height: 160px; margin: 0; display: flex; align-items: center; justify-content: center; background: #f9fafb; border-radius: 8px; }
+.productFigure img { width: 100%; height: 140px; object-fit: contain; transition: transform 0.2s ease; }
+.productFigure img:hover { transform: scale(1.05); }
 
 /* ===============================
    BADGES
 ================================ */
-.badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 3;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: #1e3a8a;
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+.badge { position: absolute; top: 10px; left: 10px; z-index: 3; padding: 4px 10px; border-radius: 6px; background: #1e3a8a; color: #ffffff; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; }
 
 /* ===============================
    INFO CONTAINER
 ================================ */
-.info {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  gap: 14px;
-}
-
-/* ===============================
-   HEADER INFO
-================================ */
-.headerInfo {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  align-items: start;
-}
-
-.headerInfo h3 {
-  margin: 0;
-  font-size: 1.25rem; /* Calibrado para evitar saltos de línea destructivos */
-  font-weight: bold;
-  line-height: 1.2;
-  color: #111827;
-}
-
-.priceBlock {
-  display: grid;
-  gap: 4px;
-}
-
-.priceBlock p {
-  margin: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  color: #1f2937;
-}
-
-.priceBlock strong {
-  font-size: 1.35rem; /* Destacado y claro sin romper la grilla */
-  font-weight: 800;
-  color: #16a34a;
-}
-
-.priceBlock span {
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: #4b5563;
-  white-space: nowrap;
-}
+.info { position: relative; z-index: 2; display: grid; gap: 14px; }
+.headerInfo { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: start; }
+.headerInfo h3 { margin: 0; font-size: 1.25rem; font-weight: bold; line-height: 1.2; color: #111827; }
+.priceBlock { display: grid; gap: 4px; }
+.priceBlock p { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #1f2937; }
+.priceBlock strong { font-size: 1.35rem; font-weight: 800; color: #16a34a; }
+.priceBlock span { font-size: 0.9rem; font-weight: bold; color: #4b5563; white-space: nowrap; }
 
 /* ===============================
    FIELDSETS RESET
 ================================ */
-.options,
-.buyFormat {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-
-.options legend,
-.buyFormat legend {
-  margin: 0 0 8px;
-  padding: 0;
-  font-size: 0.95rem;
-  font-weight: bold;
-  color: #374151;
-}
+.options, .buyFormat { margin: 0; padding: 0; border: 0; min-width: 0; }
+.options legend, .buyFormat legend { margin: 0 0 12px; padding: 0; font-size: 0.95rem; font-weight: bold; color: #374151; }
 
 /* ===============================
-    VARIANT OPTIONS (SCROLL TOTAL)
+   MODEL & VARIANT LAYOUT (VERTICAL/HORIZONTAL)
 ================================ */
-.variantGrid {
-  display: flex !important;
-  flex-wrap: nowrap !important;       /* Prohíbe terminantemente irse hacia abajo */
-  align-items: flex-start;
-  gap: 12px;
-  overflow-x: auto !important;       /* Fuerza la activación del scroll horizontal */
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  
-  /* Dejamos un margen abajo para la barra de scroll gris de tus capturas */
-  padding: 8px 4px 14px 4px; 
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch; /* Scroll suave y rápido en iOS/Android */
-
-  /* Forzamos una barra de scroll fina y estética en Firefox */
-  scrollbar-width: thin !important;
-  scrollbar-color: #9ca3af #f3f4f6;
-}
-
-/* Forzamos una barra de scroll visible y limpia en Chrome, Safari y Edge */
-.variantGrid::-webkit-scrollbar {
-  display: block !important;
-  height: 5px;                       /* Barra ultra delgada para que no sea tosca */
-}
-
-.variantGrid::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 10px;
-}
-
-.variantGrid::-webkit-scrollbar-thumb {
-  background: #9ca3af;
-  border-radius: 10px;
-}
-
-.variantOption {
-  position: relative;
-  flex-shrink: 0 !important;          /* PROHIBIDO que los elementos se aplasten entre sí */
-  width: 85px;                       /* Ancho ideal para mantener las columnas separadas */
+.modelsContainer {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+/* Cada Fila Contenedora (Modelo + Colores) */
+.modelRow {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
-  color: #111827;
-  text-align: center;
-}
-
-.variantOption input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.variantCircle {
-  position: relative;
-  width: 46px; 
-  height: 46px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
   background: #ffffff;
-  border: 2px solid #9ca3af;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px;
+  gap: 12px;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
-.variantCircle img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
+.activeModelRow {
+  border-color: #3b82f6; 
+  background: #eff6ff; 
+  box-shadow: 0 0 0 2.5px rgba(59, 130, 246, 0.2);
 }
 
-.variantOption:hover .variantCircle {
-  transform: translateY(-2px);
-  border-color: #4b5563;
-}
-
-.selected .variantCircle {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
-}
-
-/* Solución definitiva al texto encimado */
-.variantName {
-  font-size: 0.72rem;                /* Más pequeño y controlado */
-  font-weight: bold;
-  color: #111827;
-  line-height: 1.2;
-  white-space: normal !important;    /* Permite saltos de línea */
-  word-break: break-all !important;  /* CRUCIAL: Rompe "Colchon$750.000" aunque venga sin espacios */
-  overflow-wrap: break-word !important;
-  display: block;
-  width: 100%;
-}
-
-.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.soldOutBadge {
-  position: absolute;
-  top: -6px;
-  right: 4px;
-  z-index: 3;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 0.65rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* ===============================
-    BUY FORMAT (MINI COMPACTO)
-================================ */
-.buyFormatGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;                          /* Espaciado ajustado */
-  max-width: 230px;                  /* Contenedor mucho más angosto y estético */
-  width: 100%;
-  margin: 0 auto;                    
-}
-
-.formatButton {
-  position: relative;
-  min-height: 36px;                  /* Reducido de 46px a una altura bien compacta */
-  padding: 6px 8px;                  /* Relleno mínimo para que no flote tanto texto */
-  border-radius: 6px;                /* Bordes más pequeños acordes al tamaño */
-  border: 2px solid #d1d5db;
-  background: #f9fafb;
-  color: #111827;
-  cursor: pointer;
+/* Cuadro izquierdo (Imagen y Nombre del Modelo) */
+.modelInfo {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
+  min-width: 75px;
+  max-width: 85px;
+  border-right: 2px dashed #cbd5e1; 
+  padding-right: 12px;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
-.formatButton strong {
-  font-size: 0.75rem;                /* Fuente pequeña para que "3 disponibles" entre limpio */
-  line-height: 1.1;
-  text-align: center;
+.modelInfo:hover { transform: scale(1.02); }
+
+/* Clases dinámicas nuevas para seleccionar el modelo base */
+.modelInfo img { 
+  width: 48px; height: 48px; object-fit: cover; 
+  border-radius: 6px; border: 2px solid #d1d5db; 
+  transition: all 0.2s ease; 
 }
 
-.formatButton:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+.noModelImage { 
+  width: 48px; height: 48px; display: grid; place-items: center; 
+  background: #f3f4f6; border-radius: 6px; font-size: 1.2rem; color: #9ca3af; 
+  border: 2px solid #d1d5db; transition: all 0.2s ease; 
 }
 
-.selectedFormat {
-  border-color: #2563eb;
-  background: #eff6ff;
-  box-shadow: 0 0 0 1.5px rgba(37, 99, 235, 0.15);
+.selectedBaseImg {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
 }
+
+.selectedBaseText {
+  color: #2563eb !important;
+}
+
+.modelName { 
+  font-size: 0.75rem; font-weight: 800; color: #1f2937; 
+  text-align: center; line-height: 1.1; word-break: break-word; 
+  transition: color 0.2s ease;
+}
+
+/* Contenedor derecho (Lista horizontal de Colores de ESE modelo) */
+.modelVariantsContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-x: auto;
+  flex-grow: 1;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af transparent;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modelVariantsContainer::-webkit-scrollbar { height: 5px; }
+.modelVariantsContainer::-webkit-scrollbar-track { background: transparent; }
+.modelVariantsContainer::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 10px; }
+
+/* Botones individuales de colores/variantes */
+.variantOption { position: relative; flex-shrink: 0; width: 75px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: #111827; text-align: center; }
+.variantOption input { position: absolute; opacity: 0; pointer-events: none; }
+.variantCircle { position: relative; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: #ffffff; border: 2px solid #9ca3af; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s ease; overflow: hidden; }
+.variantFallback { width: 100%; height: 100%; display: block; background-color: #e5e7eb; }
+.variantCircle img { width: 100%; height: 100%; object-fit: cover; }
+.variantOption:hover .variantCircle { transform: translateY(-2px); border-color: #4b5563; }
+.selected .variantCircle { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25); }
+
+/* Ajuste para que el texto de la variante quede centrado ahora que no tiene precio */
+.variantText { 
+  display: flex; flex-direction: column; align-items: center; justify-content: center; 
+  width: 100%; min-height: 24px;
+}
+.variantName { 
+  font-size: 0.75rem; font-weight: bold; color: #111827; 
+  line-height: 1.2; white-space: normal; word-break: break-word; 
+}
+
+.disabled { opacity: 0.4; cursor: not-allowed; }
+.soldOutBadge { position: absolute; top: -6px; right: -6px; z-index: 3; padding: 2px 6px; border-radius: 4px; background: #ef4444; color: #ffffff; font-size: 0.65rem; font-weight: bold; text-transform: uppercase; white-space: nowrap; }
+
+/* ===============================
+    BUY FORMAT (MINI COMPACTO)
+================================ */
+.buyFormatGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-width: 230px; width: 100%; margin: 0 auto; }
+.formatButton { position: relative; min-height: 36px; padding: 6px 8px; border-radius: 6px; border: 2px solid #d1d5db; background: #f9fafb; color: #111827; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: bold; transition: all 0.2s ease; box-sizing: border-box; }
+.formatButton strong { font-size: 0.75rem; line-height: 1.1; text-align: center; }
+.formatButton:hover:not(:disabled) { background: #f3f4f6; border-color: #9ca3af; }
+.selectedFormat { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 1.5px rgba(37, 99, 235, 0.15); }
 
 /* ===============================
    CUOTAS
 ================================ */
-.toggleCuotas {
-  width: fit-content;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 2px solid #2563eb;
-  background: #ffffff;
-  color: #2563eb;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.toggleCuotas:hover {
-  background: #eff6ff;
-}
-
-.cuotasInline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.cuota {
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: #f3f4f6;
-  color: #1f2937;
-  font-size: 0.85rem;
-  font-weight: bold;
-  border: 2px solid #e5e7eb;
-}
+.toggleCuotas { width: fit-content; padding: 6px 12px; border-radius: 6px; border: 2px solid #2563eb; background: #ffffff; color: #2563eb; font-size: 0.9rem; font-weight: bold; cursor: pointer; }
+.toggleCuotas:hover { background: #eff6ff; }
+.cuotasInline { display: flex; flex-wrap: wrap; gap: 6px; }
+.cuota { padding: 4px 10px; border-radius: 6px; background: #f3f4f6; color: #1f2937; font-size: 0.85rem; font-weight: bold; border: 2px solid #e5e7eb; }
 
 /* ===============================
-   STOCK BY BRANCH - FIXED LAYOUT
+   STOCK BY BRANCH
 ================================ */
-.stock {
-  display: grid;
-  gap: 10px; /* Separación prolija entre sucursales */ 
-}
-
-.branch {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 10px 12px; /* Un poco menos de espacio arriba/abajo para balancear */
-  border-radius: 8px;
-  background: #f9fafb;
-  border: 1.5px solid #d1d5db;
-
-  /* --- CORRECCIÓN horizontal --- */
-  width: 85%;         /* Ocupa menos espacio del ancho total de la card */
-  max-width: 240px;   /* Evita que se estire demasiado en pantallas grandes */
-  margin: 0 auto;     /* Centra la cajita de la sucursal horizontalmente */
-  box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
-}
-
-.branchMeta {
-  display: block;
-  width: 100%; /* Ocupa todo el ancho superior */
-}
-
-.branchMeta span {
-  display: block;
-  font-size: 0.95rem; /* Tamaño intermedio perfecto para lectura rápida */
-  font-weight: 600; /* Letra un poco más delgada, nítida y legible */
-  color: #111827;
-  line-height: 1.3;
-}
-
-/* Ocultamos el "small" si es el que te renderizaba las unidades encimadas */
-.branchMeta small {
-  display: none; 
-}
-
-.stockControls {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Espacio prolijo entre -, número, + y el carrito */
-  width: 100%;
-}
-
-.stockControls strong {
-  min-width: 20px;
-  text-align: center;
-  font-size: 1rem;
-  font-weight: 600; /* Grosor intermedio coincidente con el título */
-  color: #111827;
-}
-
-.stockControls button {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1.5px solid #9ca3af;
-  background: #ffffff;
-  color: #111827;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: background 0.15s ease;
-}
-
-.stockControls button:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-
-.stockControls button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Colores de estado simplificados en los bordes */
+.stock { display: grid; gap: 10px; }
+.branch { display: flex; flex-direction: column; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: #f9fafb; border: 1.5px solid #d1d5db; width: 85%; max-width: 240px; margin: 0 auto; box-sizing: border-box; }
+.branchMeta { display: block; width: 100%; }
+.branchMeta span { display: block; font-size: 0.95rem; font-weight: 600; color: #111827; line-height: 1.3; }
+.branchMeta small { display: block; font-size: 0.8rem; font-weight: 500; color: #6b7280; margin-top: 4px; margin-bottom: 8px; }
+.stockControls { display: flex; align-items: center; gap: 8px; width: 100%; }
+.stockControls strong { min-width: 20px; text-align: center; font-size: 1rem; font-weight: 600; color: #111827; }
+.stockControls button { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid #9ca3af; background: #ffffff; color: #111827; cursor: pointer; display: grid; place-items: center; font-size: 1rem; font-weight: 600; transition: background 0.15s ease; }
+.stockControls button:hover:not(:disabled) { background: #f3f4f6; }
+.stockControls button:disabled { opacity: 0.4; cursor: not-allowed; }
 .ok { border-color: #16a34a !important; }
 .low { border-color: #ea580c !important; }
 .out { border-color: #dc2626 !important; opacity: 0.7; }
@@ -493,118 +220,60 @@
 /* ===============================
    CARD BUTTONS
 ================================ */
-.cardButtons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.cardButtons button {
-  min-height: 40px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: none;
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
+.cardButtons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cardButtons button { min-height: 40px; padding: 8px 12px; border-radius: 8px; border: none; color: #ffffff; font-size: 0.9rem; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; }
+.printBudget { grid-column: 1 / -1; background: #002d72; color: #ffffff !important; font-weight: bold !important; }
+.printBudget:hover { background: #001f50; }
 .whatsapp { background: #16a34a; }
 .whatsapp:hover { background: #15803d; }
-
 .share { background: #4b5563; }
 .share:hover { background: #374151; }
-
-.mpButton {
-  grid-column: 1 / -1;
-  background: #1d4ed8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+.mpButton { grid-column: 1 / -1; background: #1d4ed8; }
 .mpButton:hover { background: #1e40af; }
-
-.mpButton svg {
-  width: 26px !important;
-  height: 26px !important;
-}
+.mpButton svg { width: 26px !important; height: 26px !important; }
 
 /* ===============================
    RESPONSIVE GRID WIDTHS - MOBILE FIXED
 ================================ */
-
-/* Smartphones: Ajuste drástico anti-desborde */
 @media (max-width: 599px) {
-  .productWrapper {
-    width: 100%; /* Mantenemos una sola tarjeta por fila en móviles para dar espacio físico */
-    padding: 6px;
-  }
+  .productWrapper { width: 100%; padding: 6px; }
+  .productCard { padding: 12px; border-radius: 10px; gap: 12px; }
+  .productFigure { height: 120px; }
+  .productFigure img { height: 110px; }
+  .headerInfo h3 { font-size: 1.05rem; font-weight: bold; }
+  .priceBlock strong { font-size: 1.15rem; }
+  .priceBlock span, .options legend, .buyFormat legend { font-size: 0.85rem; }
 
-  .productCard {
-    padding: 12px;
-    border-radius: 10px;
-    gap: 12px;
-  }
-
-  .productFigure {
-    height: 120px; /* Reducción de la caja de imagen para rescatar valioso espacio vertical */
-  }
-
-  .productFigure img {
-    height: 110px;
-  }
-
-  /* Tamaños móviles balanceados: fuentes compactas pero gruesas */
-  .headerInfo h3 {
-    font-size: 1.05rem;
-    font-weight: bold;
-  }
-
-  .priceBlock strong {
-    font-size: 1.15rem;
-  }
-
-  .priceBlock span,
-  .options legend,
-  .buyFormat legend {
-    font-size: 0.85rem;
-  }
-
-  .variantCircle {
-    width: 40px;
-    height: 40px;
-  }
-
-  .variantName {
-    font-size: 0.75rem;
-  }
-
-  .formatButton {
-    min-height: 40px;
-    padding: 8px 4px;
-  }
-
-  .formatButton strong {
-    font-size: 0.85rem;
-  }
-
-  .toggleCuotas,
-  .cuota {
-    font-size: 0.8rem;
-  }
-
-  .branchMeta span {
-    font-size: 0.85rem;
+  /* Ajustes específicos para el Layout Modelo/Colores en mobile */
+  .modelRow {
+    flex-direction: column; /* Apila el Modelo arriba y los colores abajo */
+    padding: 8px;
+    gap: 8px;
+    align-items: flex-start;
   }
   
-  .branchMeta small {
-    font-size: 0.75rem;
+  .modelInfo {
+    flex-direction: row; /* En mobile, la foto del modelo y texto van lado a lado arriba */
+    width: 100%;
+    max-width: 100%;
+    border-right: none !important;
+    border-bottom: 2px dashed #cbd5e1;
+    padding-right: 0;
+    padding-bottom: 8px;
+    justify-content: flex-start;
   }
+  
+  .modelInfo img, .noModelImage { width: 38px; height: 38px; }
+  .modelName { font-size: 0.8rem; text-align: left; }
+  .modelVariantsContainer { width: 100%; }
 
-  .cardButtons button {
-    min-height: 38px;
-    font-size: 0.85rem;
-  }
+  .variantOption { width: 70px; }
+  .variantCircle { width: 38px; height: 38px; }
+  .variantName { font-size: 0.75rem; }
+  .formatButton { min-height: 40px; padding: 8px 4px; }
+  .formatButton strong { font-size: 0.85rem; }
+  .toggleCuotas, .cuota { font-size: 0.8rem; }
+  .branchMeta span { font-size: 0.85rem; }
+  .branchMeta small { font-size: 0.75rem; }
+  .cardButtons button { min-height: 38px; font-size: 0.85rem; }
 }
