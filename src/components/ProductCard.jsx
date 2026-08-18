@@ -116,7 +116,7 @@ export default function ProductCard({
       });
   }, [precioSeleccionado]);
 
-  if (!producto || !variant) return null;
+  if (!producto || variantes.length === 0) return null;
 
   const sendNotification = async (action, detail = {}) => {
     const user = auth.currentUser;
@@ -338,11 +338,10 @@ export default function ProductCard({
     window.open(whatsappUrl, "_blank");
   };
 
-// REMPLAZÁ ESTA FUNCIÓN COMPLETA EN TU ARCHIVO
 const handlePrintPresupuesto = () => {
     const printWindow = window.open("", "_blank", "width=400,height=600");
     const fechaActual = new Date().toLocaleDateString("es-AR");
-    const imagenUrl = producto.image || variant.image || "";
+    const imagenUrl = variant?.image || producto.image || "";
     const formatoTexto = formatoActual === "juego" ? ` (Juego x${unidadesPorJuego})` : "";
 
     printWindow.document.write(`
@@ -357,7 +356,6 @@ const handlePrintPresupuesto = () => {
               box-sizing: border-box;
             }
             
-            /* Ajuste estricto de página para evitar saltos de hoja */
             @page { 
               size: 4in 6in; 
               margin: 5mm 5mm 5mm 5mm; 
@@ -375,7 +373,6 @@ const handlePrintPresupuesto = () => {
               overflow: hidden;
             }
             
-            /* Header */
             .header-banner {
               background: #ffffff;
               color: #0f2b48;
@@ -427,7 +424,6 @@ const handlePrintPresupuesto = () => {
               object-fit: contain;
             }
             
-            /* Contenido Base optimizado en espacio */
             .content {
               padding: 6px 0 0 0;
               display: flex;
@@ -437,14 +433,12 @@ const handlePrintPresupuesto = () => {
               gap: 8px; 
             }
 
-            /* Estructura de 2 Columnas */
             .main-grid {
               display: flex;
               gap: 8px;
               align-items: stretch;
             }
             
-            /* Columna Izquierda */
             .left-column {
               width: 52%;
               display: flex;
@@ -483,7 +477,6 @@ const handlePrintPresupuesto = () => {
               margin: 0;
             }
 
-            /* Lista de Cuotas */
             .cuotas-list {
               display: flex;
               flex-direction: column;
@@ -517,7 +510,6 @@ const handlePrintPresupuesto = () => {
               white-space: nowrap;
             }
 
-            /* Columna Derecha con imagen cover */
             .right-column {
               width: 48%;
               display: flex;
@@ -527,7 +519,7 @@ const handlePrintPresupuesto = () => {
             
             .image-wrapper {
               width: 100%;
-              height: 100px; /* Ajuste sutil para garantizar una sola hoja */
+              height: 100px;
               border: 1px solid #cbd5e1;
               border-radius: 6px;
               background-color: #ffffff;
@@ -544,7 +536,6 @@ const handlePrintPresupuesto = () => {
               object-position: center;
             }
 
-            /* Bloque Requisitos */
             .requisitos-block {
               background-color: #f8fafc;
               border: 1px solid #cbd5e1;
@@ -592,7 +583,6 @@ const handlePrintPresupuesto = () => {
               flex-shrink: 0;
             }
             
-            /* Bloques Inferiores (Sucursales y Redes) */
             .bottom-row {
               display: flex;
               gap: 6px;
@@ -618,34 +608,31 @@ const handlePrintPresupuesto = () => {
               padding-bottom: 1px;
             }
             .contacto-row {
-  display: flex;
-  flex-direction: column; /* Cambia a columna para que el teléfono quede abajo de la dirección */
-  align-items: flex-start;
-  font-size: 10px;
-  margin-bottom: 4px; /* Un pequeño margen entre sucursal y sucursal */
-}
-
-/* Agrega o modifica esto para darle un toque visual más limpio */
-.contacto-branch {
-  color: #334155;
-  font-weight: 700; /* Un poco más de peso para diferenciarlo del teléfono */
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
+              display: flex;
+              flex-direction: column;
+              align-items: flex-start;
+              font-size: 10px;
+              margin-bottom: 4px;
+            }
+            .contacto-branch {
+              color: #334155;
+              font-weight: 700;
+              display: flex;
+              align-items: center;
+              gap: 2px;
+            }
             .contacto-branch i {
               color: #64748b;
               font-size: 11px;
             }
             .contacto-phone {
-  color: #16a34a;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding-left: 13px; /* Alinea el teléfono justo debajo del texto de la dirección, ignorando el icono del mapa */
-}
-
+              color: #16a34a;
+              font-weight: 700;
+              display: flex;
+              align-items: center;
+              gap: 2px;
+              padding-left: 13px;
+            }
             .redes-row {
               display: flex;
               align-items: center;
@@ -659,8 +646,6 @@ const handlePrintPresupuesto = () => {
               color: #0f2b48;
               flex-shrink: 0;
             }
-
-            /* Alerta de Validez */
             .validez-alert {
               background-color: #f0f9ff;
               border: 1px solid #bae6fd;
@@ -671,7 +656,6 @@ const handlePrintPresupuesto = () => {
               padding: 4px;
               border-radius: 4px;
             }
-
             .divider {
               height: 1px;
               background-color: #e2e8f0;
@@ -691,7 +675,6 @@ const handlePrintPresupuesto = () => {
 
           <div class="content">
             <div class="main-grid">
-              
               <div class="left-column">
                 <div class="product-details">
                   <h2 class="product-name">${producto.name}${formatoTexto}</h2>
@@ -723,7 +706,7 @@ const handlePrintPresupuesto = () => {
                 <div class="requisitos-block">
                   <div class="credito-llamativo">
                     🔥 CRÉDITO INICIAL<br>HASTA $300.000
-                  </div>
+                </div>
                   <p class="requisitos-title">Requisitos:</p>
                   <div class="requisitos-item"><i class='bx bx-id-card'></i> DNI</div>
                   <div class="requisitos-item"><i class='bx bx-receipt'></i> Recibo Sueldo o</div>
@@ -733,7 +716,6 @@ const handlePrintPresupuesto = () => {
                   <div class="requisitos-item"><i class='bx bx-camera'></i> Foto digital</div>
                 </div>
               </div>
-
             </div>
 
             <div class="divider"></div>
@@ -797,8 +779,9 @@ const handlePrintPresupuesto = () => {
         )}
 
         <figure className={styles.productFigure}>
+          {/* CAMBIO: Ahora prioriza la imagen de la variante seleccionada, y si no tiene, usa la del producto */}
           <img
-            src={producto.image || variant.image || null}
+            src={variant?.image || producto.image || null}
             alt={producto.name}
             onClick={() => setShowCarrusel(true)}
             style={{ cursor: "zoom-in" }}
@@ -847,7 +830,6 @@ const handlePrintPresupuesto = () => {
                     <input
                       type="radio"
                       checked={selectedVariant === i}
-                      disabled={!esJefe && agotada}
                       onChange={() => handleVariantSelect(i)}
                     />
 
@@ -927,7 +909,7 @@ const handlePrintPresupuesto = () => {
           )}
 
           <div className={styles.stock}>
-            {Object.entries(variant.stock).map(([sucursal, cantidad]) => {
+            {variant && Object.entries(variant.stock || {}).map(([sucursal, cantidad]) => {
               const cantidadNumber = Number(cantidad || 0);
               const juegosSucursal = tieneJuego
                 ? Math.floor(cantidadNumber / unidadesPorJuego)
@@ -979,7 +961,6 @@ const handlePrintPresupuesto = () => {
           </div>
 
           <div className={styles.cardButtons}>
-            {/* NUEVO BOTÓN AGREGADO */}
             <button
               type="button"
               className={styles.printBudget}
@@ -1011,7 +992,7 @@ const handlePrintPresupuesto = () => {
 
       {showCarrusel && (
         <ImgCarrusel
-          imagenes={[producto.image || variant.image].filter(Boolean)}
+          imagenes={[variant?.image, producto.image].filter(Boolean)}
           indexInicial={0}
           onClose={() => setShowCarrusel(false)}
         />
