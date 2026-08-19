@@ -21,8 +21,8 @@ const createEmptyVariant = () => ({
   price: "",
   priceJuego: "",
   unidadesPorJuego: "",
-  tipoVariante: "modelo", // "modelo" o "color"
-  modeloPadre: "", // Novedad: vincula el color con su modelo
+  tipoVariante: "modelo", 
+  modeloPadre: "", 
   image: "",
   colorHex: "#000000",
   stock4320: 0,
@@ -45,7 +45,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       priceJuego: v.priceJuego ?? "",
       unidadesPorJuego: v.unidadesPorJuego ?? "",
       tipoVariante: v.tipoVariante || (v.colorHex ? "color" : "modelo"),
-      modeloPadre: v.modelo || "", // Carga el modelo vinculado si existe
+      modeloPadre: v.modelo || "", 
       image: v.image || "",
       colorHex: v.colorHex || "#000000",
       stock4320: v.stock?.["Los Andes 4320"] ?? 0,
@@ -69,6 +69,28 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     setVariantes([...variantes, createEmptyVariant()]);
   };
 
+  const handleAddColorToModel = (index) => {
+    const modeloSeleccionado = variantes[index];
+    
+    if (!modeloSeleccionado.attr.trim()) {
+      alert("Primero ingresá el nombre de este modelo antes de agregarle un color.");
+      return;
+    }
+
+    const nuevaVarianteColor = {
+      ...createEmptyVariant(),
+      tipoVariante: "color",
+      modeloPadre: modeloSeleccionado.attr, 
+      price: modeloSeleccionado.price, 
+      priceJuego: modeloSeleccionado.priceJuego,
+      unidadesPorJuego: modeloSeleccionado.unidadesPorJuego,
+    };
+
+    const nuevasVariantes = [...variantes];
+    nuevasVariantes.splice(index + 1, 0, nuevaVarianteColor);
+    setVariantes(nuevasVariantes);
+  };
+
   const handleRemoveVariant = (index) => {
     if (variantes.length === 1) return;
     setVariantes(variantes.filter((_, i) => i !== index));
@@ -76,7 +98,18 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
   const handleVariantChange = (index, field, value) => {
     const newVariantes = [...variantes];
+    const oldAttr = newVariantes[index].attr;
     newVariantes[index][field] = value;
+
+    // MEJORA: Si le cambiás el nombre al modelo, actualiza automáticamente a sus hijos
+    if (field === "attr" && newVariantes[index].tipoVariante === "modelo" && oldAttr) {
+      newVariantes.forEach(v => {
+        if (v.tipoVariante === "color" && v.modeloPadre === oldAttr) {
+          v.modeloPadre = value;
+        }
+      });
+    }
+
     setVariantes(newVariantes);
   };
 
@@ -84,13 +117,9 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const sendNotification = async (detail) => {
     const user = auth.currentUser;
     if (!user) return;
-
     try {
       const userDoc = await getDoc(doc(db, "usuarios", user.uid));
-      const userName = userDoc.exists()
-        ? userDoc.data().nombre
-        : "Desconocido";
-
+      const userName = userDoc.exists() ? userDoc.data().nombre : "Desconocido";
       await addDoc(collection(db, "notificaciones"), {
         userId: user.uid,
         userName,
@@ -99,37 +128,18 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         detail,
         timestamp: serverTimestamp(),
       });
-    } catch (err) {
-      console.error("Error al crear notificación:", err);
-    }
+    } catch (err) {}
   };
 
   /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
-    if (
-      !name.trim() ||
-      variantes.some((v) => v.attr.trim() === "" || v.price === "")
-    ) {
+    if (!name.trim() || variantes.some((v) => v.attr.trim() === "" || v.price === "")) {
       alert("Completa todos los campos obligatorios de las variantes.");
-      return;
-    }
-
-    if (
-      variantes.some(
-        (v) =>
-          (v.priceJuego !== "" && v.unidadesPorJuego === "") ||
-          (v.priceJuego === "" && v.unidadesPorJuego !== "")
-      )
-    ) {
-      alert(
-        "Si cargás precio por juego/combo, también tenés que indicar las unidades por juego/combo."
-      );
       return;
     }
 
     try {
       setLoading(true);
-
       let imageURL = producto?.image || "";
 
       if (imageFile) {
@@ -142,23 +152,19 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       const variantesProcesadas = await Promise.all(
         variantes.map(async (v, i) => {
           let variantImageURL = v.image || "";
-
           if (v.tipoVariante === "modelo" && variantImages[i]) {
             const fileName = `${Date.now()}-${variantImages[i].name}`;
             const storageRef = ref(storage, `variants/${fileName}`);
             await uploadBytes(storageRef, variantImages[i]);
             variantImageURL = await getDownloadURL(storageRef);
           }
-
           return {
             attr: v.attr,
             tipoVariante: v.tipoVariante,
-            // Aquí está la magia: vinculamos el color a su modelo padre
             modelo: v.tipoVariante === "color" ? (v.modeloPadre || "") : v.attr,
             price: Number(v.price),
             priceJuego: v.priceJuego !== "" ? Number(v.priceJuego) : null,
-            unidadesPorJuego:
-              v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
+            unidadesPorJuego: v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
             image: v.tipoVariante === "modelo" ? variantImageURL : (v.image || ""),
             colorHex: v.tipoVariante === "color" ? v.colorHex : "",
             stock: {
@@ -170,37 +176,16 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         })
       );
 
-      const nuevoProducto = {
-        name,
-        tag,
-        image: imageURL,
-        variantes: variantesProcesadas,
-      };
-
-      if (!producto) {
-        nuevoProducto.createdAt = serverTimestamp();
-      }
+      const nuevoProducto = { name, tag, image: imageURL, variantes: variantesProcesadas };
+      if (!producto) nuevoProducto.createdAt = serverTimestamp();
 
       await onSave(nuevoProducto);
-
-      if (producto) {
-        if (producto.name !== name) {
-          await sendNotification({
-            tipo: "nombre",
-            producto: producto.name,
-            antes: producto.name,
-            despues: name,
-          });
-        }
-      } else {
-        await sendNotification({
-          tipo: "nombre",
-          producto: name,
-          antes: "",
-          despues: name,
-        });
+      
+      if (producto && producto.name !== name) {
+        await sendNotification({ tipo: "nombre", producto: producto.name, antes: producto.name, despues: name });
+      } else if (!producto) {
+        await sendNotification({ tipo: "nombre", producto: name, antes: "", despues: name });
       }
-
       onClose?.();
     } catch (error) {
       console.error(error);
@@ -209,6 +194,14 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       setLoading(false);
     }
   };
+
+  /* ================= AGRUPACIÓN LÓGICA PARA RENDER ================= */
+  // Asignamos el index original a cada objeto para no perder la referencia al editar
+  const variantesConIndex = variantes.map((v, i) => ({ ...v, _originalIndex: i }));
+  const modelos = variantesConIndex.filter((v) => v.tipoVariante === "modelo");
+  const colores = variantesConIndex.filter((v) => v.tipoVariante === "color");
+  // Colores que perdieron a su padre (por si ocurre algún bug, los renderizamos sueltos abajo)
+  const coloresHuerfanos = colores.filter(c => !modelos.some(m => m.attr === c.modeloPadre));
 
   /* ================= UI ================= */
   return (
@@ -221,265 +214,139 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className={styles.closeButton} onClick={onClose}>
-          ×
-        </button>
+        <button type="button" className={styles.closeButton} onClick={onClose}>×</button>
 
         <h2>{producto ? "Editar producto" : "Nuevo producto"}</h2>
 
-        <label>
-          Nombre del producto
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(formatText(e.target.value))}
-          />
-        </label>
+        <div className={styles.headerInputs}>
+          <label>
+            Nombre del producto
+            <input type="text" value={name} onChange={(e) => setName(formatText(e.target.value))} />
+          </label>
+          <label>
+            Badge (Etiqueta principal)
+            <input type="text" value={tag} onChange={(e) => setTag(formatText(e.target.value))} />
+          </label>
+          <label>
+            Imagen principal general del producto
+            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
+          </label>
+          {producto?.image && !imageFile && (
+            <img src={producto.image} alt="Principal" style={{ width: 80, borderRadius: 6 }} />
+          )}
+        </div>
 
-        <label>
-          Badge (Etiqueta principal)
-          <input
-            type="text"
-            value={tag}
-            onChange={(e) => setTag(formatText(e.target.value))}
-          />
-        </label>
-
-        <label>
-          Imagen principal general del producto
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files[0])}
-          />
-        </label>
-
-        {producto?.image && !imageFile && (
-          <img
-            src={producto.image}
-            alt="Principal"
-            style={{ width: 80, marginTop: 4, borderRadius: 6 }}
-          />
-        )}
-
-        <fieldset>
+        <fieldset className={styles.treeFieldset}>
           <legend>Variedades / Opciones</legend>
 
-          {variantes.map((v, i) => (
-            <div key={i} className={styles.variant}>
-              
-              {/* SELECTOR DEL TIPO DE VARIANTE */}
-              <label>
-                Tipo de variante
-                <select
-                  value={v.tipoVariante}
-                  onChange={(e) =>
-                    handleVariantChange(i, "tipoVariante", e.target.value)
-                  }
-                >
-                  <option value="modelo">Modelo (Crea un grupo / Fila nueva)</option>
-                  <option value="color">Color (Se agrupa dentro de un modelo)</option>
-                </select>
-              </label>
-
-              {/* SI ES COLOR: PREGUNTAR A QUÉ MODELO PERTENECE */}
-              {v.tipoVariante === "color" && (
-                <label>
-                  ¿A qué modelo pertenece este color?
-                  <select
-                    value={v.modeloPadre}
-                    onChange={(e) => handleVariantChange(i, "modeloPadre", e.target.value)}
-                    style={{ border: "2px solid #3b82f6", backgroundColor: "#eff6ff" }}
-                  >
-                    <option value="">-- Modelo General del Producto --</option>
-                    {variantes
-                      .filter(m => m.tipoVariante === 'modelo' && m.attr)
-                      .map((m, idx) => (
-                        <option key={idx} value={m.attr}>{m.attr}</option>
-                      ))}
-                  </select>
-                </label>
-              )}
-
-              {/* CAMPO CONDICIONAL SEGÚN EL TIPO SELECCIONADO */}
-              {v.tipoVariante === "color" ? (
-                <>
+          {modelos.map((modelo) => {
+            const hijos = colores.filter(c => c.modeloPadre === modelo.attr && modelo.attr !== "");
+            
+            return (
+              <div key={modelo._originalIndex} className={styles.variantRow}>
+                
+                {/* LADO IZQUIERDO: TARJETA DEL MODELO PRINCIPAL */}
+                <div className={styles.variantModelo}>
+                  <div className={styles.cardHeader}>
+                    <h4>Modelo Base</h4>
+                  </div>
+                  
                   <label>
-                    Nombre del color (Ej: Azul, Rojo)
+                    Nombre del Modelo
                     <input
                       type="text"
-                      value={v.attr}
-                      onChange={(e) =>
-                        handleVariantChange(
-                          i,
-                          "attr",
-                          formatText(e.target.value)
-                        )
-                      }
-                      placeholder="Ej: Azul marino"
-                    />
-                  </label>
-
-                  <label>
-                    Seleccionar Color (Código RGB / Hex)
-                    <input
-                      type="color"
-                      value={v.colorHex || "#000000"}
-                      onChange={(e) =>
-                        handleVariantChange(i, "colorHex", e.target.value)
-                      }
-                      style={{ width: "100%", height: "40px", cursor: "pointer" }}
-                    />
-                  </label>
-                </>
-              ) : (
-                <>
-                  <label>
-                    Nombre del Modelo (Ej: Kratos 1, Ferri-throne)
-                    <input
-                      type="text"
-                      value={v.attr}
-                      onChange={(e) =>
-                        handleVariantChange(
-                          i,
-                          "attr",
-                          formatText(e.target.value)
-                        )
-                      }
+                      value={modelo.attr}
+                      onChange={(e) => handleVariantChange(modelo._originalIndex, "attr", formatText(e.target.value))}
                       placeholder="Ej: Exhibidora 437lts"
                     />
                   </label>
 
                   <label>
                     Subir foto de este modelo
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        setVariantImages({
-                          ...variantImages,
-                          [i]: e.target.files[0],
-                        })
-                      }
-                    />
+                    <input type="file" accept="image/*" onChange={(e) => setVariantImages({ ...variantImages, [modelo._originalIndex]: e.target.files[0] })} />
+                  </label>
+                  {modelo.image && <img src={modelo.image} alt={modelo.attr} className={styles.previewImg} />}
+
+                  <div className={styles.grid2Cols}>
+                    <label>
+                      Precio unidad
+                      <input type="number" min="0" step="0.01" value={modelo.price} onChange={(e) => handleVariantChange(modelo._originalIndex, "price", e.target.value)} onWheel={(e) => e.target.blur()} />
+                    </label>
+                    <label>
+                      Precio combo
+                      <input type="number" min="0" step="0.01" value={modelo.priceJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "priceJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
+                    </label>
+                  </div>
+                  
+                  <label>
+                    Unidades por combo
+                    <input type="number" min="0" step="1" value={modelo.unidadesPorJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "unidadesPorJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
                   </label>
 
-                  {v.image && (
-                    <img
-                      src={v.image}
-                      alt={v.attr}
-                      style={{ width: 80, marginTop: 6, borderRadius: 6 }}
-                    />
-                  )}
-                </>
-              )}
+                  <div className={styles.grid3Cols}>
+                    <label>Stk 4320 <input type="number" min="0" value={modelo.stock4320} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                    <label>Stk 4034 <input type="number" min="0" value={modelo.stock4034} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                    <label>Stk 2440 <input type="number" min="0" value={modelo.stock2440} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                  </div>
 
-              {/* PRECIOS Y STOCK (COMUNES) */}
-              <label>
-                Precio por unidad
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={v.price}
-                  onChange={(e) =>
-                    handleVariantChange(i, "price", e.target.value)
-                  }
-                  onWheel={(e) => e.target.blur()}
-                />
-              </label>
+                  <div className={styles.variantActions}>
+                    <button type="button" onClick={() => handleAddColorToModel(modelo._originalIndex)} className={styles.btnAddColor}>
+                      + Agregar Color
+                    </button>
+                    <button type="button" onClick={() => handleRemoveVariant(modelo._originalIndex)} className={styles.btnRemoveVariant}>
+                      Borrar
+                    </button>
+                  </div>
+                </div>
 
-              <label>
-                Precio por juego / combo
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={v.priceJuego}
-                  onChange={(e) =>
-                    handleVariantChange(i, "priceJuego", e.target.value)
-                  }
-                  onWheel={(e) => e.target.blur()}
-                  placeholder="Ej: 120000"
-                />
-              </label>
+                {/* LADO DERECHO: MINI FORMULARIOS DE COLORES (SCROLL HORIZONTAL) */}
+                {hijos.length > 0 && (
+                  <div className={styles.coloresScroll}>
+                    {hijos.map((color) => (
+                      <div key={color._originalIndex} className={styles.variantColorMini}>
+                        <div className={styles.cardHeaderColor}>
+                          <h4>Variante Color</h4>
+                        </div>
+                        
+                        <label>
+                          Nombre Color
+                          <input type="text" value={color.attr} onChange={(e) => handleVariantChange(color._originalIndex, "attr", formatText(e.target.value))} placeholder="Ej: Azul" />
+                        </label>
+                        
+                        <label>
+                          Tono Visual
+                          <input type="color" value={color.colorHex || "#000000"} onChange={(e) => handleVariantChange(color._originalIndex, "colorHex", e.target.value)} className={styles.colorInput} />
+                        </label>
 
-              <label>
-                Unidades por juego / combo
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={v.unidadesPorJuego}
-                  onChange={(e) =>
-                    handleVariantChange(i, "unidadesPorJuego", e.target.value)
-                  }
-                  onWheel={(e) => e.target.blur()}
-                  placeholder="Ej: 6"
-                />
-              </label>
+                        <div className={styles.grid2Cols}>
+                          <label>Precio <input type="number" min="0" value={color.price} onChange={(e) => handleVariantChange(color._originalIndex, "price", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                          <label>Combo <input type="number" min="0" value={color.priceJuego} onChange={(e) => handleVariantChange(color._originalIndex, "priceJuego", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                        </div>
 
-              <label>
-                Stock Los Andes 4320
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={v.stock4320}
-                  onChange={(e) =>
-                    handleVariantChange(i, "stock4320", e.target.value)
-                  }
-                  onWheel={(e) => e.target.blur()}
-                />
-              </label>
+                        <div className={styles.grid3Cols}>
+                          <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                          <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                          <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                        </div>
 
-              <label>
-                Stock Los Andes 4034
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={v.stock4034}
-                  onChange={(e) =>
-                    handleVariantChange(i, "stock4034", e.target.value)
-                  }
-                  onWheel={(e) => e.target.blur()}
-                />
-              </label>
+                        <button type="button" onClick={() => handleRemoveVariant(color._originalIndex)} className={styles.btnRemoveVariantMini}>
+                          Eliminar Color
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
-              <label>
-                Stock Jofre 2440
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={v.stock2440}
-                  onChange={(e) =>
-                    handleVariantChange(i, "stock2440", e.target.value)
-                  }
-                  onWheel={(e) => e.target.blur()}
-                />
-              </label>
-
-              <button type="button" onClick={() => handleRemoveVariant(i)}>
-                Eliminar variante
-              </button>
-
-              <hr />
-            </div>
-          ))}
-
-          <button type="button" onClick={handleAddVariant}>
-            Agregar variante
+          <button type="button" onClick={handleAddVariant} className={styles.btnAddNewModel}>
+            + Agregar Nuevo Modelo Base
           </button>
         </fieldset>
 
         <button type="submit" disabled={loading}>
-          {loading
-            ? "Guardando..."
-            : producto
-              ? "Guardar cambios"
-              : "Agregar producto"}
+          {loading ? "Guardando..." : producto ? "Guardar cambios" : "Agregar producto"}
         </button>
       </form>
     </div>

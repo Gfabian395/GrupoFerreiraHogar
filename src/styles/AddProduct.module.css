@@ -1,24 +1,16 @@
 /* ===============================
    ADD PRODUCT MODAL
-   LIGHT GLASS HUD
 ================================ */
 
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
   display: grid;
   place-items: center;
-
   padding: 16px;
   overflow-y: auto;
-
-  background:
-    radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.12), transparent 60%),
-    radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.12), transparent 60%),
-    rgba(241, 245, 249, 0.82);
-
+  background: rgba(241, 245, 249, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -35,632 +27,191 @@
 .productForm {
   position: relative;
   z-index: 10000;
-
-  width: min(100%, 520px);
-  max-height: min(92vh, 820px);
-
+  /* AUMENTÉ EL ANCHO para que entren las columnas */
+  width: min(100%, 860px); 
+  max-height: min(92vh, 840px);
   overflow-y: auto;
-  overscroll-behavior: contain;
-
-  padding: 22px 20px 24px;
+  padding: 24px;
   border-radius: 22px;
-
   display: grid;
   gap: 16px;
-
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   color: #1e293b;
-
-  background:
-    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.95), transparent 38%),
-    linear-gradient(180deg, #ffffff, #f3f6fa);
-
+  background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.38);
-
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.85),
-    0 24px 60px rgba(15, 23, 42, 0.18),
-    0 8px 20px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
   animation: hudIn 0.35s cubic-bezier(.16, .84, .44, 1);
 }
 
-.productForm::-webkit-scrollbar {
-  width: 8px;
+.headerInputs {
+  display: grid;
+  gap: 12px;
 }
 
-.productForm::-webkit-scrollbar-track {
-  background: rgba(226, 232, 240, 0.9);
-  border-radius: 999px;
-}
-
-.productForm::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.35);
-  border-radius: 999px;
-}
-
-.productForm::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.55);
-}
+.productForm::-webkit-scrollbar { width: 8px; height: 8px; }
+.productForm::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.9); border-radius: 999px; }
+.productForm::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.35); border-radius: 999px; }
 
 /* ===============================
-   CLOSE BUTTON
+   CLOSE BUTTON & TEXTS
 ================================ */
 
-.productForm .closeButton {
+.closeButton {
   position: absolute;
-  top: 12px;
-  right: 14px;
-
+  top: 16px;
+  right: 16px;
   width: 34px;
   height: 34px;
-  min-height: 34px;
-
-  margin: 0;
-  padding: 0;
-
   border-radius: 50%;
   border: 1px solid rgba(148, 163, 184, 0.45);
-
   background: #ffffff;
   color: #334155;
-
   font-size: 1.15rem;
   font-weight: 800;
-  line-height: 1;
-
   cursor: pointer;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  box-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.25s ease,
-    background 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease;
 }
+.closeButton:hover { background: #fee2e2; color: #b91c1c; }
 
-.productForm .closeButton:hover {
-  transform: scale(1.08);
-  background: #fee2e2;
-  color: #b91c1c;
-  border-color: rgba(239, 68, 68, 0.38);
-
-  box-shadow:
-    0 10px 22px rgba(185, 28, 28, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-
-/* ===============================
-   TITLE
-================================ */
-
-.productForm h2 {
-  margin: 0 42px 2px 0;
-
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-
-  color: #0f172a;
-
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9),
-    0 6px 18px rgba(15, 23, 42, 0.08);
-}
-
-/* ===============================
-   LABELS
-================================ */
-
-.productForm label {
-  display: grid;
-  gap: 6px;
-
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.55px;
-  text-transform: uppercase;
-
-  color: #475569;
-}
+.productForm h2 { margin: 0; font-size: 1.35rem; font-weight: 800; color: #0f172a; }
+.productForm label { display: grid; gap: 4px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #475569; }
 
 /* ===============================
    INPUTS
 ================================ */
 
-.productForm input,
-.productForm select {
+.productForm input, .productForm select {
   width: 100%;
-  min-height: 39px;
-
-  padding: 9px 11px;
-
-  border-radius: 12px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.55);
-
-  background: #ffffff;
-
+  background: #f8fafc;
   color: #111827;
-
   font-size: 0.82rem;
   font-weight: 500;
-
   outline: none;
-
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    inset 0 1px 2px rgba(15, 23, 42, 0.04);
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
 }
-
-.productForm input::placeholder {
-  color: rgba(100, 116, 139, 0.55);
-}
-
-.productForm input:focus,
-.productForm select:focus {
-  border-color: #2563eb;
-
-  background: #ffffff;
-
-  box-shadow:
-    0 0 0 3px rgba(37, 99, 235, 0.16),
-    0 8px 18px rgba(37, 99, 235, 0.08);
-}
-
-.productForm input[type="number"] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.productForm input[type="number"]::-webkit-outer-spin-button,
-.productForm input[type="number"]::-webkit-inner-spin-button {
-  margin: 0;
-  appearance: none;
-  -webkit-appearance: none;
-}
+.productForm input:focus { border-color: #2563eb; background: #ffffff; }
 
 /* ===============================
-   FILE INPUT
+   LAYOUT DE "MINI FORM A LA DERECHA"
 ================================ */
 
-.productForm input[type="file"] {
-  padding: 7px;
-  cursor: pointer;
-
-  background: #f8fafc;
-  border: 1px dashed rgba(100, 116, 139, 0.45);
-  color: #475569;
-}
-
-.productForm input[type="file"]::file-selector-button {
-  margin-right: 10px;
-  padding: 8px 11px;
-
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  border-radius: 10px;
-
-  background: #e2e8f0;
-  color: #1e293b;
-
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.productForm input[type="file"]::file-selector-button:hover {
-  background: #cbd5e1;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
-}
-
-/* ===============================
-   FIELDSET
-================================ */
-
-.productForm fieldset {
-  margin: 2px 0 0;
-  padding: 14px;
-
+.treeFieldset {
+  margin: 10px 0 0;
+  padding: 16px;
   border: 1px dashed rgba(148, 163, 184, 0.58);
   border-radius: 16px;
-
   display: grid;
-  gap: 14px;
+  gap: 20px;
+  background: #f1f5f9;
+}
+.treeFieldset legend { font-size: 0.72rem; font-weight: 800; color: #334155; padding: 0 10px;}
 
-  background:
-    linear-gradient(
-      180deg,
-      rgba(248, 250, 252, 0.95),
-      rgba(241, 245, 249, 0.85)
-    );
+.variantRow {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  padding-bottom: 8px; /* Espacio extra por si hay scroll horizontal */
+  overflow-x: auto; /* Permite escrollear los colores si agregas muchísimos */
 }
 
-.productForm legend {
-  padding: 0 10px;
-
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.65px;
-  text-transform: uppercase;
-
-  color: #334155;
-}
-
-/* ===============================
-   VARIANT CARD
-================================ */
-
-.variant {
-  position: relative;
-
+/* Tarjeta del Modelo Principal (Izquierda) */
+.variantModelo {
+  flex: 0 0 320px; /* Ancho fijo para el modelo base */
   display: grid;
   gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #ffffff;
+  border-left: 5px solid #1e293b; /* Borde oscuro */
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
 
+/* Contenedor desplazable de los colores */
+.coloresScroll {
+  display: flex;
+  gap: 12px;
+}
+
+/* Tarjeta Mini de Color (Derecha) */
+.variantColorMini {
+  flex: 0 0 240px; /* Mini form más angosto */
+  display: grid;
+  align-content: start;
+  gap: 10px;
   padding: 14px;
-  border-radius: 16px;
-
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 45%),
-    linear-gradient(180deg, #ffffff, #f8fafc);
-
-  border: 1px solid rgba(148, 163, 184, 0.38);
-
-  box-shadow:
-    0 10px 22px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  background: #f0f9ff;
+  border: 2px solid #bae6fd;
 }
 
-.variant label {
-  font-size: 0.68rem;
-}
+.cardHeader h4 { margin: 0; font-size: 0.9rem; color: #1e293b; }
+.cardHeaderColor h4 { margin: 0; font-size: 0.85rem; color: #0284c7; }
 
-.variant img {
-  width: 82px !important;
-  height: 82px;
+/* Utilidades para compactar los formularios */
+.grid2Cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid3Cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 
-  object-fit: cover;
-
-  margin-top: 2px !important;
-  border-radius: 12px !important;
-
-  border: 1px solid rgba(148, 163, 184, 0.45);
-
-  box-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-.variant hr {
-  width: 100%;
-  height: 1px;
-
-  margin: 2px 0 0;
-
-  border: 0;
-
-  background:
-    linear-gradient(
-      90deg,
-      transparent,
-      rgba(148, 163, 184, 0.55),
-      rgba(37, 99, 235, 0.24),
-      transparent
-    );
-}
+.previewImg { width: 60px !important; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; }
+.colorInput { padding: 0 !important; cursor: pointer; border: none !important; border-radius: 8px !important; height: 32px !important;}
 
 /* ===============================
-   BUTTONS
+   BOTONES
 ================================ */
 
-.productForm button:not(.closeButton) {
-  min-height: 42px;
-
-  padding: 12px 14px;
-
-  border-radius: 14px;
+.productForm button {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 10px;
   border: 1px solid rgba(37, 99, 235, 0.35);
-
-  background:
-    linear-gradient(180deg, #3b82f6, #2563eb);
-
-  color: #ffffff;
-
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 800;
-  letter-spacing: 0.45px;
-
   cursor: pointer;
-
-  box-shadow:
-    0 12px 24px rgba(37, 99, 235, 0.26),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
-
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.25s ease,
-    filter 0.2s ease,
-    opacity 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.productForm button:not(.closeButton):hover {
-  transform: translateY(-2px);
+.variantActions { display: flex; gap: 8px; margin-top: 8px; }
 
-  box-shadow:
-    0 16px 30px rgba(37, 99, 235, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+.btnAddColor { flex: 2; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+.btnAddColor:hover { background: #bae6fd; }
 
-  filter: brightness(1.04);
-}
+.btnRemoveVariant { flex: 1; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.btnRemoveVariant:hover { background: #fca5a5; }
 
-.productForm button:not(.closeButton):active {
-  transform: translateY(0);
+.btnRemoveVariantMini { background: transparent; color: #ef4444; border: 1px dashed #fca5a5; margin-top: auto; }
+.btnRemoveVariantMini:hover { background: #fee2e2; }
 
-  box-shadow:
-    0 8px 18px rgba(37, 99, 235, 0.22),
-    inset 0 2px 6px rgba(15, 23, 42, 0.18);
-}
+.btnAddNewModel { background: #3b82f6; color: #ffffff; width: 100%; margin-top: 10px; }
 
-.productForm button:disabled {
-  opacity: 0.58;
-  cursor: not-allowed;
-  transform: none !important;
-  filter: grayscale(0.35);
-}
-
-/* Agregar variante */
-.productForm fieldset > button {
-  background:
-    linear-gradient(
-      180deg,
-      #38bdf8,
-      #2563eb
-    );
-
-  color: #ffffff;
-}
-
-/* Eliminar variante */
-.variant > button {
-  background:
-    linear-gradient(
-      180deg,
-      #ef4444,
-      #b91c1c
-    ) !important;
-
-  color: #ffffff !important;
-
-  border-color: rgba(239, 68, 68, 0.5) !important;
-
-  box-shadow:
-    0 10px 22px rgba(239, 68, 68, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
-}
-
-/* Guardar / Agregar producto */
 .productForm > button[type="submit"] {
   min-height: 48px;
-
-  margin-top: 2px;
-
-  background:
-    linear-gradient(
-      135deg,
-      #2563eb,
-      #1d4ed8 45%,
-      #0f766e
-    );
-
+  background: #10b981;
   color: #ffffff;
-
   font-size: 0.95rem;
-  font-weight: 900;
-
-  box-shadow:
-    0 16px 32px rgba(37, 99, 235, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 /* ===============================
-   MOBILE
+   MOBILE RESPONSIVE
 ================================ */
 
-@media (max-width: 480px) {
-  .overlay {
+@media (max-width: 768px) {
+  .productForm { width: 100%; padding: 16px; border-radius: 16px; }
+  
+  /* En celular, para que no quede todo espichado, apilamos el padre arriba y los colores abajo,
+     o permitimos que la tarjeta izquierda sea 100% y los colores escroleen debajo */
+  .variantRow {
+    flex-direction: column; 
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
     padding: 10px;
-    place-items: start center;
+    background: #fff;
   }
-
-  .productForm {
-    width: 100%;
-    max-height: 94vh;
-
-    padding: 16px 13px 18px;
-    gap: 12px;
-
-    border-radius: 18px;
-  }
-
-  .productForm h2 {
-    font-size: 1.08rem;
-    letter-spacing: 0.3px;
-  }
-
-  .productForm label {
-    font-size: 0.66rem;
-    gap: 4px;
-  }
-
-  .productForm input,
-  .productForm select {
-    min-height: 36px;
-    padding: 8px 10px;
-
-    border-radius: 11px;
-
-    font-size: 0.78rem;
-  }
-
-  .productForm fieldset {
-    padding: 10px;
-    gap: 10px;
-
-    border-radius: 14px;
-  }
-
-  .productForm legend {
-    font-size: 0.62rem;
-  }
-
-  .variant {
-    padding: 11px;
-    gap: 10px;
-
-    border-radius: 14px;
-  }
-
-  .variant label {
-    font-size: 0.62rem;
-  }
-
-  .productForm button:not(.closeButton) {
-    min-height: 38px;
-    padding: 10px 12px;
-
-    border-radius: 13px;
-
-    font-size: 0.8rem;
-  }
-
-  .productForm .closeButton {
-    top: 10px;
-    right: 10px;
-
-    width: 30px;
-    height: 30px;
-    min-height: 30px;
-
-    font-size: 1rem;
-  }
-}
-
-/* ===============================
-   SMALL MOBILE
-================================ */
-
-@media (max-width: 380px) {
-  .overlay {
-    padding: 6px;
-  }
-
-  .productForm {
-    width: 100%;
-    max-height: 92vh;
-
-    padding: 12px 10px 14px;
-    gap: 9px;
-
-    border-radius: 15px;
-  }
-
-  .productForm h2 {
-    font-size: 0.98rem;
-    letter-spacing: 0.25px;
-    margin-bottom: 1px;
-  }
-
-  .productForm label {
-    font-size: 0.58rem;
-    gap: 3px;
-  }
-
-  .productForm input,
-  .productForm select {
-    min-height: 34px;
-
-    padding: 7px 9px;
-
-    border-radius: 10px;
-
-    font-size: 0.73rem;
-  }
-
-  .productForm fieldset {
-    padding: 8px;
-    gap: 8px;
-
-    border-radius: 12px;
-  }
-
-  .productForm legend {
-    font-size: 0.54rem;
-  }
-
-  .variant {
-    padding: 9px;
-    gap: 8px;
-
-    border-radius: 12px;
-  }
-
-  .variant img {
-    width: 70px !important;
-    height: 70px;
-  }
-
-  .productForm button:not(.closeButton) {
-    min-height: 34px;
-
-    padding: 8px 10px;
-
-    font-size: 0.72rem;
-    border-radius: 11px;
-  }
-
-  .productForm .closeButton {
-    top: 7px;
-    right: 7px;
-
-    width: 25px;
-    height: 25px;
-    min-height: 25px;
-
-    font-size: 0.85rem;
-  }
-}
-
-/* ===============================
-   ANIMATION
-================================ */
-
-@keyframes hudIn {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  
+  .variantModelo { flex: none; border-left: none; box-shadow: none; padding: 10px; border-bottom: 2px dashed #cbd5e1; }
+  
+  .coloresScroll { padding: 10px; overflow-x: auto; }
 }
