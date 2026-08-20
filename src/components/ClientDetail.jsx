@@ -44,12 +44,12 @@ const formatearFecha = (fecha) => {
   });
 };
 
-const getFirmaTexto = (firma) => {
+const getFirmaTexto = (firma, usuariosMap = {}) => {
   if (typeof firma === "object" && firma !== null) {
-    return firma.nombre || firma.email || "—";
+    return firma.nombre || usuariosMap[firma.email] || firma.email || "—";
   }
   if (typeof firma === "string") {
-    return firma;
+    return usuariosMap[firma] || firma;
   }
   return "—";
 };
@@ -181,8 +181,9 @@ export default function ClientDetail() {
         const map = {};
         snap.docs.forEach((d) => {
           const data = d.data();
-          if (data.email && data.nombre && data.activo) {
-            map[data.email] = data.nombre;
+          if (data.activo) {
+            if (data.email) map[data.email] = data.nombre;
+            if (data.nombre) map[d.id] = data.nombre; // 🔥 ACA ESTABA EL ERROR: mapear también el UID
           }
         });
         setUsuariosMap(map);
@@ -242,8 +243,9 @@ export default function ClientDetail() {
     }
 
     const firma = {
-      nombre: usuarioActual.nombre || "",
+      nombre: usuariosMap[usuarioActual.uid] || usuarioActual.nombre || usuarioActual.displayName || "",
       email: usuarioActual.email || "",
+      uid: usuarioActual.uid || ""
     };
 
     const pagoAGuardar = {
@@ -496,7 +498,7 @@ DNI: ${cliente.dni}
 
 Fecha: ${formatearFecha(venta.fecha)}
 Sucursal: ${venta.sucursal || "—"}
-Vendedor: ${venta.vendedor || "—"}
+Vendedor: ${getFirmaTexto(venta.vendedor, usuariosMap)}
 
 Productos:
 ${productosTexto}
@@ -542,7 +544,7 @@ Fecha de pago: ${formatearFecha(pago.fecha)}
 Monto abonado: $${Number(pago.monto).toLocaleString("es-AR")}
 Método de pago: ${pago.metodo || "—"}
 
-Cobrado por: ${getFirmaTexto(pago.firma)}
+Cobrado por: ${getFirmaTexto(pago.firma, usuariosMap)}
 
 Gracias por su pago.`;
 
@@ -637,7 +639,7 @@ Gracias por su pago.`;
               <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
               <span>{pago.metodo || "—"}</span>
               <span>Pagado</span>
-              <span>{getFirmaTexto(pago.firma)}</span>
+              <span>{getFirmaTexto(pago.firma, usuariosMap)}</span>
             </div>
           ))}
 
@@ -760,7 +762,7 @@ Gracias por su pago.`;
 
                       <p>
                         <span className={styles.badge}>Vendedor</span>
-                        {usuariosMap[venta.vendedor] || venta.vendedor}
+                        {getFirmaTexto(venta.vendedor, usuariosMap)}
                       </p>
 
                       <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
@@ -912,7 +914,7 @@ Gracias por su pago.`;
 
                           <p>
                             <span className={styles.badge}>Vendedor</span>
-                            {usuariosMap[venta.vendedor] || venta.vendedor}
+                            {getFirmaTexto(venta.vendedor, usuariosMap)}
                           </p>
 
                           <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
