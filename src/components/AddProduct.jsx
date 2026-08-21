@@ -10,10 +10,100 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import styles from "../styles/AddProduct.module.css";
 
-/* ================= UTIL ================= */
+/* ================= DICCIONARIOS DE COLORES AMPLIADOS ================= */
+// 1. De Texto a Color (para cuando escriben)
+const diccionarioColores = {
+  "verde": "#008000",
+  "verde claro": "#90ee90",
+  "verde oscuro": "#006400",
+  "esmeralda": "#50c878",
+  "lima": "#00ff00",
+  "rojo": "#ff0000",
+  "bordo": "#800000",
+  "bordó": "#800000",
+  "coral": "#ff7f50",
+  "salmon": "#fa8072",
+  "salmón": "#fa8072",
+  "azul": "#0000ff",
+  "celeste": "#87ceeb",
+  "turquesa": "#40e0d0",
+  "cian": "#00ffff",
+  "cyan": "#00ffff",
+  "amarillo": "#ffff00",
+  "naranja": "#ffa500",
+  "mostaza": "#ffdb58",
+  "oro": "#ffd700",
+  "dorado": "#ffd700",
+  "negro": "#000000",
+  "blanco": "#ffffff",
+  "blanco perlado": "#f0ead6",
+  "gris": "#808080",
+  "gris claro": "#d3d3d3",
+  "gris oscuro": "#a9a9a9",
+  "plateado": "#c0c0c0",
+  "cromado": "#d8d8d8",
+  "rosa": "#ffc0cb",
+  "fucsia": "#ff00ff",
+  "magenta": "#ff00ff", // En código HEX web fucsia y magenta suelen compartir el mismo
+  "violeta": "#8a2be2",
+  "lila": "#c8a2c8",
+  "purpura": "#800080",
+  "púrpura": "#800080",
+  "marron": "#a52a2a",
+  "marrón": "#a52a2a",
+  "beige": "#f5f5dc"
+};
+
+// 2. De Color a Texto (para cuando usan el selector visual)
+const diccionarioHexANombre = {
+  "#008000": "Verde",
+  "#90ee90": "Verde Claro",
+  "#006400": "Verde Oscuro",
+  "#50c878": "Esmeralda",
+  "#00ff00": "Lima",
+  "#ff0000": "Rojo",
+  "#800000": "Bordó",
+  "#ff7f50": "Coral",
+  "#fa8072": "Salmón",
+  "#0000ff": "Azul",
+  "#87ceeb": "Celeste",
+  "#40e0d0": "Turquesa",
+  "#00ffff": "Cian",
+  "#ffff00": "Amarillo",
+  "#ffa500": "Naranja",
+  "#ffdb58": "Mostaza",
+  "#ffd700": "Dorado",
+  "#000000": "Negro",
+  "#ffffff": "Blanco",
+  "#f0ead6": "Blanco Perlado",
+  "#808080": "Gris",
+  "#d3d3d3": "Gris Claro",
+  "#a9a9a9": "Gris Oscuro",
+  "#c0c0c0": "Plateado",
+  "#d8d8d8": "Cromado",
+  "#ffc0cb": "Rosa",
+  "#ff00ff": "Magenta",
+  "#8a2be2": "Violeta",
+  "#c8a2c8": "Lila",
+  "#800080": "Púrpura",
+  "#a52a2a": "Marrón",
+  "#f5f5dc": "Beige"
+};
+
+/* ================= UTILS ================= */
 const formatText = (value) => {
   if (!value) return "";
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+};
+
+// Convierte Hexadecimal a RGB para poder calcular distancias de color
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
 };
 
 const createEmptyVariant = () => ({
@@ -57,14 +147,12 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     })) || [createEmptyVariant()]
   );
 
-  /* ================= ESC PARA CERRAR ================= */
   useEffect(() => {
     const handleEsc = (e) => e.key === "Escape" && onClose?.();
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  /* ================= VARIANTES ================= */
   const handleAddVariant = () => {
     setVariantes([...variantes, createEmptyVariant()]);
   };
@@ -101,7 +189,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     const oldAttr = newVariantes[index].attr;
     newVariantes[index][field] = value;
 
-    // MEJORA: Si le cambiás el nombre al modelo, actualiza automáticamente a sus hijos
     if (field === "attr" && newVariantes[index].tipoVariante === "modelo" && oldAttr) {
       newVariantes.forEach(v => {
         if (v.tipoVariante === "color" && v.modeloPadre === oldAttr) {
@@ -110,10 +197,45 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       });
     }
 
+    // IDA: Texto -> Color
+    if (field === "attr" && newVariantes[index].tipoVariante === "color") {
+      const colorBuscado = value.trim().toLowerCase();
+      if (diccionarioColores[colorBuscado]) {
+        newVariantes[index].colorHex = diccionarioColores[colorBuscado];
+      }
+    }
+
+    // VUELTA: Color -> Texto (Busca el color más parecido)
+    if (field === "colorHex" && newVariantes[index].tipoVariante === "color") {
+      const targetRgb = hexToRgb(value);
+      
+      if (targetRgb) {
+        let minDistance = Infinity;
+        let closestName = newVariantes[index].attr; // Mantiene el actual por defecto
+
+        for (const [hex, name] of Object.entries(diccionarioHexANombre)) {
+          const rgb = hexToRgb(hex);
+          if (rgb) {
+            // Calcula la distancia matemática entre el color elegido y los del diccionario
+            const distance = Math.pow(targetRgb.r - rgb.r, 2) +
+                             Math.pow(targetRgb.g - rgb.g, 2) +
+                             Math.pow(targetRgb.b - rgb.b, 2);
+            
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestName = name;
+            }
+          }
+        }
+        
+        // Actualiza el texto con el nombre del color más similar
+        newVariantes[index].attr = closestName;
+      }
+    }
+
     setVariantes(newVariantes);
   };
 
-  /* ================= NOTIFICACION ================= */
   const sendNotification = async (detail) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -131,7 +253,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     } catch (err) {}
   };
 
-  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
     if (!name.trim() || variantes.some((v) => v.attr.trim() === "" || v.price === "")) {
       alert("Completa todos los campos obligatorios de las variantes.");
@@ -195,15 +316,10 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     }
   };
 
-  /* ================= AGRUPACIÓN LÓGICA PARA RENDER ================= */
-  // Asignamos el index original a cada objeto para no perder la referencia al editar
   const variantesConIndex = variantes.map((v, i) => ({ ...v, _originalIndex: i }));
   const modelos = variantesConIndex.filter((v) => v.tipoVariante === "modelo");
   const colores = variantesConIndex.filter((v) => v.tipoVariante === "color");
-  // Colores que perdieron a su padre (por si ocurre algún bug, los renderizamos sueltos abajo)
-  const coloresHuerfanos = colores.filter(c => !modelos.some(m => m.attr === c.modeloPadre));
 
-  /* ================= UI ================= */
   return (
     <div className={styles.overlay} onClick={onClose}>
       <form
@@ -245,7 +361,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             return (
               <div key={modelo._originalIndex} className={styles.variantRow}>
                 
-                {/* LADO IZQUIERDO: TARJETA DEL MODELO PRINCIPAL */}
                 <div className={styles.variantModelo}>
                   <div className={styles.cardHeader}>
                     <h4>Modelo Base</h4>
@@ -299,7 +414,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   </div>
                 </div>
 
-                {/* LADO DERECHO: MINI FORMULARIOS DE COLORES (SCROLL HORIZONTAL) */}
                 {hijos.length > 0 && (
                   <div className={styles.coloresScroll}>
                     {hijos.map((color) => (
