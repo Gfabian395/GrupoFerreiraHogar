@@ -58,7 +58,12 @@ export default function ProductCard({
   const { addToCart, items } = useCart();
   const { categoriaId } = useParams();
 
-  // AGRUPAMIENTO INTELIGENTE POR MODELO
+  const esJefe = userRole === "jefe";
+  const esEncargado = userRole === "encargado";
+
+  const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
+
+  // AGRUPAMIENTO INTELIGENTE POR MODELO (Se mantiene intacto para no romper estructura)
   const agrupadoPorModelo = useMemo(() => {
     const grupos = {};
     variantes.forEach((v, originalIndex) => {
@@ -87,6 +92,26 @@ export default function ProductCard({
     return Object.values(grupos);
   }, [variantes, producto]);
 
+  const handleVariantSelect = (index) => {
+    setSelectedVariant(index);
+    const v = variantes[index];
+    if (!(Number(v?.priceJuego || 0) > 0 && Number(v?.unidadesPorJuego || 0) > 1)) setFormatoCompra("unidad");
+  };
+
+  // Efecto para auto-seleccionar una variante con stock si la que viene por defecto está agotada (Solo clientes)
+  useEffect(() => {
+    if (!esJefe && !esEncargado && variantes.length > 0) {
+      const currentStock = getStockTotalVariante(variantes[selectedVariant]);
+      if (currentStock <= 0) {
+        const indexConStock = variantes.findIndex(v => getStockTotalVariante(v) > 0);
+        if (indexConStock !== -1) {
+          handleVariantSelect(indexConStock);
+        }
+      }
+    }
+    // eslint-disable-next-line
+  }, [selectedVariant, variantes, esJefe, esEncargado]);
+
   // Sincronizar modelo seleccionado al cambiar de variante activa
   useEffect(() => {
     if (variantes[selectedVariant]) {
@@ -101,7 +126,6 @@ export default function ProductCard({
 
   const variant = variantes[selectedVariant] ?? null;
 
-  // Lógica para determinar la imagen principal a mostrar siempre (evita imagen rota en colores)
   const modeloActual = agrupadoPorModelo.find((m) => m.nombre === selectedModel) || agrupadoPorModelo[0];
   const imagenMostrar = modeloActual?.imagenPrincipal || producto?.image || null;
 
@@ -114,14 +138,11 @@ export default function ProductCard({
   const unidadesNecesarias = formatoActual === "juego" ? unidadesPorJuego : 1;
   const precioSeleccionado = formatoActual === "juego" ? precioJuego : precioUnidad;
 
-  const totalStock = Object.values(variant?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
+  const totalStock = getStockTotalVariante(variant);
   const juegosDisponibles = tieneJuego ? Math.floor(totalStock / unidadesPorJuego) : 0;
   const sucursalDisponible = Object.entries(variant?.stock || {}).find(
     ([, cantidad]) => Number(cantidad || 0) >= unidadesNecesarias
   )?.[0];
-
-  const esJefe = userRole === "jefe";
-  const esEncargado = userRole === "encargado";
 
   const configuracionCuotas = [
     { cuotas: 2, interes: 30 }, { cuotas: 3, interes: 50 }, { cuotas: 4, interes: 70 },
@@ -149,7 +170,7 @@ export default function ProductCard({
       });
   }, [precioSeleccionado]);
 
-  if (!producto || variantes.length === 0) return null;
+  if (!producto || variantes.length === 0 || agrupadoPorModelo.length === 0) return null;
 
   const sendNotification = async (action, detail = {}) => {
     const user = auth.currentUser;
@@ -167,8 +188,6 @@ export default function ProductCard({
     } catch (error) { console.error("❌ Error Firebase:", error); }
   };
 
-  const getStockTotalVariante = (v) => Object.values(v.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
-
   const getItemUnits = (item) => Number(item.qty || 1) * Number(item.unitsToDiscount ?? item.unidadesNecesarias ?? item.unidadesPorJuego ?? 1);
 
   const updateStock = async (sucursal, delta) => {
@@ -182,12 +201,6 @@ export default function ProductCard({
       await updateDoc(doc(db, "categorias", categoriaId, "productos", producto.id), { variantes: nuevasVariantes });
       await sendNotification("modificó stock", { tipo: "stock", sucursal, antes, despues });
     } catch (err) { alert("Error al guardar stock"); }
-  };
-
-  const handleVariantSelect = (index) => {
-    setSelectedVariant(index);
-    const v = variantes[index];
-    if (!(Number(v?.priceJuego || 0) > 0 && Number(v?.unidadesPorJuego || 0) > 1)) setFormatoCompra("unidad");
   };
 
   const handleAddToCart = async (branch) => {
@@ -300,23 +313,41 @@ export default function ProductCard({
 
             <div className={styles.modelsContainer}>
               {agrupadoPorModelo.map((m) => {
-                const isActiveModel = selectedModel === m.nombre;
-                
-                // La variante base es el modelo en sí (evitamos que se repita a la derecha)
                 const baseVariant = m.variantes.find(v => v.tipoVariante === 'modelo') || m.variantes[0];
-                const isBaseSelected = selectedVariant === baseVariant.originalIndex;
-                
-                // Los colores son todas las DEMÁS variantes
+                const stockBase = getStockTotalVariante(baseVariant);
                 const colorVariants = m.variantes.filter(v => v.originalIndex !== baseVariant.originalIndex);
+                
+                // Filtramos los colores visibles (si no es admin, solo los que tienen stock)
+                const coloresVisibles = colorVariants.filter(v => 
+                  (esJefe || esEncargado) || getStockTotalVariante(v) > 0
+                );
+
+                // MAGIA: Si el modelo principal no tiene stock Y no le queda ningún color con stock, ocultamos TODA la fila para el cliente
+                if (!esJefe && !esEncargado && stockBase <= 0 && coloresVisibles.length === 0) {
+                  return null; 
+                }
+
+                const isActiveModel = selectedModel === m.nombre;
+                const isBaseSelected = selectedVariant === baseVariant.originalIndex;
+                const baseAgotado = stockBase <= 0;
 
                 return (
                   <div key={m.nombre} className={`${styles.modelRow} ${isActiveModel ? styles.activeModelRow : ""}`}>
                     
-                    {/* INFO DEL MODELO: Ahora funciona como el botón selector de la variante base */}
+                    {/* INFO DEL MODELO (Lado izquierdo) */}
                     <div 
                       className={styles.modelInfo}
-                      style={{ borderRight: colorVariants.length === 0 ? "none" : undefined }}
-                      onClick={() => handleVariantSelect(baseVariant.originalIndex)}
+                      style={{ 
+                        borderRight: coloresVisibles.length === 0 ? "none" : undefined,
+                        opacity: (!esJefe && !esEncargado && baseAgotado) ? 0.4 : 1, 
+                        cursor: (!esJefe && !esEncargado && baseAgotado) ? "not-allowed" : "pointer"
+                      }}
+                      onClick={() => {
+                        // Solo permite seleccionar el modelo base si sos admin o si TIENE stock
+                        if (esJefe || esEncargado || !baseAgotado) {
+                          handleVariantSelect(baseVariant.originalIndex);
+                        }
+                      }}
                     >
                       {m.imagenPrincipal ? (
                         <img 
@@ -327,27 +358,50 @@ export default function ProductCard({
                       ) : (
                         <div className={`${styles.noModelImage} ${isBaseSelected ? styles.selectedBaseImg : ""}`}>📷</div>
                       )}
-                      <span className={`${styles.modelName} ${isBaseSelected ? styles.selectedBaseText : ""}`}>{m.nombre}</span>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <span className={`${styles.modelName} ${isBaseSelected ? styles.selectedBaseText : ""}`}>
+                          {m.nombre}
+                        </span>
+                        {/* Indicador de agotado para el modelo base */}
+                        {baseAgotado && <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold', marginTop: '2px' }}>Agotado</span>}
+                      </div>
                     </div>
 
-                    {/* VARIANTES DE COLOR: Solo renderizamos si hay colores extra */}
-                    {colorVariants.length > 0 && (
+                    {/* VARIANTES DE COLOR (Lado derecho) */}
+                    {coloresVisibles.length > 0 && (
                       <div className={styles.modelVariantsContainer}>
-                        {colorVariants.map((v) => {
+                        {coloresVisibles.map((v) => {
                           const agotada = getStockTotalVariante(v) <= 0;
                           const isSelected = selectedVariant === v.originalIndex;
                           const optionColor = formatCssColor(v.colorHex || v.colorRgb || v.color || v.rgb);
 
                           return (
                             <label key={v.originalIndex} className={`${styles.variantOption} ${isSelected ? styles.selected : ""} ${agotada ? styles.disabled : ""}`}>
-                              <input type="radio" name={`variant-${producto.id}`} checked={isSelected} onChange={() => handleVariantSelect(v.originalIndex)} />
+                              <input 
+                                type="radio" 
+                                name={`variant-${producto.id}`} 
+                                checked={isSelected} 
+                                onChange={() => handleVariantSelect(v.originalIndex)} 
+                                disabled={!esJefe && !esEncargado && agotada} // Evita clics forzados por CSS
+                              />
                               <span className={styles.variantCircle}>
-                                {optionColor ? <span className={styles.variantFallback} style={{ backgroundColor: optionColor }} /> : v.image ? <img src={v.image} alt={v.attr} /> : <span className={styles.variantFallback} />}
+                                {/* Lógica modificada: Prioridad a la imagen del tapizado sobre el color */}
+                                {v.image ? (
+                                  <img 
+                                    src={v.image} 
+                                    alt={v.attr} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                                  />
+                                ) : optionColor ? (
+                                  <span className={styles.variantFallback} style={{ backgroundColor: optionColor }} />
+                                ) : (
+                                  <span className={styles.variantFallback} />
+                                )}
                                 {agotada && <span className={styles.soldOutBadge}>Agotado</span>}
                               </span>
                               <span className={styles.variantText}>
                                 <span className={styles.variantName}>{v.attr}</span>
-                                {/* PRECIO ELIMINADO PARA LIMPIAR LA VISTA */}
                               </span>
                             </label>
                           );

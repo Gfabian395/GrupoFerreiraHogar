@@ -44,7 +44,7 @@ const diccionarioColores = {
   "cromado": "#d8d8d8",
   "rosa": "#ffc0cb",
   "fucsia": "#ff00ff",
-  "magenta": "#ff00ff", // En código HEX web fucsia y magenta suelen compartir el mismo
+  "magenta": "#ff00ff", 
   "violeta": "#8a2be2",
   "lila": "#c8a2c8",
   "purpura": "#800080",
@@ -96,7 +96,6 @@ const formatText = (value) => {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 };
 
-// Convierte Hexadecimal a RGB para poder calcular distancias de color
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
@@ -205,18 +204,17 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       }
     }
 
-    // VUELTA: Color -> Texto (Busca el color más parecido)
+    // VUELTA: Color -> Texto
     if (field === "colorHex" && newVariantes[index].tipoVariante === "color") {
       const targetRgb = hexToRgb(value);
       
       if (targetRgb) {
         let minDistance = Infinity;
-        let closestName = newVariantes[index].attr; // Mantiene el actual por defecto
+        let closestName = newVariantes[index].attr; 
 
         for (const [hex, name] of Object.entries(diccionarioHexANombre)) {
           const rgb = hexToRgb(hex);
           if (rgb) {
-            // Calcula la distancia matemática entre el color elegido y los del diccionario
             const distance = Math.pow(targetRgb.r - rgb.r, 2) +
                              Math.pow(targetRgb.g - rgb.g, 2) +
                              Math.pow(targetRgb.b - rgb.b, 2);
@@ -228,11 +226,36 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           }
         }
         
-        // Actualiza el texto con el nombre del color más similar
         newVariantes[index].attr = closestName;
       }
     }
 
+    setVariantes(newVariantes);
+  };
+
+  // Función para copiar el stock del modelo padre al color
+  const handleCopyStockFromModel = (colorIndex, modeloPadreAttr) => {
+    const parentModel = variantes.find(v => v.tipoVariante === "modelo" && v.attr === modeloPadreAttr);
+    if (parentModel) {
+      const newVariantes = [...variantes];
+      newVariantes[colorIndex].stock4320 = parentModel.stock4320;
+      newVariantes[colorIndex].stock4034 = parentModel.stock4034;
+      newVariantes[colorIndex].stock2440 = parentModel.stock2440;
+      setVariantes(newVariantes);
+    } else {
+      alert("No se encontró el modelo padre para copiar el stock.");
+    }
+  };
+
+  // Función para borrar la imagen asociada a una variante (sea temporal o guardada)
+  const handleRemoveVariantImage = (index) => {
+    if (variantImages[index]) {
+      const newImages = { ...variantImages };
+      delete newImages[index];
+      setVariantImages(newImages);
+    }
+    const newVariantes = [...variantes];
+    newVariantes[index].image = "";
     setVariantes(newVariantes);
   };
 
@@ -273,7 +296,8 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       const variantesProcesadas = await Promise.all(
         variantes.map(async (v, i) => {
           let variantImageURL = v.image || "";
-          if (v.tipoVariante === "modelo" && variantImages[i]) {
+          // Ahora procesa imágenes tanto para "modelo" como para "color"
+          if (variantImages[i]) {
             const fileName = `${Date.now()}-${variantImages[i].name}`;
             const storageRef = ref(storage, `variants/${fileName}`);
             await uploadBytes(storageRef, variantImages[i]);
@@ -286,7 +310,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             price: Number(v.price),
             priceJuego: v.priceJuego !== "" ? Number(v.priceJuego) : null,
             unidadesPorJuego: v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
-            image: v.tipoVariante === "modelo" ? variantImageURL : (v.image || ""),
+            image: variantImageURL, // Guarda la imagen sin importar si es color o modelo
             colorHex: v.tipoVariante === "color" ? v.colorHex : "",
             stock: {
               "Los Andes 4320": Number(v.stock4320),
@@ -416,38 +440,86 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
                 {hijos.length > 0 && (
                   <div className={styles.coloresScroll}>
-                    {hijos.map((color) => (
-                      <div key={color._originalIndex} className={styles.variantColorMini}>
-                        <div className={styles.cardHeaderColor}>
-                          <h4>Variante Color</h4>
-                        </div>
-                        
-                        <label>
-                          Nombre Color
-                          <input type="text" value={color.attr} onChange={(e) => handleVariantChange(color._originalIndex, "attr", formatText(e.target.value))} placeholder="Ej: Azul" />
-                        </label>
-                        
-                        <label>
-                          Tono Visual
-                          <input type="color" value={color.colorHex || "#000000"} onChange={(e) => handleVariantChange(color._originalIndex, "colorHex", e.target.value)} className={styles.colorInput} />
-                        </label>
+                    {hijos.map((color) => {
+                      // Comprueba si esta variante en particular tiene una imagen cargada o lista para subir
+                      const hasImage = !!variantImages[color._originalIndex] || !!color.image;
+                      
+                      return (
+                        <div key={color._originalIndex} className={styles.variantColorMini}>
+                          <div className={styles.cardHeaderColor}>
+                            <h4>Variante Color</h4>
+                          </div>
+                          
+                          <label>
+                            Nombre Color (Ej: Tapizado Flores)
+                            <input type="text" value={color.attr} onChange={(e) => handleVariantChange(color._originalIndex, "attr", formatText(e.target.value))} placeholder="Ej: Azul" />
+                          </label>
 
-                        <div className={styles.grid2Cols}>
-                          <label>Precio <input type="number" min="0" value={color.price} onChange={(e) => handleVariantChange(color._originalIndex, "price", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                          <label>Combo <input type="number" min="0" value={color.priceJuego} onChange={(e) => handleVariantChange(color._originalIndex, "priceJuego", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                        </div>
+                          <label>
+                            Subir imagen del tapizado/color
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => setVariantImages({ ...variantImages, [color._originalIndex]: e.target.files[0] })} 
+                            />
+                          </label>
 
-                        <div className={styles.grid3Cols}>
-                          <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                          <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                          <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                        </div>
+                          {hasImage ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '10px 0' }}>
+                              {color.image && !variantImages[color._originalIndex] && (
+                                <img src={color.image} alt={color.attr} className={styles.previewImg} style={{width: '60px', borderRadius: '4px', border: '1px solid #ddd'}} />
+                              )}
+                              {variantImages[color._originalIndex] && (
+                                <span style={{ fontSize: "0.85rem", color: "#16a34a", fontWeight: "bold" }}>✅ Imagen nueva lista para subir</span>
+                              )}
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveVariantImage(color._originalIndex)} 
+                                style={{ marginTop: '5px', fontSize: '0.75rem', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ef4444', color: '#ef4444', background: '#fef2f2' }}
+                              >
+                                🗑️ Quitar imagen y usar color
+                              </button>
+                            </div>
+                          ) : (
+                            <label>
+                              Tono Visual
+                              <input type="color" value={color.colorHex || "#000000"} onChange={(e) => handleVariantChange(color._originalIndex, "colorHex", e.target.value)} className={styles.colorInput} />
+                            </label>
+                          )}
 
-                        <button type="button" onClick={() => handleRemoveVariant(color._originalIndex)} className={styles.btnRemoveVariantMini}>
-                          Eliminar Color
-                        </button>
-                      </div>
-                    ))}
+                          <div className={styles.grid2Cols}>
+                            <label>Precio <input type="number" min="0" value={color.price} onChange={(e) => handleVariantChange(color._originalIndex, "price", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            <label>Combo <input type="number" min="0" value={color.priceJuego} onChange={(e) => handleVariantChange(color._originalIndex, "priceJuego", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '15px 0 5px 0' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Stock sucursales</span>
+                            <button 
+                              type="button" 
+                              onClick={() => handleCopyStockFromModel(color._originalIndex, color.modeloPadre)}
+                              style={{ 
+                                fontSize: "0.75rem", padding: "4px 8px", cursor: "pointer", 
+                                borderRadius: "4px", border: "1px solid #cbd5e1", 
+                                background: "#f1f5f9", color: "#334155", fontWeight: "600" 
+                              }}
+                              title="Copiar las mismas cantidades que pusiste en el modelo base"
+                            >
+                              🔄 Repetir stock
+                            </button>
+                          </div>
+
+                          <div className={styles.grid3Cols}>
+                            <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                          </div>
+
+                          <button type="button" onClick={() => handleRemoveVariant(color._originalIndex)} className={styles.btnRemoveVariantMini}>
+                            Eliminar Color
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
