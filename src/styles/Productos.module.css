@@ -28,8 +28,9 @@
   position: relative;
   z-index: 10000;
 
-  width: 100%;
-  max-width: 420px;
+  /* CORRECCIÓN APLICADA AQUÍ */
+  width: 420px;
+  max-width: calc(100vw - 32px);
 
   padding: 20px 18px 22px;
   border-radius: 22px;

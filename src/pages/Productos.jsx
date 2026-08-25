@@ -158,6 +158,7 @@ export const Productos = () => {
 
     if (categoriaId) fetchCategoria();
   }, [categoriaId]);
+
   /* ===============================
      FILTRO DE PRODUCTOS
   =============================== */
@@ -167,7 +168,6 @@ export const Productos = () => {
       .toLowerCase()
       .includes(search.toLowerCase());
 
-    // CORRECCIÓN: Si es un combo, pasa el filtro de stock directamente
     if (p.type === "combo") {
       return coincideBusqueda;
     }
@@ -182,7 +182,6 @@ export const Productos = () => {
     }, 0);
 
     const tieneStock = totalStock > 0;
-
     const esInvitado = role === "invitado";
 
     if (esInvitado) {
@@ -200,29 +199,32 @@ export const Productos = () => {
       FILTRO Y ORDEN DE PRODUCTOS
    =============================== */
 
+  // CORRECCIÓN: Función segura para obtener el precio, descartando ceros y vacíos.
+  const getPrecioParaOrdenar = (item, orden) => {
+    const precios = (item.variantes || []).map((v) => Number(v.price || 0));
+    
+    if (item.price) {
+      precios.push(Number(item.price));
+    }
+
+    // 🔥 FILTRAMOS CUALQUIER 0 PARA QUE NO ROMPA EL MATH.MIN
+    const preciosValidos = precios.filter((p) => !isNaN(p) && p > 0);
+
+    // Si un producto no tiene precio válido, en ASC lo mandamos al fondo (Infinity), en DESC a 0
+    if (preciosValidos.length === 0) return orden === "asc" ? Infinity : 0;
+
+    return orden === "asc"
+      ? Math.min(...preciosValidos)
+      : Math.max(...preciosValidos);
+  };
+
   const productosOrdenados = [...productosFiltrados].sort((a, b) => {
     if (ordenPrecio === "asc") {
-      const precioA = Math.min(
-        ...((a.variantes || []).map(v => Number(v.price || 0))),
-        a.price ? Number(a.price) : Infinity
-      );
-      const precioB = Math.min(
-        ...((b.variantes || []).map(v => Number(v.price || 0))),
-        b.price ? Number(b.price) : Infinity
-      );
-      return precioA - precioB;
+      return getPrecioParaOrdenar(a, "asc") - getPrecioParaOrdenar(b, "asc");
     }
 
     if (ordenPrecio === "desc") {
-      const precioA = Math.max(
-        ...((a.variantes || []).map(v => Number(v.price || 0))),
-        a.price ? Number(a.price) : -Infinity
-      );
-      const precioB = Math.max(
-        ...((b.variantes || []).map(v => Number(v.price || 0))),
-        b.price ? Number(b.price) : -Infinity
-      );
-      return precioB - precioA;
+      return getPrecioParaOrdenar(b, "desc") - getPrecioParaOrdenar(a, "desc");
     }
 
     // "ninguno": Mantiene el orden alfabético por nombre original de fetchProductos
@@ -623,8 +625,8 @@ export const Productos = () => {
         for (const [index, variante] of data.variantes.entries()) {
 
           /* =================================================================
-             SISTEMA DE CONTROL DE STOCK (Suma todas las sucursales del objeto)
-             ================================================================= */
+              SISTEMA DE CONTROL DE STOCK (Suma todas las sucursales del objeto)
+              ================================================================= */
           const totalStockVariante = Object.values(variante?.stock || {}).reduce(
             (total, cantidad) => total + Number(cantidad || 0),
             0

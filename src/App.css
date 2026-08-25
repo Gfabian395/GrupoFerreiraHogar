@@ -28,6 +28,10 @@ body::before {
 #root {
   position: relative;
   z-index: 1;
+  
+  /* 🛠️ FIX APLICADO AQUÍ: Forzamos el ancho para vencer al body flex */
+  width: 100%;
+  min-height: 100vh;
 }
 
 /* Ajuste responsivo exclusivo para smartphones */

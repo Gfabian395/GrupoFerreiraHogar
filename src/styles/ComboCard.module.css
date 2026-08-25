@@ -615,55 +615,6 @@
 }
 
 /* ==========================================================================
-   BOTONES DE ADMINISTRACIÓN FLOTANTES (EDITAR Y ELIMINAR)
-   ========================================================================== */
-
-.adminActions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 999; /* Asegura quedar por encima de las imágenes */
-  display: flex;
-  gap: 6px;
-}
-
-.adminEditBtn,
-.adminDeleteBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #ffffff;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 0.85rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.15s ease, background-color 0.15s ease;
-}
-
-/* Estilo específico para el botón Editar */
-.adminEditBtn {
-  border: 1px solid #f97316;
-  color: #f97316;
-}
-
-.adminEditBtn:hover {
-  transform: scale(1.1);
-  background-color: #fff7ed; /* Sutil fondo naranja */
-}
-
-/* Estilo específico para el botón Eliminar */
-.adminDeleteBtn {
-  border: 1px solid #ef4444;
-  color: #ef4444;
-  background: #fef2f2;
-}
-
-.adminDeleteBtn:hover {
-  transform: scale(1.1);
-  background-color: #fee2e2; /* Fondo rojo un poco más oscuro al hover */
-}
-/* ==========================================================================
    BOTONES DE ADMINISTRACIÓN FLOTANTES (IGUALADOS A PRODUCT CARD)
    ========================================================================== */
 
@@ -712,6 +663,7 @@
   color: #ffffff !important;
   border-color: #b91c1c !important;
 }
+
 /* ===============================
    RESPONSIVE MISMO QUE PRODUCTCARD
 ================================ */
@@ -879,4 +831,14 @@
     width: calc(12.5% - 20px);
     margin: 10px;
   }
+}
+
+/* ===============================
+   FIX PARA COMBO INDIVIDUAL EN OVERLAY
+================================ */
+.overlay .card,
+.selector .card {
+  width: 100%;
+  min-width: unset;
+  margin: 0;
 }
