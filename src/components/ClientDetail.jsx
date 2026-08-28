@@ -663,9 +663,9 @@ Gracias por su pago.`;
               >
                 <option value="" disabled hidden>Método</option>
                 <option value="Efectivo">💵 Efectivo</option>
+                <option value="Transferencia">🏦 Transferencia</option>
                 <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito</option>
                 <option value="Tarjeta de Débito">💳 Tarjeta de Débito</option>
-                <option value="Transferencia">🏦 Transferencia</option>
                 <option value="QR">📱 QR</option>
                 <option value="Link de Pago">🔗 Link de Pago</option>
               </select>

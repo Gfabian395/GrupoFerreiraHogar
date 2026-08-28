@@ -165,7 +165,7 @@
   }
 
   .card {
-    width: 135px;
+    width: 120px;
     border-radius: 1rem;
     gap: 0.7rem;
   }
@@ -195,7 +195,7 @@
   }
 
   .content h3 {
-    font-size: 1.1rem;
+    font-size: 0.8rem;
   }
 
   .content p {
