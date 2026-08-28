@@ -286,6 +286,10 @@ export default function Ventas() {
         // 3️⃣ WRITES (ACTUALIZACIONES)
         // ===============================
 
+       // ===============================
+        // 3️⃣ WRITES (ACTUALIZACIONES)
+        // ===============================
+
         // 🔻 DESCONTAR STOCK
         for (const { item, ref, data } of productosLeidos) {
           const variantesDB = Array.isArray(data.variantes)
@@ -293,8 +297,16 @@ export default function Ventas() {
             : [{ attr: "default", stock: data.stock || {} }];
 
           const variantesActualizadas = variantesDB.map((v) => {
-            // Si el item tiene variante, afectamos solo a esa variante
-            if (item.variant && String(v.attr).trim() !== String(item.variant).trim()) return v;
+            const attrDb = String(v.attr || "").trim();
+            const attrItem = String(item.variant || "").trim();
+
+            // Si el item tiene variante, validamos si coincide con el attr principal 
+            // o si coincide con el modelo/color secundario guardado en la variante
+            if (item.variant) {
+              const coincideAttr = attrDb === attrItem;
+              const coincideModelo = String(v.modelo || "").trim() === attrItem;
+              if (!coincideAttr && !coincideModelo) return v;
+            }
 
             const nuevoStock = { ...v.stock };
             const sucursal = item.branch;
@@ -305,10 +317,14 @@ export default function Ventas() {
             if (nuevoStock[sucursal] === undefined)
               throw new Error(`La sucursal "${sucursal}" no está cargada en el producto "${item.name}".`);
 
-            if (nuevoStock[sucursal] < item.qty)
-              throw new Error(`Stock insuficiente de "${item.name}" en la sucursal "${sucursal}". Pedidos: ${item.qty}, Disponibles: ${nuevoStock[sucursal]}`);
+            const stockActual = Number(nuevoStock[sucursal] || 0);
+            const cantidadPedida = Number(item.qty || 0);
 
-            nuevoStock[sucursal] -= item.qty;
+            if (stockActual < cantidadPedida)
+              throw new Error(`Stock insuficiente de "${item.name}" en la sucursal "${sucursal}". Pedidos: ${cantidadPedida}, Disponibles: ${stockActual}`);
+
+            // Descontamos las unidades correctamente de esta variante
+            nuevoStock[sucursal] = stockActual - cantidadPedida;
 
             return { ...v, stock: nuevoStock };
           });

@@ -44,6 +44,20 @@ const formatearFecha = (fecha) => {
   });
 };
 
+// 🛠️ Helper universal para convertir cualquier formato de fecha de venta a milisegundos para ordenar
+const obtenerMilisegundosFecha = (fecha) => {
+  if (!fecha) return 0;
+  if (typeof fecha === "object" && typeof fecha.toDate === "function") {
+    return fecha.toDate().getTime();
+  }
+  if (typeof fecha === "string" && fecha.includes("-")) {
+    const [year, month, day] = fecha.split("-");
+    return new Date(year, month - 1, day).getTime();
+  }
+  const parsed = new Date(fecha).getTime();
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 const getFirmaTexto = (firma, usuariosMap = {}) => {
   if (typeof firma === "object" && firma !== null) {
     return firma.nombre || usuariosMap[firma.email] || firma.email || "—";
@@ -382,7 +396,13 @@ export default function ClientDetail() {
   };
 
   const ventasPendientes = ventas.filter((v) => !estaPagado(v));
-  const ventasPagadas = ventas.filter((v) => estaPagado(v));
+  
+  // 🔥 Ventas pagadas ordenadas de la más reciente a la más antigua
+  const ventasPagadas = useMemo(() => {
+    return ventas
+      .filter((v) => estaPagado(v))
+      .sort((a, b) => obtenerMilisegundosFecha(b.fecha) - obtenerMilisegundosFecha(a.fecha));
+  }, [ventas]);
 
   // ===============================
   // LOADING
@@ -866,6 +886,7 @@ Gracias por su pago.`;
         )}
 
         {/* ================= VENTAS PAGADAS ================= */}
+        {/* ================= VENTAS PAGADAS ================= */}
         {ventasPagadas.length > 0 && (
           <section className={styles.paidSummary}>
             <h4>Ventas Completamente Pagadas</h4>
@@ -876,11 +897,7 @@ Gracias por su pago.`;
                   <div
                     key={venta.id + idx}
                     className={styles.paidItem}
-                    onClick={() =>
-                      setSelectedVentaId(
-                        selectedVentaId === venta.id ? null : venta.id
-                      )
-                    }
+                    onClick={() => setSelectedVentaId(venta.id)}
                     style={{ cursor: "pointer" }}
                   >
                     {p.nombre} — Completamente pagada
@@ -889,110 +906,168 @@ Gracias por su pago.`;
               )}
             </div>
 
-            {/* ================= VENTAS PAGADAS (DETALLE) ================= */}
-            {selectedVentaId &&
-              ventasPagadas
-                .filter((v) => v.id === selectedVentaId)
-                .map((venta) => {
-                  const totalCredito =
-                    venta.totalCredito || venta.valorCuota * venta.cuotas;
+            {/* ================= VENTAS PAGADAS (DETALLE MODAL FLOTANTE CON BLUR) ================= */}
+            {selectedVentaId && (
+              <div
+                style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100vw",
+                  height: "100vh",
+                  backgroundColor: "rgba(0, 0, 0, 0.5)",
+                  backdropFilter: "blur(5px)",
+                  WebkitBackdropFilter: "blur(5px)",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  zIndex: 1000,
+                  padding: "20px",
+                  boxSizing: "border-box",
+                }}
+                onClick={() => setSelectedVentaId(null)} // Cierra al hacer clic en el fondo difuminado
+              >
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: "12px",
+                    maxWidth: "700px",
+                    width: "100%",
+                    maxHeight: "90vh",
+                    overflowY: "auto",
+                    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3)",
+                    padding: "24px",
+                    position: "relative",
+                  }}
+                  onClick={(e) => e.stopPropagation()} // Evita que se cierre al hacer clic dentro de la tarjeta
+                >
+                  {/* Botón de cierre "X" */}
+                  <button
+                    onClick={() => setSelectedVentaId(null)}
+                    style={{
+                      position: "absolute",
+                      top: "16px",
+                      right: "16px",
+                      background: "#f1f5f9",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "36px",
+                      height: "36px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                      color: "#334155",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ✕
+                  </button>
 
-                  return (
-                    <section key={venta.id} className={styles.saleWrapper}>
-                      <section className={styles.saleInfoCard}>
-                        <div className={styles.saleSection}>
-                          <h4>Datos de la venta (Completada)</h4>
+                  {ventasPagadas
+                    .filter((v) => v.id === selectedVentaId)
+                    .map((venta) => {
+                      const totalCredito =
+                        venta.totalCredito || venta.valorCuota * venta.cuotas;
 
-                          <p>
-                            <span className={styles.badge}>ID de Venta</span>
-                            <span className={styles.idDestacado}>{venta.id}</span>
-                          </p>
+                      return (
+                        <div key={venta.id}>
+                          <section className={styles.saleWrapper} style={{ margin: 0, boxShadow: "none" }}>
+                            <section className={styles.saleInfoCard} style={{ border: "none", padding: 0 }}>
+                              <div className={styles.saleSection}>
+                                <h4>Datos de la venta (Completada)</h4>
 
-                          <p><span className={styles.badge}>Cliente</span>{cliente.nombre}</p>
-                          <p><span className={styles.badge}>DNI</span>{cliente.dni}</p>
-                          <p><span className={styles.badge}>Dirección</span>{cliente.direccion} · {cliente.entreCalles}</p>
+                                <p>
+                                  <span className={styles.badge}>ID de Venta</span>
+                                  <span className={styles.idDestacado}>{venta.id}</span>
+                                </p>
 
-                          <p>
-                            <span className={styles.badge}>Vendedor</span>
-                            {getFirmaTexto(venta.vendedor, usuariosMap)}
-                          </p>
+                                <p><span className={styles.badge}>Cliente</span>{cliente.nombre}</p>
+                                <p><span className={styles.badge}>DNI</span>{cliente.dni}</p>
+                                <p><span className={styles.badge}>Dirección</span>{cliente.direccion} · {cliente.entreCalles}</p>
 
-                          <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
-                          <p><span className={styles.badge}>Entrega</span>{venta.entrega || "—"}</p>
+                                <p>
+                                  <span className={styles.badge}>Vendedor</span>
+                                  {getFirmaTexto(venta.vendedor, usuariosMap)}
+                                </p>
 
-                          {venta.chofer && (
-                            <p>
-                              <span className={styles.badge}>Chofer</span>
-                              {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
-                            </p>
-                          )}
+                                <p><span className={styles.badge}>Sucursal</span>{venta.sucursal || "—"}</p>
+                                <p><span className={styles.badge}>Entrega</span>{venta.entrega || "—"}</p>
 
-                          <p>
-                            <span className={styles.badge}>Productos</span>
-                            {venta.productos
-                              ?.map(
-                                (p) =>
-                                  `${p.nombre} (x${p.cantidad}, $${Number(
-                                    p.precio
-                                  ).toLocaleString("es-AR")})`
-                              )
-                              .join(", ")}
-                          </p>
-                          
-                          {/* 🟢 CARTELCITO DE DESCUENTO EN VENTAS PAGADAS 🟢 */}
-                          {venta.descuento > 0 && (
-                            <div style={{
-                              background: "#dcfce7",
-                              color: "#166534",
-                              padding: "6px 12px",
-                              borderRadius: "4px",
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              marginTop: "8px",
-                              marginBottom: "8px",
-                              display: "inline-block",
-                              border: "1px solid #bbf7d0"
-                            }}>
-                              🎉 Descuento aplicado: ${venta.descuento.toLocaleString("es-AR")}
-                            </div>
-                          )}
+                                {venta.chofer && (
+                                  <p>
+                                    <span className={styles.badge}>Chofer</span>
+                                    {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
+                                  </p>
+                                )}
 
-                          <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
-                          <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
-                          <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
-                          <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
+                                <p>
+                                  <span className={styles.badge}>Productos</span>
+                                  {venta.productos
+                                    ?.map(
+                                      (p) =>
+                                        `${p.nombre} (x${p.cantidad}, $${Number(
+                                          p.precio
+                                        ).toLocaleString("es-AR")})`
+                                    )
+                                    .join(", ")}
+                                </p>
+                                
+                                {venta.descuento > 0 && (
+                                  <div style={{
+                                    background: "#dcfce7",
+                                    color: "#166534",
+                                    padding: "6px 12px",
+                                    borderRadius: "4px",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    marginTop: "8px",
+                                    marginBottom: "8px",
+                                    display: "inline-block",
+                                    border: "1px solid #bbf7d0"
+                                  }}>
+                                    🎉 Descuento aplicado: ${venta.descuento.toLocaleString("es-AR")}
+                                  </div>
+                                )}
 
-                          {/* 💰 DEUDA INDIVIDUAL CERO PARA COMPRA COMPLETADA */}
-                          <div className={styles.saleDebtPaid}>
-                            <span>Deuda de esta compra:</span>
-                            <strong>$0 (Pagada)</strong>
-                          </div>
+                                <p><span className={styles.badge}>Fecha</span>{formatearFecha(venta.fecha)}</p>
+                                <p><span className={styles.badge}>Total Crédito $</span>{totalCredito?.toLocaleString("es-AR")}</p>
+                                <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
+                                <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
+
+                                <div className={styles.saleDebtPaid}>
+                                  <span>Deuda de esta compra:</span>
+                                  <strong>$0 (Pagada)</strong>
+                                </div>
+                              </div>
+
+                              <div style={{ marginTop: "10px" }}>
+                                <button
+                                  onClick={() => reenviarComprobante(venta)}
+                                  style={{
+                                    background: "#1976d2",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 14px",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontWeight: "500",
+                                  }}
+                                >
+                                  📩 Reenviar comprobante de compra
+                                </button>
+                              </div>
+                            </section>
+
+                            {renderTablePagos(venta, false)}
+                          </section>
                         </div>
-
-                        {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
-                        <div style={{ marginTop: "10px" }}>
-                          <button
-                            onClick={() => reenviarComprobante(venta)}
-                            style={{
-                              background: "#1976d2",
-                              color: "white",
-                              border: "none",
-                              padding: "8px 14px",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                              fontWeight: "500",
-                            }}
-                          >
-                            📩 Reenviar comprobante de compra
-                          </button>
-                        </div>
-                      </section>
-
-                      {/* ================= TABLA DE HISTORIAL DE PAGOS REALES ================= */}
-                      {renderTablePagos(venta, false)}
-                    </section>
-                  );
-                })}
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </section>
         )}
 
