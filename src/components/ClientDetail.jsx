@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebase/firebaseConfig";
 import styles from "../styles/ClientDetail.module.css";
@@ -20,7 +20,6 @@ const formatearFecha = (fecha) => {
   }
   // 🔥 Caso 2: String tipo "2025-11-15"
   else if (typeof fecha === "string") {
-    // Evita problemas de zona horaria
     if (fecha.includes("-")) {
       const [year, month, day] = fecha.split("-");
       date = new Date(year, month - 1, day);
@@ -73,22 +72,50 @@ const obtenerFechaHoyInput = () => {
   const year = hoy.getFullYear();
   const month = String(hoy.getMonth() + 1).padStart(2, "0");
   const day = String(hoy.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`; // formato YYYY-MM-DD
+  return `${year}-${month}-${day}`;
+};
+
+// ===============================
+// 📈 CÁLCULO DE RECARGO POR ATRASO
+// ===============================
+const calcularRecargoAtraso = (venta) => {
+  const fechaInicio = venta.fecha?.toDate ? venta.fecha.toDate() : new Date(venta.fecha);
+  if (isNaN(fechaInicio.getTime())) return { diasAtraso: 0, porcentajeRecargo: 0, montoRecargo: 0 };
+
+  const cuotasPagadas = venta.pagos?.length || 0;
+  const proximoVencimiento = new Date(fechaInicio);
+  proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
+
+  const hoy = new Date();
+  const diferenciaMs = hoy - proximoVencimiento;
+  const diasAtraso = Math.floor(diferenciaMs / (1000 * 60 * 60 * 24));
+
+  if (diasAtraso < 30) {
+    return { diasAtraso: Math.max(diasAtraso, 0), porcentajeRecargo: 0, montoRecargo: 0 };
+  }
+
+  const bloquesAdicionales = Math.floor((diasAtraso - 30) / 10);
+  let porcentajeRecargo = 10 + (bloquesAdicionales * 10);
+  
+  if (porcentajeRecargo > 200) porcentajeRecargo = 200;
+
+  const valorCuota = Number(venta.valorCuota || 0);
+  const montoRecargo = Math.round((valorCuota * porcentajeRecargo) / 100);
+
+  return {
+    diasAtraso,
+    porcentajeRecargo,
+    montoRecargo,
+  };
 };
 
 const normalizarVenta = (venta, usuariosMap = {}) => {
-  // ===============================
-  // PRODUCTOS
-  // ===============================
   const productosNormalizados = (venta.productos || []).map((p) => ({
     nombre: p.nombre ?? p.name ?? "Producto",
     cantidad: p.cantidad ?? p.qty ?? 1,
     precio: p.precio ?? p.price ?? 0,
   }));
 
-  // ===============================
-  // PAGOS
-  // ===============================
   const pagosNormalizados = [];
 
   if (venta.pago?.montoPagado > 0) {
@@ -96,6 +123,9 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
       numero: 1,
       fecha: venta.fecha || venta.createdAt || "—",
       monto: venta.pago.montoPagado,
+      montoBase: venta.pago.montoPagado,
+      montoRecargoAtraso: 0,
+      montoRecargoMetodo: 0,
       metodo: venta.pago.pagoParcial
         ? "Pago parcial"
         : venta.pago.primerCuotaPaga
@@ -110,14 +140,14 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
     numero: pago.numero ?? pagosNormalizados.length + index + 1,
     fecha: pago.fecha ?? "—",
     monto: Number(pago.monto ?? 0),
+    montoBase: Number(pago.montoBase ?? pago.monto ?? 0),
+    montoRecargoAtraso: Number(pago.montoRecargoAtraso ?? 0),
+    montoRecargoMetodo: Number(pago.montoRecargoMetodo ?? 0),
     metodo: pago.metodo ?? "—",
     estado: "Pagado",
     firma: pago.firma ?? pago.usuario ?? "—",
   }));
 
-  // ===============================
-  // CAMPOS COMERCIALES
-  // ===============================
   const vendedor =
     usuariosMap[venta.vendedor] ??
     usuariosMap[venta.vendedorReal] ??
@@ -137,7 +167,6 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
     vendedor,
     entrega,
     sucursal,
-    // Nos aseguramos de capturar el descuento si existe
     descuento: venta.descuento || 0 
   };
 };
@@ -155,19 +184,11 @@ export default function ClientDetail() {
   const [addingPagoId, setAddingPagoId] = useState(null);
   const [nuevoPago, setNuevoPago] = useState({ fecha: "", monto: "", metodo: "" });
 
-  const [showImportVenta, setShowImportVenta] = useState(false);
-  const [ventaPegada, setVentaPegada] = useState("");
-
   const [selectedVentaId, setSelectedVentaId] = useState(null);
-  // ===============================
-  // AUTH
-  // ===============================
-  const auth = getAuth();
-  const usuarioActual = auth.currentUser; // ✅ nombre consistente
 
-  // ===============================
-  // FETCH CLIENTE
-  // ===============================
+  const auth = getAuth();
+  const usuarioActual = auth.currentUser;
+
   useEffect(() => {
     const fetchCliente = async () => {
       try {
@@ -185,9 +206,6 @@ export default function ClientDetail() {
     fetchCliente();
   }, [id, navigate]);
 
-  // ===============================
-  // FETCH USUARIOS
-  // ===============================
   useEffect(() => {
     const fetchUsuarios = async () => {
       try {
@@ -197,7 +215,7 @@ export default function ClientDetail() {
           const data = d.data();
           if (data.activo) {
             if (data.email) map[data.email] = data.nombre;
-            if (data.nombre) map[d.id] = data.nombre; // 🔥 ACA ESTABA EL ERROR: mapear también el UID
+            if (data.nombre) map[d.id] = data.nombre;
           }
         });
         setUsuariosMap(map);
@@ -208,9 +226,6 @@ export default function ClientDetail() {
     fetchUsuarios();
   }, []);
 
-  // ===============================
-  // FETCH VENTAS
-  // ===============================
   const fetchVentas = async () => {
     try {
       const snap = await getDocs(
@@ -218,7 +233,7 @@ export default function ClientDetail() {
       );
       setVentas(
         snap.docs.map((d) =>
-          normalizarVenta({ id: d.id, ...d.data() }, usuariosMap) // ✅ pasa usuariosMap
+          normalizarVenta({ id: d.id, ...d.data() }, usuariosMap)
         )
       );
     } finally {
@@ -228,11 +243,8 @@ export default function ClientDetail() {
 
   useEffect(() => {
     fetchVentas();
-  }, [id, usuariosMap]); // ✅ depende del map
+  }, [id, usuariosMap]);
 
-  // ===============================
-  // AGREGAR PAGO
-  // ===============================
   const handleAddPagoClick = (ventaId) => {
     setAddingPagoId(ventaId);
     setNuevoPago({
@@ -262,11 +274,27 @@ export default function ClientDetail() {
       uid: usuarioActual.uid || ""
     };
 
+    const montoBaseInput = Number(nuevoPago.monto);
+    const metodoSeleccionado = nuevoPago.metodo;
+    const metodosConRecargo = ["Transferencia", "Tarjeta de Crédito", "Tarjeta de Débito", "QR", "Link de Pago"];
+
+    const { montoRecargo: recargoAtrasoMonto } = calcularRecargoAtraso(venta);
+    
+    let recargoMetodoMonto = 0;
+    if (metodosConRecargo.includes(metodoSeleccionado)) {
+      recargoMetodoMonto = Math.round((montoBaseInput * 0.05));
+    }
+
+    const montoFinalPago = montoBaseInput + recargoMetodoMonto;
+
     const pagoAGuardar = {
       numero: (venta.pagos?.length || 0) + 1,
       fecha: nuevoPago.fecha,
-      monto: Number(nuevoPago.monto),
-      metodo: nuevoPago.metodo || "—",
+      monto: montoFinalPago,
+      montoBase: montoBaseInput,
+      montoRecargoAtraso: recargoAtrasoMonto,
+      montoRecargoMetodo: recargoMetodoMonto,
+      metodo: metodoSeleccionado || "—",
       estado: "Pagado",
       firma,
     };
@@ -276,7 +304,6 @@ export default function ClientDetail() {
         pagos: arrayUnion(pagoAGuardar),
       });
 
-      // Buscar la venta actualizada
       const ventaActual = ventas.find((v) => v.id === ventaId);
 
       setVentas((prev) =>
@@ -287,7 +314,6 @@ export default function ClientDetail() {
         )
       );
 
-      // 🔥 ENVIAR COMPROBANTE AUTOMÁTICO
       if (ventaActual) {
         enviarComprobantePago(ventaActual, pagoAGuardar);
       }
@@ -301,13 +327,9 @@ export default function ClientDetail() {
     }
   };
 
-  // ===============================
-  // VERIFICAR SI VENTA ESTÁ PAGADA (CORREGIDA)
-  // ===============================
   const estaPagado = (venta) => {
     const totalPagado = (venta.pagos || []).reduce(
       (sum, p) => {
-        // Reemplaza comas por puntos por si se cargó como string regional (ej: "1500,50")
         const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
         return sum + Number(montoLimpio || 0);
       },
@@ -318,13 +340,9 @@ export default function ClientDetail() {
       venta.totalCredito ||
       (venta.valorCuota || 0) * (venta.cuotas || 0);
 
-    // Usamos Math.round para ignorar diferencias de centavos por divisiones o flotantes
     return Math.round(totalPagado) >= Math.round(totalCredito);
   };
 
-  // ===============================
-  // VENTAS ATRASADAS (IDs) (CORREGIDA)
-  // ===============================
   const ventasAtrasadasIds = useMemo(() => {
     const hoy = new Date();
     return ventas
@@ -335,8 +353,7 @@ export default function ClientDetail() {
           return sum + Number(montoLimpio || 0);
         }, 0);
 
-        // Aplicar redondeo aquí también para evitar falsos positivos de deuda
-        if (Math.round(totalPagado) >= Math.round(totalCredito)) return false; // ya pagada
+        if (Math.round(totalPagado) >= Math.round(totalCredito)) return false;
 
         const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
         const cuotasPagadas = v.pagos?.length || 0;
@@ -344,14 +361,11 @@ export default function ClientDetail() {
         proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
 
         const diasAtraso = (hoy - proximoVencimiento) / (1000 * 60 * 60 * 24);
-        return diasAtraso > 30; // atraso > 30 días
+        return diasAtraso > 30;
       })
       .map((v) => v.id);
   }, [ventas]);
 
-  // ===============================
-  // DOBLE CLICK → RESALTAR Y SCROLL
-  // ===============================
   useEffect(() => {
     if (!selectedVentaId) return;
 
@@ -361,58 +375,17 @@ export default function ClientDetail() {
     }
   }, [selectedVentaId]);
 
-  // ===============================
-  // DOBLE CLICK DESDE CLIENTES VENCIDOS
-  // ===============================
-  const handleDoubleClickCliente = (clienteId) => {
-    const clienteVentas = ventas.filter((v) => v.clienteId === clienteId && !estaPagado(v));
-    if (clienteVentas.length === 0) return;
-
-    let mayorAtraso = 0;
-    let ventaMasAtrasada = null;
-    const hoy = new Date();
-
-    clienteVentas.forEach((v) => {
-      const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
-      const cuotasPagadas = v.pagos?.length || 0;
-      const proximoVencimiento = new Date(fechaInicio);
-      proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
-
-      const diferenciaDias = (hoy - proximoVencimiento) / (1000 * 60 * 60 * 24);
-      if (diferenciaDias > mayorAtraso) {
-        mayorAtraso = diferenciaDias;
-        ventaMasAtrasada = v;
-      }
-    });
-
-    if (ventaMasAtrasada) {
-      setSelectedVentaId(ventaMasAtrasada.id);
-
-      const finDelDia = new Date();
-      finDelDia.setHours(23, 59, 59, 999);
-      localStorage.setItem("clienteVisitadoHoy", clienteId);
-      localStorage.setItem("expiraVisita", finDelDia.getTime());
-    }
-  };
-
   const ventasPendientes = ventas.filter((v) => !estaPagado(v));
   
-  // 🔥 Ventas pagadas ordenadas de la más reciente a la más antigua
   const ventasPagadas = useMemo(() => {
     return ventas
       .filter((v) => estaPagado(v))
       .sort((a, b) => obtenerMilisegundosFecha(b.fecha) - obtenerMilisegundosFecha(a.fecha));
   }, [ventas]);
 
-  // ===============================
-  // LOADING
-  // ===============================
   if (loadingCliente || loadingVentas) return <Loader />;
   if (!cliente) return null;
 
-  // ===============================
-  // ENVIAR RECORDATORIO WHATSAPP
-  // ===============================
   const enviarRecordatorio = (venta) => {
     const telefonoRaw =
       cliente.telefono1?.replace(/\D/g, "") ||
@@ -429,14 +402,21 @@ export default function ClientDetail() {
 
     const cuotasPagadas = venta.pagos?.length || 0;
     const numeroCuota = cuotasPagadas + 1;
-
     const valorCuota = Number(venta.valorCuota || 0);
+    const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
+
+    let mensajeRecargo = "";
+    if (diasAtraso >= 30) {
+      mensajeRecargo = `\n⚠️ Su cuota registra ${diasAtraso} días de atraso, aplicándose un recargo del ${porcentajeRecargo}% ($${montoRecargo.toLocaleString("es-AR")}).`;
+    }
+
+    const mensajeTransferencia = `\n💳 Recuerde que abonando por Transferencia, Tarjeta, QR o Link de Pago cuenta con un recargo adicional del +5%.`;
 
     const mensaje = `Estimado/a ${cliente.nombre},
 
 Le informamos que se encuentra pendiente el pago de su cuota N° ${numeroCuota}.
 
-Monto de la cuota: $${valorCuota.toLocaleString("es-AR")}
+Monto de la cuota: $${valorCuota.toLocaleString("es-AR")}${mensajeRecargo}${mensajeTransferencia}
 
 Le solicitamos regularizar la misma a la brevedad.
 
@@ -449,9 +429,6 @@ Este es un mensaje automático generado por nuestro sistema.`;
     window.open(url, "_blank");
   };
 
-  // ===============================
-  // REENVIAR COMPROBANTE
-  // ===============================
   const reenviarComprobante = (venta) => {
     const telefonoRaw =
       cliente.telefono1?.replace(/\D/g, "") ||
@@ -462,54 +439,38 @@ Este es un mensaje automático generado por nuestro sistema.`;
       return;
     }
 
-    // Asegurar código país Argentina
     const telefono = telefonoRaw.startsWith("54")
       ? telefonoRaw
       : `54${telefonoRaw}`;
 
-    // Formato de productos
     const productosTexto = venta.productos
       ?.map((p) => `* ${p.nombre} x${p.cantidad} —`)
       .join("\n");
 
-    // =========================================================
-    // 🧮 LÓGICA MATEMÁTICA DE CUOTAS (CORREGIDA)
-    // =========================================================
     const valorCuota = Number(venta.valorCuota || 0);
     const todosLosPagos = venta.pagos || [];
 
-    // 1. Calcular el total acumulado de dinero pagado hasta hoy
     const totalPagadoHistorico = todosLosPagos.reduce((sum, p) => sum + Number(p.monto || 0), 0);
-
-    // 2. Obtener los datos específicos del último pago realizado
     const ultimoPago = todosLosPagos.length > 0 ? todosLosPagos[todosLosPagos.length - 1] : null;
     const montoUltimoPago = ultimoPago ? Number(ultimoPago.monto || 0) : 0;
     const valorPagadoTexto = montoUltimoPago.toLocaleString("es-AR");
 
-    // 3. Calcular cuántas cuotas se habían completado ANTES de este último pago
     const totalAntesDeEstePago = totalPagadoHistorico - montoUltimoPago;
     const cuotasCompletasAntes = Math.floor(totalAntesDeEstePago / valorCuota);
-
-    // 4. Calcular cuántas cuotas se completan AHORA con este pago
     const cuotasCompletasAhora = Math.floor(totalPagadoHistorico / valorCuota);
 
     let detalleCuota = "";
 
     if (cuotasCompletasAhora > cuotasCompletasAntes) {
-      // Si este pago logró cerrar una cuota que venía incompleta
       detalleCuota = `cuota n°${cuotasCompletasAhora} (completa)`;
-
-      // Si además de completar la cuota sobró plata para la que sigue
       const saldoSobrante = totalPagadoHistorico % valorCuota;
       if (saldoSobrante > 0 && cuotasCompletasAhora < Number(venta.cuotas)) {
         detalleCuota += ` y saldo a cuenta de cuota n°${cuotasCompletasAhora + 1}`;
       }
     } else {
-      // Si el pago no llegó a completar ninguna cuota nueva, sigue siendo un pago parcial
       const cuotaEnProceso = cuotasCompletasAhora + 1;
       detalleCuota = `a cuenta de cuota n°${cuotaEnProceso} (pago parcial)`;
     }
-    // =========================================================
 
     const mensaje = `COMPROBANTE DE COMPRA
 
@@ -529,7 +490,6 @@ Total pagado: $${valorPagadoTexto} ${detalleCuota}
 
 Gracias por su compra.`;
 
-    // Usar endpoint más estable
     const url = `https://api.whatsapp.com/send?phone=${telefono}&text=${encodeURIComponent(
       mensaje
     )}`;
@@ -537,9 +497,6 @@ Gracias por su compra.`;
     window.open(url, "_blank");
   };
 
-  // ===============================
-  // ENVIAR COMPROBANTE DE PAGO
-  // ===============================
   const enviarComprobantePago = (venta, pago) => {
     const telefonoRaw =
       cliente.telefono1?.replace(/\D/g, "") ||
@@ -554,6 +511,18 @@ Gracias por su compra.`;
       ? telefonoRaw
       : `54${telefonoRaw}`;
 
+    let textoRecargosWhatsApp = "";
+    const montoBaseVal = Number(pago.montoBase || pago.monto || 0);
+    const recargoMetodoVal = Number(pago.montoRecargoMetodo || 0);
+    const recargoAtrasoVal = Number(pago.montoRecargoAtraso || 0);
+
+    if (recargoAtrasoVal > 0) {
+      textoRecargosWhatsApp += `\nRecargo por atraso: $${recargoAtrasoVal.toLocaleString("es-AR")}`;
+    }
+    if (recargoMetodoVal > 0) {
+      textoRecargosWhatsApp += `\nRecargo por ${pago.metodo} (+5%): $${recargoMetodoVal.toLocaleString("es-AR")}`;
+    }
+
     const mensaje = `COMPROBANTE DE PAGO
 
 Cliente: ${cliente.nombre}
@@ -561,7 +530,8 @@ DNI: ${cliente.dni}
 
 Venta ID: ${venta.id}
 Fecha de pago: ${formatearFecha(pago.fecha)}
-Monto abonado: $${Number(pago.monto).toLocaleString("es-AR")}
+Monto base: $${montoBaseVal.toLocaleString("es-AR")}${textoRecargosWhatsApp}
+Monto total abonado: $${Number(pago.monto).toLocaleString("es-AR")}
 Método de pago: ${pago.metodo || "—"}
 
 Cobrado por: ${getFirmaTexto(pago.firma, usuariosMap)}
@@ -575,11 +545,7 @@ Gracias por su pago.`;
     window.open(url, "_blank");
   };
 
-  // ===============================
-  // RENDER DE TABLA DE PAGOS (NUEVO)
-  // ===============================
   const renderTablePagos = (venta, permitirAgregar) => {
-    // 1. Calculamos a qué cuota pertenece cada pago
     const valorCuotaSeguro = Number(venta.valorCuota) || 1;
     let acumuladoPagos = 0;
 
@@ -589,9 +555,8 @@ Gracias por su pago.`;
       const cuotaInicio = Math.floor(acumuladoPagos / valorCuotaSeguro) + 1;
       acumuladoPagos += monto;
       let cuotaFin = Math.ceil(acumuladoPagos / valorCuotaSeguro);
-      if (cuotaFin < cuotaInicio) cuotaFin = cuotaInicio; // Evitar desfases si el monto es 0
+      if (cuotaFin < cuotaInicio) cuotaFin = cuotaInicio;
 
-      // Definimos la etiqueta visual (Ej: "Cuota 1" o "Cuotas 1 a 3")
       const labelCuota = cuotaInicio === cuotaFin 
         ? `Cuota ${cuotaInicio}` 
         : `Cuotas ${cuotaInicio} a ${cuotaFin}`;
@@ -603,7 +568,6 @@ Gracias por su pago.`;
       };
     });
 
-    // 2. Calculamos el resumen de cuotas para el mensaje
     const totalPagado = acumuladoPagos;
     const cuotasPagas = Math.floor(totalPagado / valorCuotaSeguro);
     const totalCuotas = Number(venta.cuotas) || 0;
@@ -621,7 +585,6 @@ Gracias por su pago.`;
             )}
           </div>
 
-          {/* 🔥 DETALLE BREVE SOLICITADO */}
           <div style={{
             background: "#e0f2fe",
             color: "#0369a1",
@@ -646,24 +609,37 @@ Gracias por su pago.`;
             <span>Firma</span>
           </div>
 
-          {/* Renderizamos los pagos calculados */}
-          {pagosConCuota.map((pago, i) => (
-            <div key={i} className={`${styles.row} ${styles.paid}`}>
-              {/* Agrupación visual de cuota y n° de pago */}
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
-                <strong style={{ color: "#0f172a" }}>{pago.labelCuota}</strong>
-                <small style={{ color: "#64748b", fontSize: "12px" }}>Pago #{pago.indexReal}</small>
-              </span>
-              
-              <span>{formatearFecha(pago.fecha)}</span>
-              <span>${Number(pago.monto)?.toLocaleString("es-AR")}</span>
-              <span>{pago.metodo || "—"}</span>
-              <span>Pagado</span>
-              <span>{getFirmaTexto(pago.firma, usuariosMap)}</span>
-            </div>
-          ))}
+          {pagosConCuota.map((pago, i) => {
+            const montoBaseVal = Number(pago.montoBase || pago.monto || 0);
+            const recargoAtrasoVal = Number(pago.montoRecargoAtraso || 0);
+            const recargoMetodoVal = Number(pago.montoRecargoMetodo || 0);
+            const montoTotalVal = Number(pago.monto || 0);
 
-          {/* Formulario para agregar un nuevo pago */}
+            return (
+              <div key={i} className={`${styles.row} ${styles.paid}`} style={{ alignItems: "flex-start", paddingBottom: "12px", paddingTop: "12px" }}>
+                <span style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
+                  <strong style={{ color: "#0f172a" }}>{pago.labelCuota}</strong>
+                  <small style={{ color: "#64748b", fontSize: "12px" }}>Pago #{pago.indexReal}</small>
+                </span>
+                
+                <span>{formatearFecha(pago.fecha)}</span>
+                
+                <span style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <strong>${montoTotalVal.toLocaleString("es-AR")}</strong>
+                  <small style={{ color: "#475569", fontSize: "11px", lineHeight: "1.3" }}>
+                    Base: ${montoBaseVal.toLocaleString("es-AR")}
+                    {recargoAtrasoVal > 0 && <><br />Recargo Atraso: +${recargoAtrasoVal.toLocaleString("es-AR")}</>}
+                    {recargoMetodoVal > 0 && <><br />Recargo {pago.metodo} (+5%): +${recargoMetodoVal.toLocaleString("es-AR")}</>}
+                  </small>
+                </span>
+
+                <span>{pago.metodo || "—"}</span>
+                <span>Pagado</span>
+                <span>{getFirmaTexto(pago.firma, usuariosMap)}</span>
+              </div>
+            );
+          })}
+
           {permitirAgregar && addingPagoId === venta.id && (
             <div className={`${styles.row} ${styles.addPagoRow}`}>
               <input
@@ -683,11 +659,11 @@ Gracias por su pago.`;
               >
                 <option value="" disabled hidden>Método</option>
                 <option value="Efectivo">💵 Efectivo</option>
-                <option value="Transferencia">🏦 Transferencia</option>
-                <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito</option>
-                <option value="Tarjeta de Débito">💳 Tarjeta de Débito</option>
-                <option value="QR">📱 QR</option>
-                <option value="Link de Pago">🔗 Link de Pago</option>
+                <option value="Transferencia">🏦 Transferencia (+5%)</option>
+                <option value="Tarjeta de Crédito">💳 Tarjeta de Crédito (+5%)</option>
+                <option value="Tarjeta de Débito">💳 Tarjeta de Débito (+5%)</option>
+                <option value="QR">📱 QR (+5%)</option>
+                <option value="Link de Pago">🔗 Link de Pago (+5%)</option>
               </select>
               <button onClick={() => handleSavePago(venta.id)}>Guardar</button>
               <button onClick={() => setAddingPagoId(null)}>Cancelar</button>
@@ -698,13 +674,9 @@ Gracias por su pago.`;
     );
   };
 
-  // ===============================
-  // RENDER
-  // ===============================
   return (
     <div className={styles.paymentWrapper}>
       <article className={styles.paymentCard}>
-        {/* ========== CLIENTE ========== */}
         <header className={styles.clientHeader}>
           <div className={styles.avatar}>
             <img
@@ -727,19 +699,16 @@ Gracias por su pago.`;
           </div>
 
           <span
-            className={`${styles.status} ${cliente.estado === "Activo" ? styles.ok : styles.blocked
-              }`}
+            className={`${styles.status} ${cliente.estado === "Activo" ? styles.ok : styles.blocked}`}
           >
             {cliente.estado}
           </span>
         </header>
 
-        {/* ================= VENTAS ================= */}
         {ventas.length === 0 ? (
           <p style={{ color: "#64748b" }}>No hay ventas registradas</p>
         ) : (
           <>
-            {/* ================= VENTAS PENDIENTES ================= */}
             {ventasPendientes.map((venta) => {
               const totalCredito =
                 venta.totalCredito || venta.valorCuota * venta.cuotas;
@@ -753,13 +722,18 @@ Gracias por su pago.`;
               }, 0);
 
               const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
+              const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
+              
+              const totalConRecargoBase = totalCredito + montoRecargo;
+              const saldoConRecargo = Math.max(totalConRecargoBase - totalPagado, 0);
+
+              const recargoTransferencia = Math.round((saldoConRecargo * 1.05) / 100) * 100;
 
               return (
                 <section
                   id={`venta-${venta.id}`}
                   key={venta.id}
-                  className={`${styles.saleWrapper} ${ventasAtrasadasIds.includes(venta.id) ? styles.destacado : ""
-                    } ${selectedVentaId === venta.id ? styles.resaltado : ""}`}
+                  className={`${styles.saleWrapper} ${ventasAtrasadasIds.includes(venta.id) ? styles.destacado : ""} ${selectedVentaId === venta.id ? styles.resaltado : ""}`}
                 >
                   <section className={styles.saleInfoCard}>
                     <div className={styles.saleSection}>
@@ -807,7 +781,6 @@ Gracias por su pago.`;
                           .join(", ")}
                       </p>
 
-                      {/* 🟢 CARTELCITO DE DESCUENTO 🟢 */}
                       {venta.descuento > 0 && (
                         <div style={{
                           background: "#dcfce7",
@@ -830,14 +803,66 @@ Gracias por su pago.`;
                       <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
                       <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
 
-                      {/* 💰 DEUDA INDIVIDUAL DESTACADA DE ESTA COMPRA */}
+                      {diasAtraso >= 30 && (
+                        <div style={{
+                          background: "#fef2f2",
+                          color: "#991b1b",
+                          padding: "8px 12px",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          marginTop: "8px",
+                          marginBottom: "8px",
+                          border: "1px solid #fecaca"
+                        }}>
+                          ⚠️ Atraso de {diasAtraso} días: recargo sobre la cuota (+${montoRecargo.toLocaleString("es-AR")})
+                        </div>
+                      )}
+
                       <div className={styles.saleDebtPending}>
-                        <span>Deuda de esta compra:</span>
-                        <strong>${saldoPendiente.toLocaleString("es-AR")}</strong>
+                        <span>Deuda de esta compra {diasAtraso >= 30 ? "(con recargo):" : "(sin recargo):"}</span>
+                        <strong>${saldoConRecargo.toLocaleString("es-AR")}</strong>
+                      </div>
+
+                      <div style={{
+                        background: diasAtraso >= 30 ? "linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%)" : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+                        color: "#ffffff",
+                        padding: "20px",
+                        borderRadius: "12px",
+                        marginTop: "16px",
+                        marginBottom: "12px",
+                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4)",
+                        border: diasAtraso >= 30 ? "3px solid #f87171" : "2px solid #38bdf8"
+                      }}>
+                        <div style={{ fontSize: "14px", textTransform: "uppercase", letterSpacing: "1.5px", color: diasAtraso >= 30 ? "#fca5a5" : "#38bdf8", fontWeight: "800", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span>🚨</span> CONTROL DE CAJA / VENDEDOR — ESTADO DE CUENTA
+                        </div>
+                        
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginTop: "12px" }}>
+                          <div style={{ background: "rgba(0, 0, 0, 0.25)", padding: "10px 14px", borderRadius: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "#cbd5e1", display: "block" }}>Días de Atraso</span>
+                            <strong style={{ fontSize: "20px", color: diasAtraso >= 30 ? "#f87171" : "#f8fafc" }}>
+                              {diasAtraso} {diasAtraso === 1 ? "día" : "días"}
+                            </strong>
+                          </div>
+
+                          <div style={{ background: "rgba(0, 0, 0, 0.25)", padding: "10px 14px", borderRadius: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "#cbd5e1", display: "block" }}>A Pagar (Efectivo / Contado)</span>
+                            <strong style={{ fontSize: "22px", color: "#ffffff" }}>
+                              ${saldoConRecargo.toLocaleString("es-AR")}
+                            </strong>
+                          </div>
+
+                          <div style={{ background: "rgba(0, 0, 0, 0.25)", padding: "10px 14px", borderRadius: "8px" }}>
+                            <span style={{ fontSize: "12px", color: "#cbd5e1", display: "block" }}>Transferencia / Tarjeta (+5%)</span>
+                            <strong style={{ fontSize: "22px", color: "#4ade80" }}>
+                              ${recargoTransferencia.toLocaleString("es-AR")}
+                            </strong>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* 🔔 BOTÓN RECORDAR CUOTA */}
                     {saldoPendiente > 0 &&
                       (cliente.telefono1 || cliente.telefono2) && (
                         <div style={{ marginTop: "12px" }}>
@@ -858,7 +883,6 @@ Gracias por su pago.`;
                         </div>
                       )}
 
-                    {/* 📩 BOTÓN REENVIAR COMPROBANTE */}
                     <div style={{ marginTop: "8px" }}>
                       <button
                         onClick={() => reenviarComprobante(venta)}
@@ -877,7 +901,6 @@ Gracias por su pago.`;
                     </div>
                   </section>
 
-                  {/* ================= PAGOS ================= */}
                   {renderTablePagos(venta, true)}
                 </section>
               );
@@ -885,8 +908,6 @@ Gracias por su pago.`;
           </>
         )}
 
-        {/* ================= VENTAS PAGADAS ================= */}
-        {/* ================= VENTAS PAGADAS ================= */}
         {ventasPagadas.length > 0 && (
           <section className={styles.paidSummary}>
             <h4>Ventas Completamente Pagadas</h4>
@@ -906,7 +927,6 @@ Gracias por su pago.`;
               )}
             </div>
 
-            {/* ================= VENTAS PAGADAS (DETALLE MODAL FLOTANTE CON BLUR) ================= */}
             {selectedVentaId && (
               <div
                 style={{
@@ -925,7 +945,7 @@ Gracias por su pago.`;
                   padding: "20px",
                   boxSizing: "border-box",
                 }}
-                onClick={() => setSelectedVentaId(null)} // Cierra al hacer clic en el fondo difuminado
+                onClick={() => setSelectedVentaId(null)}
               >
                 <div
                   style={{
@@ -939,27 +959,19 @@ Gracias por su pago.`;
                     padding: "24px",
                     position: "relative",
                   }}
-                  onClick={(e) => e.stopPropagation()} // Evita que se cierre al hacer clic dentro de la tarjeta
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Botón de cierre "X" */}
                   <button
                     onClick={() => setSelectedVentaId(null)}
                     style={{
                       position: "absolute",
-                      top: "16px",
-                      right: "16px",
-                      background: "#f1f5f9",
+                      top: "12px",
+                      right: "12px",
+                      background: "transparent",
                       border: "none",
-                      borderRadius: "50%",
-                      width: "36px",
-                      height: "36px",
+                      fontSize: "24px",
                       cursor: "pointer",
-                      fontSize: "16px",
-                      fontWeight: "bold",
-                      color: "#334155",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      color: "#374151",
                     }}
                   >
                     ✕
@@ -1071,7 +1083,6 @@ Gracias por su pago.`;
           </section>
         )}
 
-        {/* ================= DEUDA TOTAL ================= */}
         <div className={styles.totalDebt}>
           <h3>
             Deuda Total: $
@@ -1089,7 +1100,10 @@ Gracias por su pago.`;
                   venta.totalCredito ||
                   (venta.valorCuota || 0) * (venta.cuotas || 1);
 
-                return total + Math.max(totalVenta - totalPagado, 0);
+                const { montoRecargo } = calcularRecargoAtraso(venta);
+                const saldoConRecargo = Math.max((totalVenta + montoRecargo) - totalPagado, 0);
+
+                return total + saldoConRecargo;
               }, 0)
               .toLocaleString("es-AR")}
           </h3>
