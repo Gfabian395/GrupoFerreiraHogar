@@ -14,21 +14,16 @@ const formatearFecha = (fecha) => {
 
   let date;
 
-  // 🔥 Caso 1: Timestamp de Firestore
   if (typeof fecha === "object" && typeof fecha.toDate === "function") {
     date = fecha.toDate();
-  }
-  // 🔥 Caso 2: String tipo "2025-11-15"
-  else if (typeof fecha === "string") {
+  } else if (typeof fecha === "string") {
     if (fecha.includes("-")) {
       const [year, month, day] = fecha.split("-");
       date = new Date(year, month - 1, day);
     } else {
       date = new Date(fecha);
     }
-  }
-  // 🔥 Caso 3: Number (timestamp numérico)
-  else if (typeof fecha === "number") {
+  } else if (typeof fecha === "number") {
     date = new Date(fecha);
   } else {
     return "—";
@@ -43,7 +38,6 @@ const formatearFecha = (fecha) => {
   });
 };
 
-// 🛠️ Helper universal para convertir cualquier formato de fecha de venta a milisegundos para ordenar
 const obtenerMilisegundosFecha = (fecha) => {
   if (!fecha) return 0;
   if (typeof fecha === "object" && typeof fecha.toDate === "function") {
@@ -73,6 +67,17 @@ const obtenerFechaHoyInput = () => {
   const month = String(hoy.getMonth() + 1).padStart(2, "0");
   const day = String(hoy.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+// 🛡️ Helper blindado: fuerza TODOS los cálculos a ser números reales
+const obtenerTotalVenta = (venta) => {
+  const totalCredito = Number(venta.totalCredito || 0);
+  if (totalCredito > 0) return totalCredito;
+
+  const valorCuota = Number(venta.valorCuota || 0);
+  const cuotas = Number(venta.cuotas || 0);
+  
+  return valorCuota * cuotas;
 };
 
 // ===============================
@@ -336,10 +341,7 @@ export default function ClientDetail() {
       0
     );
 
-    const totalCredito =
-      venta.totalCredito ||
-      (venta.valorCuota || 0) * (venta.cuotas || 0);
-
+    const totalCredito = obtenerTotalVenta(venta);
     return Math.round(totalPagado) >= Math.round(totalCredito);
   };
 
@@ -347,7 +349,7 @@ export default function ClientDetail() {
     const hoy = new Date();
     return ventas
       .filter((v) => {
-        const totalCredito = v.totalCredito || (v.valorCuota * v.cuotas);
+        const totalCredito = obtenerTotalVenta(v);
         const totalPagado = (v.pagos || []).reduce((sum, p) => {
           const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
           return sum + Number(montoLimpio || 0);
@@ -710,8 +712,7 @@ Gracias por su pago.`;
         ) : (
           <>
             {ventasPendientes.map((venta) => {
-              const totalCredito =
-                venta.totalCredito || venta.valorCuota * venta.cuotas;
+              const totalCredito = obtenerTotalVenta(venta);
 
               const totalPagado = (venta.pagos || []).reduce((sum, p) => {
                 const montoLimpio =
@@ -980,8 +981,7 @@ Gracias por su pago.`;
                   {ventasPagadas
                     .filter((v) => v.id === selectedVentaId)
                     .map((venta) => {
-                      const totalCredito =
-                        venta.totalCredito || venta.valorCuota * venta.cuotas;
+                      const totalCredito = obtenerTotalVenta(venta);
 
                       return (
                         <div key={venta.id}>
@@ -1086,7 +1086,7 @@ Gracias por su pago.`;
         <div className={styles.totalDebt}>
           <h3>
             Deuda Total: $
-            {ventas
+            {ventasPendientes
               .reduce((total, venta) => {
                 const totalPagado = (venta.pagos || []).reduce((a, p) => {
                   const montoLimpio =
@@ -1096,10 +1096,7 @@ Gracias por su pago.`;
                   return a + Number(montoLimpio || 0);
                 }, 0);
 
-                const totalVenta =
-                  venta.totalCredito ||
-                  (venta.valorCuota || 0) * (venta.cuotas || 1);
-
+                const totalVenta = obtenerTotalVenta(venta);
                 const { montoRecargo } = calcularRecargoAtraso(venta);
                 const saldoConRecargo = Math.max((totalVenta + montoRecargo) - totalPagado, 0);
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase/firebaseConfig";
-import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
+// 🔥 Agregamos doc y deleteDoc a las importaciones de firestore
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp, doc, deleteDoc } from "firebase/firestore";
 import styles from "../styles/Finanzas.module.css";
 import { Loader } from "./Loader";
 
@@ -120,6 +121,32 @@ const Finanzas = () => {
     } catch (error) {
       console.error("Error al guardar el gasto:", error);
       alert("Hubo un error al cargar el gasto.");
+    }
+  };
+
+  // 🔥 FUNCIÓN ACTUALIZADA: Eliminar Gasto con contraseña
+  const handleEliminarGasto = async (idGasto) => {
+    const password = window.prompt("Ingrese la contraseña para eliminar este gasto:");
+
+    if (password === null) {
+      return; // El usuario presionó cancelar en el prompt
+    }
+
+    if (password !== "554972") {
+      alert("Contraseña incorrecta. Acción denegada.");
+      return;
+    }
+
+    const confirmar = window.confirm("¿Estás seguro de que deseas eliminar este gasto? Esto afectará los balances.");
+    if (!confirmar) return;
+
+    try {
+      await deleteDoc(doc(db, "gastos", idGasto));
+      alert("Gasto eliminado con éxito.");
+      setRefreshKey(prev => prev + 1); // Recarga los datos automáticamente
+    } catch (error) {
+      console.error("Error al eliminar el gasto:", error);
+      alert("Hubo un error al intentar eliminar el gasto.");
     }
   };
   
@@ -568,7 +595,7 @@ const Finanzas = () => {
             </div>
           </div>
 
-          {/* TABLA DE RANKING DE VENDEDORES (NUEVO) */}
+          {/* TABLA DE RANKING DE VENDEDORES */}
           <div className={styles.auditoriaWrapper} style={{ marginTop: "20px", marginBottom: "20px" }}>
             <h3 style={{ color: "#3b82f6" }}>🏆 Ranking de Vendedores: {sucursalNombre}</h3>
             <div className={styles["table-wrapper"]}>
@@ -691,7 +718,8 @@ const Finanzas = () => {
                 <div className={styles["table-wrapper"]}>
                   <table className={styles.table}>
                     <thead>
-                      <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th></tr>
+                      {/* 🔥 Columna Acciones */}
+                      <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th><th>Acciones</th></tr>
                     </thead>
                     <tbody>
                       {gastosSucursal.map(g => (
@@ -708,9 +736,27 @@ const Finanzas = () => {
                           <td>{g.descripcion}</td>
                           <td className={styles.textoDestacadoGastos}>${formatearMonto(g.monto)}</td>
                           <td>{g.registradoPor}</td>
+                          {/* 🔥 Botón de eliminar */}
+                          <td>
+                            <button
+                              onClick={() => handleEliminarGasto(g.id)}
+                              style={{
+                                background: "#fee2e2",
+                                color: "#ef4444",
+                                border: "none",
+                                padding: "6px 10px",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontWeight: "bold"
+                              }}
+                              title="Eliminar Gasto"
+                            >
+                              🗑️
+                            </button>
+                          </td>
                         </tr>
                       ))}
-                      {gastosSucursal.length === 0 && <tr><td colSpan="5" className={styles.tablaVacia}>No hay gastos registrados este mes.</td></tr>}
+                      {gastosSucursal.length === 0 && <tr><td colSpan="6" className={styles.tablaVacia}>No hay gastos registrados este mes.</td></tr>}
                     </tbody>
                   </table>
                 </div>
