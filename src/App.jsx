@@ -22,6 +22,7 @@ import { Loader } from "./components/Loader";
 import Alerta from "./components/Alerta"; // 👈 IMPORTANTE: Importamos tu nueva Alerta
 import "./App.css";
 import ProductoDetalle from "./components/ProductoDetalle";
+import Viajes from "./components/Viajes";
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -94,7 +95,7 @@ function App() {
       activo: true,
     };
     localStorage.setItem("guestUser", JSON.stringify(guestUser));
-    setUsuario(guestUser); 
+    setUsuario(guestUser);
     setBloqueado(false);
   };
 
@@ -123,7 +124,7 @@ function App() {
       <Router>
         <Notificaciones />
         <div className="layout">
-          
+
           {/* 👈 AQUÍ: Renderiza la alerta de pantalla completa por 3 segundos */}
           {/* <Alerta /> */} {/* ACA SE ACTIVA LA ALERTA EN PANTALLA PARA NO VENDER MAS DE UN PRODUCTO */}
 
@@ -177,6 +178,14 @@ function App() {
               <Route path="/admin/migrar-clientes" element={<PrivateRoute role="jefe"><MigrarClientes /></PrivateRoute>} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
+              <Route
+                path="/viajes"
+                element={
+                  <PrivateRoute role={["jefe", "encargado"]}>
+                    <Viajes />
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </div>
         </div>

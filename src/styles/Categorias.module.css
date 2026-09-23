@@ -175,6 +175,35 @@
 }
 
 /* ===============================
+   GOOGLE MAPS FLOAT BUTTON
+=============================== */
+
+/* Botón flotante de Google Maps (ubicado arriba del botón +) */
+.mapFloatBtn {
+  position: fixed;
+  bottom: 95px; /* Separado del fondo, quedando arriba del botón + */
+  right: 25px;
+  width: 50px;
+  height: 50px;
+  background-color: #ffffff;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 1000;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.mapFloatBtn:hover {
+  transform: scale(1.08);
+  background-color: #f1f5f9;
+}
+/* ===============================
    ANIMACIÓN
 =============================== */
 
