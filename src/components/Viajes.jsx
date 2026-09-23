@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
-import { useLoadScript, GoogleMap, DirectionsRenderer, Autocomplete } from '@react-google-maps/api';
+import { useLoadScript, GoogleMap, DirectionsRenderer, Autocomplete, Circle, Marker, InfoWindow } from '@react-google-maps/api';
 import styles from '../styles/Viajes.module.css';
 
 // Bibliotecas necesarias de Google Maps (Autocomplete y Places)
 const libraries = ['places'];
-const TARIFA_POR_KM = 1000; // $1.000 ARS por kilómetro
+const TARIFA_POR_KM = 2000; // $1.000 ARS por kilómetro
 
-// Lista de sucursales reales actualizadas
+// Lista de sucursales con coordenadas geográficas reales y exactas
 const SUCURSALES = [
-  { id: 'suc1', nombre: 'Sucursal Los Andes 4320 (Bernal Oeste)', direccion: 'Los Andes 4320, B1876 Bernal Oeste, Provincia de Buenos Aires' },
-  { id: 'suc2', nombre: 'Sucursal Los Andes 4034 (Bernal Oeste)', direccion: 'Los Andes 4034, B1876 Bernal Oeste, Provincia de Buenos Aires' },
-  { id: 'suc3', nombre: 'Sucursal Aldo Emir Jofre 2440 (Quilmes)', direccion: 'Aldo Emir Jofre 2440, B1883 Quilmes, Provincia de Buenos Aires' },
+  { 
+    id: 'suc1', 
+    nombre: 'Sucursal Los Andes 4320 (Bernal Oeste)', 
+    direccion: 'Los Andes 4320, B1876 Bernal Oeste, Provincia de Buenos Aires',
+    coords: { lat: -34.7241133, lng: -58.3217973 } 
+  },
+  { 
+    id: 'suc2', 
+    nombre: 'Sucursal Los Andes 4034 (Bernal Oeste)', 
+    direccion: 'Los Andes 4034, B1876 Bernal Oeste, Provincia de Buenos Aires',
+    coords: { lat: -34.7225356, lng: -58.3200516 } 
+  },
+  { 
+    id: 'suc3', 
+    nombre: 'Sucursal Aldo Emir Jofre 2440 (Quilmes)', 
+    direccion: 'Aldo Emir Jofre 2440, B1883 Quilmes, Provincia de Buenos Aires',
+    coords: { lat: -34.7192629, lng: -58.322658 } 
+  },
 ];
 
 export default function Viajes() {
@@ -19,7 +34,10 @@ export default function Viajes() {
     libraries,
   });
 
-  const [origen, setOrigen] = useState(SUCURSALES[0].direccion); // Por defecto la primera sucursal
+  const [origen, setOrigen] = useState(SUCURSALES[0].direccion); 
+  const [centroMapa, setCentroMapa] = useState(SUCURSALES[0].coords);
+  const [sucursalActiva, setSucursalActiva] = useState(SUCURSALES[0]);
+  const [mapInstance, setMapInstance] = useState(null);
   const [destino, setDestino] = useState('');
   const [directionsResponse, setDirectionsResponse] = useState(null);
   const [distanciaTexto, setDistanciaTexto] = useState('');
@@ -27,6 +45,22 @@ export default function Viajes() {
   const [duracion, setDuracion] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Cada vez que cambia el origen en el select, actualizamos las coordenadas y recentramos el mapa exactamente en esa sucursal
+  const handleOrigenChange = (e) => {
+    const nuevaDireccion = e.target.value;
+    setOrigen(nuevaDireccion);
+    
+    const sucursalEncontrada = SUCURSALES.find(s => s.direccion === nuevaDireccion);
+    if (sucursalEncontrada) {
+      setCentroMapa(sucursalEncontrada.coords);
+      setSucursalActiva(sucursalEncontrada);
+      if (mapInstance) {
+        mapInstance.panTo(sucursalEncontrada.coords);
+        mapInstance.setZoom(13);
+      }
+    }
+  };
 
   // Referencia para el input de Autocompletado del Destino
   const [destAutocomplete, setDestAutocomplete] = useState(null);
@@ -65,7 +99,6 @@ export default function Viajes() {
           setDistanciaTexto(route.distance.text);
           setDuracion(route.duration.text);
           
-          // route.distance.value está en metros, lo pasamos a kilómetros
           const km = route.distance.value / 1000;
           setDistanciaValorKm(km);
         } else {
@@ -77,7 +110,19 @@ export default function Viajes() {
 
   if (!isLoaded) return <div className={styles.loading}>Cargando mapa...</div>;
 
-  const costoTotal = Math.round(distanciaValorKm * TARIFA_POR_KM);
+  // Lógica: Si es <= 5 km es GRATIS (0). Si supera los 5 km, se cobra el total completo desde la sucursal.
+  const costoTotal = distanciaValorKm <= 5 ? 0 : Math.round(distanciaValorKm * TARIFA_POR_KM);
+
+  // Opciones de estilo para el círculo de 5 km
+  const circleOptions = {
+    strokeColor: '#1d4ed8',
+    strokeOpacity: 0.9,
+    strokeWeight: 3,
+    fillColor: '#3b82f6',
+    fillOpacity: 0.2,
+    clickable: false,
+    zIndex: 1,
+  };
 
   return (
     <div className={styles.viajesContainer}>
@@ -85,11 +130,40 @@ export default function Viajes() {
       {/* MAPA DE FONDO (Ocupa toda la pantalla detrás) */}
       <div className={styles.mapWrapper}>
         <GoogleMap
-          center={{ lat: -34.722, lng: -58.283 }} // Centrado en la zona de Bernal / Quilmes
+          center={centroMapa} 
           zoom={13}
+          onLoad={(map) => setMapInstance(map)}
           mapContainerStyle={{ width: '100%', height: '100%' }}
           options={{ zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: false }}
         >
+          {mapInstance && (
+            <>
+              {/* Círculo exacto de 5 km (5000 metros) centrado en la sucursal activa */}
+              <Circle
+                center={centroMapa}
+                radius={4000}
+                options={circleOptions}
+              />
+
+              {/* Marcador exacto de la sucursal activa */}
+              <Marker
+                position={centroMapa}
+                icon={{
+                  url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                  scaledSize: new window.google.maps.Size(42, 42)
+                }}
+              />
+
+              {/* Etiqueta flotante permanente con el nombre de la sucursal activa */}
+              <InfoWindow position={centroMapa}>
+                <div style={{ padding: '2px', color: '#1e293b', fontFamily: 'sans-serif' }}>
+                  <strong style={{ fontSize: '13px', display: 'block', color: '#b91c1c' }}>📍 Sucursal de Origen</strong>
+                  <span style={{ fontSize: '12px', fontWeight: '500' }}>{sucursalActiva.nombre}</span>
+                </div>
+              </InfoWindow>
+            </>
+          )}
+
           {directionsResponse && <DirectionsRenderer directions={directionsResponse} />}
         </GoogleMap>
       </div>
@@ -104,7 +178,7 @@ export default function Viajes() {
             <label>Sucursal de Origen:</label>
             <select
               value={origen}
-              onChange={(e) => setOrigen(e.target.value)}
+              onChange={handleOrigenChange}
               className={styles.input}
             >
               {SUCURSALES.map((suc) => (
@@ -142,10 +216,20 @@ export default function Viajes() {
             <h3>Detalles del Viaje</h3>
             <p><strong>Distancia:</strong> {distanciaTexto}</p>
             <p><strong>Tiempo estimado:</strong> {duracion}</p>
-            <p><strong>Tarifa aplicada:</strong> ${TARIFA_POR_KM} ARS / km</p>
+            
+            {distanciaValorKm <= 5 ? (
+              <p style={{ color: '#16a34a', fontWeight: 'bold', margin: '0.4rem 0' }}>
+                ¡Envío bonificado (dentro del radio de 5 km)!
+              </p>
+            ) : (
+              <p><strong>Tarifa aplicada:</strong> ${TARIFA_POR_KM} ARS / km (se cobra desde origen por superar los 5 km)</p>
+            )}
+
             <div className={styles.totalBox}>
               <span>Costo Total:</span>
-              <span className={styles.totalPrice}>${costoTotal.toLocaleString('es-AR')} ARS</span>
+              <span className={styles.totalPrice}>
+                {costoTotal === 0 ? 'GRATIS' : `$${costoTotal.toLocaleString('es-AR')} ARS`}
+              </span>
             </div>
           </div>
         )}
