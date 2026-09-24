@@ -25,7 +25,7 @@ export default function CardCategory({
               }}
               title="Editar"
             >
-              ✏️
+              <i className='bx bxs-pencil'></i>
             </button>
           )}
 
@@ -38,7 +38,7 @@ export default function CardCategory({
               }}
               title="Eliminar"
             >
-              🗑
+              <i className='bx bxs-trash'></i>
             </button>
           )}
         </div>
