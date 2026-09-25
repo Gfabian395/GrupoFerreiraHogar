@@ -43,15 +43,15 @@ export default function ProductCard({
   const [variantes, setVariantes] = useState(() =>
     producto?.variantes
       ? producto.variantes.map((v) => ({
-          ...v,
-          priceJuego: v.priceJuego ?? null,
-          unidadesPorJuego: v.unidadesPorJuego ?? null,
-          stock: {
-            "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
-            "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
-            "Jofre 2440": v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ?? 0,
-          },
-        }))
+        ...v,
+        priceJuego: v.priceJuego ?? null,
+        unidadesPorJuego: v.unidadesPorJuego ?? null,
+        stock: {
+          "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
+          "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
+          "Jofre 2440": v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ?? 0,
+        },
+      }))
       : []
   );
 
@@ -147,12 +147,12 @@ export default function ProductCard({
   const configuracionCuotas = [
     { cuotas: 2, interes: 30 }, { cuotas: 3, interes: 50 }, { cuotas: 4, interes: 70 },
     { cuotas: 6, interes: 90 }, { cuotas: 9, interes: 120 }, { cuotas: 12, interes: 150 },
-    { cuotas: 18, interes: 170 }, { cuotas: 24, interes: 200 },
+    /* { cuotas: 18, interes: 170 }, { cuotas: 24, interes: 200 }, */
   ];
 
   const formatARS = (valor) =>
     new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 })
-    .format(Math.ceil(Number(valor) / 1000) * 1000);
+      .format(Math.ceil(Number(valor) / 1000) * 1000);
 
   const cuotas = useMemo(() => {
     if (!precioSeleccionado) return [];
@@ -208,26 +208,26 @@ export default function ProductCard({
     const stockSucursal = Number(variant.stock?.[branch] || 0);
     const inCart = items.filter((i) => i.id === producto.id && i.variant === variant.attr && i.branch === branch).reduce((a, i) => a + getItemUnits(i), 0);
     if (inCart + unidadesNecesarias > stockSucursal) return alert("❌ Ya no hay stock disponible en esta sucursal.");
-    
-    addToCart({ 
-      key: `${producto.id}-${variant.attr}-${formatoActual}-${branch}`, 
-      id: producto.id, 
-      categoriaId, 
-      name: producto.name, 
-      price: precioSeleccionado, 
-      image: variant.image || imagenMostrar, 
-      qty: 1, 
-      variant: variant.attr, 
-      type: formatoActual === "juego" ? "juego" : "simple", 
-      formatoCompra: formatoActual, 
-      unidadesPorJuego: formatoActual === "juego" ? unidadesPorJuego : null, 
-      unitsToDiscount: unidadesNecesarias, 
-      fromCombo, 
-      comboId: producto.comboId ?? null, 
-      branch, 
-      stockFull: { ...variant.stock } 
+
+    addToCart({
+      key: `${producto.id}-${variant.attr}-${formatoActual}-${branch}`,
+      id: producto.id,
+      categoriaId,
+      name: producto.name,
+      price: precioSeleccionado,
+      image: variant.image || imagenMostrar,
+      qty: 1,
+      variant: variant.attr,
+      type: formatoActual === "juego" ? "juego" : "simple",
+      formatoCompra: formatoActual,
+      unidadesPorJuego: formatoActual === "juego" ? unidadesPorJuego : null,
+      unitsToDiscount: unidadesNecesarias,
+      fromCombo,
+      comboId: producto.comboId ?? null,
+      branch,
+      stockFull: { ...variant.stock }
     });
-    
+
     await sendNotification("agregó al carrito", { tipo: "carrito", sucursal: branch, precio: precioSeleccionado, unidades: unidadesNecesarias });
   };
 
@@ -288,8 +288,8 @@ export default function ProductCard({
       <article className={styles.productCard}>
         {(esJefe || esEncargado) && (
           <div className={styles.productActions}>
-            <button className={styles.edit} onClick={() => onEdit?.({ ...producto, variantes })}>✏️</button>
-            {esJefe && <button className={styles.delete} onClick={() => { if(window.confirm(`¿Eliminar ${producto.name}?`)) { sendNotification("eliminó producto", { producto: producto.name }); onDelete?.(producto.id); } }}>🗑</button>}
+            <button className={styles.edit} onClick={() => onEdit?.({ ...producto, variantes })}><i class='bx bxs-pencil'></i></button>
+            {esJefe && <button className={styles.delete} onClick={() => { if (window.confirm(`¿Eliminar ${producto.name}?`)) { sendNotification("eliminó producto", { producto: producto.name }); onDelete?.(producto.id); } }}><i class='bx bxs-trash' ></i></button>}
           </div>
         )}
 
@@ -316,15 +316,15 @@ export default function ProductCard({
                 const baseVariant = m.variantes.find(v => v.tipoVariante === 'modelo') || m.variantes[0];
                 const stockBase = getStockTotalVariante(baseVariant);
                 const colorVariants = m.variantes.filter(v => v.originalIndex !== baseVariant.originalIndex);
-                
+
                 // Filtramos los colores visibles (si no es admin, solo los que tienen stock)
-                const coloresVisibles = colorVariants.filter(v => 
+                const coloresVisibles = colorVariants.filter(v =>
                   (esJefe || esEncargado) || getStockTotalVariante(v) > 0
                 );
 
                 // MAGIA: Si el modelo principal no tiene stock Y no le queda ningún color con stock, ocultamos TODA la fila para el cliente
                 if (!esJefe && !esEncargado && stockBase <= 0 && coloresVisibles.length === 0) {
-                  return null; 
+                  return null;
                 }
 
                 const isActiveModel = selectedModel === m.nombre;
@@ -333,13 +333,13 @@ export default function ProductCard({
 
                 return (
                   <div key={m.nombre} className={`${styles.modelRow} ${isActiveModel ? styles.activeModelRow : ""}`}>
-                    
+
                     {/* INFO DEL MODELO (Lado izquierdo) */}
-                    <div 
+                    <div
                       className={styles.modelInfo}
-                      style={{ 
+                      style={{
                         borderRight: coloresVisibles.length === 0 ? "none" : undefined,
-                        opacity: (!esJefe && !esEncargado && baseAgotado) ? 0.4 : 1, 
+                        opacity: (!esJefe && !esEncargado && baseAgotado) ? 0.4 : 1,
                         cursor: (!esJefe && !esEncargado && baseAgotado) ? "not-allowed" : "pointer"
                       }}
                       onClick={() => {
@@ -350,15 +350,15 @@ export default function ProductCard({
                       }}
                     >
                       {m.imagenPrincipal ? (
-                        <img 
-                          src={m.imagenPrincipal} 
-                          alt={m.nombre} 
+                        <img
+                          src={m.imagenPrincipal}
+                          alt={m.nombre}
                           className={isBaseSelected ? styles.selectedBaseImg : ""}
                         />
                       ) : (
                         <div className={`${styles.noModelImage} ${isBaseSelected ? styles.selectedBaseImg : ""}`}>📷</div>
                       )}
-                      
+
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <span className={`${styles.modelName} ${isBaseSelected ? styles.selectedBaseText : ""}`}>
                           {m.nombre}
@@ -378,20 +378,20 @@ export default function ProductCard({
 
                           return (
                             <label key={v.originalIndex} className={`${styles.variantOption} ${isSelected ? styles.selected : ""} ${agotada ? styles.disabled : ""}`}>
-                              <input 
-                                type="radio" 
-                                name={`variant-${producto.id}`} 
-                                checked={isSelected} 
-                                onChange={() => handleVariantSelect(v.originalIndex)} 
+                              <input
+                                type="radio"
+                                name={`variant-${producto.id}`}
+                                checked={isSelected}
+                                onChange={() => handleVariantSelect(v.originalIndex)}
                                 disabled={!esJefe && !esEncargado && agotada} // Evita clics forzados por CSS
                               />
                               <span className={styles.variantCircle}>
                                 {/* Lógica modificada: Prioridad a la imagen del tapizado sobre el color */}
                                 {v.image ? (
-                                  <img 
-                                    src={v.image} 
-                                    alt={v.attr} 
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                                  <img
+                                    src={v.image}
+                                    alt={v.attr}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                                   />
                                 ) : optionColor ? (
                                   <span className={styles.variantFallback} style={{ backgroundColor: optionColor }} />
@@ -415,6 +415,12 @@ export default function ProductCard({
             </div>
           </fieldset>
 
+          <button className={styles.toggleCuotas} onClick={() => setShowCuotas(!showCuotas)}>
+            {showCuotas ? "Ocultar cuotas" : "Ver cuotas"}
+          </button>
+
+          {showCuotas && <div className={styles.cuotasInline}>{cuotas.map((c, i) => <span key={i} className={styles.cuota}>{c}</span>)}</div>}
+
           <fieldset className={styles.buyFormat}>
             <legend>Paso 2: Elegí tu formato de compra</legend>
             <div className={styles.buyFormatGrid}>
@@ -428,12 +434,6 @@ export default function ProductCard({
               )}
             </div>
           </fieldset>
-
-          <button className={styles.toggleCuotas} onClick={() => setShowCuotas(!showCuotas)}>
-            {showCuotas ? "Ocultar cuotas" : "Ver cuotas"}
-          </button>
-
-          {showCuotas && <div className={styles.cuotasInline}>{cuotas.map((c, i) => <span key={i} className={styles.cuota}>{c}</span>)}</div>}
 
           <div className={styles.stock}>
             {variant && Object.entries(variant.stock || {}).map(([sucursal, cantidad]) => {
