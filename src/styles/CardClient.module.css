@@ -1,16 +1,22 @@
 /* ================= CLIENT WRAPPER ================= */
 .clientWrapper {
-  width: min(440px, 95vw);
+  width: 100%;
   display: grid;
   gap: 1rem;
-  justify-content: center;
+  justify-content: stretch;
   padding: 1rem 0;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 /* ================= CLIENT CARD ================= */
 .clientCard {
   background: #ffffff;
-  /* Quitamos transparencias para que los fondos pastel se distingan bien */
+  width: 100%;
+  min-width: 0; /* Clave para el grid */
+  max-width: 100%;
+  overflow: hidden; /* Evita que contenido interno estire la card fuera de rango */
+  box-sizing: border-box;
   border-radius: 1.5rem;
   padding: 1.5rem;
   display: grid;
@@ -63,6 +69,7 @@
   grid-template-columns: auto 1fr auto auto;
   gap: .75rem;
   align-items: center;
+  min-width: 0;
 }
 
 .avatar img {
@@ -79,12 +86,20 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
+.identity {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .identity h3 {
   font-size: 1.15rem;
   font-weight: 600;
   display: flex;
   gap: .35rem;
   color: black;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status {
@@ -164,6 +179,7 @@
 .clientInfo {
   display: grid;
   gap: .6rem;
+  min-width: 0;
 }
 
 .row {
@@ -171,6 +187,7 @@
   grid-template-columns: 140px 1fr;
   gap: .4rem;
   font-size: .9rem;
+  min-width: 0;
 }
 
 .label {
@@ -178,10 +195,17 @@
   font-weight: 500;
 }
 
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .value a {
   color: black;
   text-decoration: none;
   font-weight: 600;
+  word-break: break-all; /* Evita que URLs o teléfonos largos ensanchen la card */
 }
 
 .value a:hover {
@@ -198,6 +222,7 @@
   padding-top: 10px;
   border-top: 1px solid #e2e8f0;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .metricBox {
@@ -268,6 +293,7 @@
   gap: .4rem;
   font-size: .9rem;
   align-items: center;
+  min-width: 0;
 }
 
 .valuePuntuacion {
@@ -284,20 +310,20 @@
 
 .detallePuntuacion {
   grid-column: 1 / -1;
-  /* 🌟 Ocupa todo el ancho de la card para que se lea perfecto */
   font-size: 0.85rem;
   color: #4b5563;
   margin-top: 2px;
   font-style: italic;
   padding-left: 4px;
+  word-break: break-word; /* Rompe palabras largas para que no fuercen el ancho */
 }
 
 /* ===============================
    ALERTA DE CLIENTE BLOQUEADO
    =============================== */
 .alertaBloqueo {
-  background-color: #fef2f2; /* Fondo rojo muy suave */
-  border: 1.5px solid #ef4444; /* Borde rojo llamativo */
+  background-color: #fef2f2;
+  border: 1.5px solid #ef4444;
   border-radius: 8px;
   padding: 10px 12px;
   margin-top: 10px;
@@ -305,6 +331,7 @@
   flex-direction: column;
   gap: 4px;
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+  min-width: 0;
 }
 
 .alertaBloqueoHeader {
@@ -313,21 +340,20 @@
   gap: 6px;
   font-weight: 700;
   font-size: 13px;
-  color: #dc2626; /* Texto rojo intenso */
+  color: #dc2626;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .alertaBloqueoTexto {
   font-size: 13px;
-  color: #7f1d1d; /* Tono oscuro para que sea legible */
+  color: #7f1d1d;
   line-height: 1.4;
   word-break: break-word;
 }
 
 /* ================= MOBILE ================= */
 @media (max-width: 360px) {
-
   .row,
   .rowPuntuacion {
     grid-template-columns: 1fr;

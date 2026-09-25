@@ -39,19 +39,20 @@ export default function ProductCard({
   const [formatoCompra, setFormatoCompra] = useState("unidad");
   const [showCuotas, setShowCuotas] = useState(false);
   const [showCarrusel, setShowCarrusel] = useState(false);
+  const [showFichaTecnica, setShowFichaTecnica] = useState(false);
 
   const [variantes, setVariantes] = useState(() =>
     producto?.variantes
       ? producto.variantes.map((v) => ({
-        ...v,
-        priceJuego: v.priceJuego ?? null,
-        unidadesPorJuego: v.unidadesPorJuego ?? null,
-        stock: {
-          "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
-          "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
-          "Jofre 2440": v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ?? 0,
-        },
-      }))
+          ...v,
+          priceJuego: v.priceJuego ?? null,
+          unidadesPorJuego: v.unidadesPorJuego ?? null,
+          stock: {
+            "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
+            "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
+            "Jofre 2440": v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ?? 0,
+          },
+        }))
       : []
   );
 
@@ -63,7 +64,27 @@ export default function ProductCard({
 
   const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
 
-  // AGRUPAMIENTO INTELIGENTE POR MODELO (Se mantiene intacto para no romper estructura)
+  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA (Soporta Map de Firestore o Array)
+  const fichaTecnicaProcesada = useMemo(() => {
+    if (!producto?.fichaTecnica) return [];
+    if (Array.isArray(producto.fichaTecnica)) {
+      return producto.fichaTecnica
+        .map((item) => ({
+          label: item.label || item.etiqueta || item.key,
+          value: item.value || item.valor,
+        }))
+        .filter((item) => item.label && item.value);
+    }
+    if (typeof producto.fichaTecnica === "object") {
+      return Object.entries(producto.fichaTecnica).map(([label, value]) => ({
+        label,
+        value,
+      }));
+    }
+    return [];
+  }, [producto]);
+
+  // AGRUPAMIENTO INTELIGENTE POR MODELO
   const agrupadoPorModelo = useMemo(() => {
     const grupos = {};
     variantes.forEach((v, originalIndex) => {
@@ -98,7 +119,6 @@ export default function ProductCard({
     if (!(Number(v?.priceJuego || 0) > 0 && Number(v?.unidadesPorJuego || 0) > 1)) setFormatoCompra("unidad");
   };
 
-  // Efecto para auto-seleccionar una variante con stock si la que viene por defecto está agotada (Solo clientes)
   useEffect(() => {
     if (!esJefe && !esEncargado && variantes.length > 0) {
       const currentStock = getStockTotalVariante(variantes[selectedVariant]);
@@ -109,10 +129,8 @@ export default function ProductCard({
         }
       }
     }
-    // eslint-disable-next-line
   }, [selectedVariant, variantes, esJefe, esEncargado]);
 
-  // Sincronizar modelo seleccionado al cambiar de variante activa
   useEffect(() => {
     if (variantes[selectedVariant]) {
       const vActiva = variantes[selectedVariant];
@@ -147,7 +165,6 @@ export default function ProductCard({
   const configuracionCuotas = [
     { cuotas: 2, interes: 30 }, { cuotas: 3, interes: 50 }, { cuotas: 4, interes: 70 },
     { cuotas: 6, interes: 90 }, { cuotas: 9, interes: 120 }, { cuotas: 12, interes: 150 },
-    /* { cuotas: 18, interes: 170 }, { cuotas: 24, interes: 200 }, */
   ];
 
   const formatARS = (valor) =>
@@ -288,8 +305,8 @@ export default function ProductCard({
       <article className={styles.productCard}>
         {(esJefe || esEncargado) && (
           <div className={styles.productActions}>
-            <button className={styles.edit} onClick={() => onEdit?.({ ...producto, variantes })}><i class='bx bxs-pencil'></i></button>
-            {esJefe && <button className={styles.delete} onClick={() => { if (window.confirm(`¿Eliminar ${producto.name}?`)) { sendNotification("eliminó producto", { producto: producto.name }); onDelete?.(producto.id); } }}><i class='bx bxs-trash' ></i></button>}
+            <button className={styles.edit} onClick={() => onEdit?.({ ...producto, variantes })}><i className='bx bxs-pencil'></i></button>
+            {esJefe && <button className={styles.delete} onClick={() => { if (window.confirm(`¿Eliminar ${producto.name}?`)) { sendNotification("eliminó producto", { producto: producto.name }); onDelete?.(producto.id); } }}><i className='bx bxs-trash' ></i></button>}
           </div>
         )}
 
@@ -317,12 +334,10 @@ export default function ProductCard({
                 const stockBase = getStockTotalVariante(baseVariant);
                 const colorVariants = m.variantes.filter(v => v.originalIndex !== baseVariant.originalIndex);
 
-                // Filtramos los colores visibles (si no es admin, solo los que tienen stock)
                 const coloresVisibles = colorVariants.filter(v =>
                   (esJefe || esEncargado) || getStockTotalVariante(v) > 0
                 );
 
-                // MAGIA: Si el modelo principal no tiene stock Y no le queda ningún color con stock, ocultamos TODA la fila para el cliente
                 if (!esJefe && !esEncargado && stockBase <= 0 && coloresVisibles.length === 0) {
                   return null;
                 }
@@ -333,8 +348,6 @@ export default function ProductCard({
 
                 return (
                   <div key={m.nombre} className={`${styles.modelRow} ${isActiveModel ? styles.activeModelRow : ""}`}>
-
-                    {/* INFO DEL MODELO (Lado izquierdo) */}
                     <div
                       className={styles.modelInfo}
                       style={{
@@ -343,7 +356,6 @@ export default function ProductCard({
                         cursor: (!esJefe && !esEncargado && baseAgotado) ? "not-allowed" : "pointer"
                       }}
                       onClick={() => {
-                        // Solo permite seleccionar el modelo base si sos admin o si TIENE stock
                         if (esJefe || esEncargado || !baseAgotado) {
                           handleVariantSelect(baseVariant.originalIndex);
                         }
@@ -363,12 +375,10 @@ export default function ProductCard({
                         <span className={`${styles.modelName} ${isBaseSelected ? styles.selectedBaseText : ""}`}>
                           {m.nombre}
                         </span>
-                        {/* Indicador de agotado para el modelo base */}
                         {baseAgotado && <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold', marginTop: '2px' }}>Agotado</span>}
                       </div>
                     </div>
 
-                    {/* VARIANTES DE COLOR (Lado derecho) */}
                     {coloresVisibles.length > 0 && (
                       <div className={styles.modelVariantsContainer}>
                         {coloresVisibles.map((v) => {
@@ -383,10 +393,9 @@ export default function ProductCard({
                                 name={`variant-${producto.id}`}
                                 checked={isSelected}
                                 onChange={() => handleVariantSelect(v.originalIndex)}
-                                disabled={!esJefe && !esEncargado && agotada} // Evita clics forzados por CSS
+                                disabled={!esJefe && !esEncargado && agotada}
                               />
                               <span className={styles.variantCircle}>
-                                {/* Lógica modificada: Prioridad a la imagen del tapizado sobre el color */}
                                 {v.image ? (
                                   <img
                                     src={v.image}
@@ -408,12 +417,51 @@ export default function ProductCard({
                         })}
                       </div>
                     )}
-
                   </div>
                 );
               })}
             </div>
           </fieldset>
+
+          {/* FICHA TÉCNICA DESPLEGABLE UNIVERSAL */}
+          <div className={styles.fichaContainer}>
+            <button 
+              type="button" 
+              className={styles.toggleFicha} 
+              onClick={() => setShowFichaTecnica(!showFichaTecnica)}
+            >
+              <span>📋 Ficha técnica</span>
+              <span>{showFichaTecnica ? "▲" : "▼"}</span>
+            </button>
+
+            {showFichaTecnica && (
+              <div className={styles.fichaContent}>
+                {fichaTecnicaProcesada.length > 0 ? (
+                  fichaTecnicaProcesada.map((item, index) => (
+                    <div key={index} className={styles.fichaRow}>
+                      <span className={styles.fichaLabel}>{item.label}:</span>
+                      <span className={styles.fichaValue}>{item.value}</span>
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    <div className={styles.fichaRow}>
+                      <span className={styles.fichaLabel}>Marca:</span>
+                      <span className={styles.fichaValue}>{producto.marca || "Genérico"}</span>
+                    </div>
+                    <div className={styles.fichaRow}>
+                      <span className={styles.fichaLabel}>Origen:</span>
+                      <span className={styles.fichaValue}>{producto.origen || "Nacional / Importado"}</span>
+                    </div>
+                    <div className={styles.fichaRow}>
+                      <span className={styles.fichaLabel}>Garantía:</span>
+                      <span className={styles.fichaValue}>{producto.garantia || "6 meses"}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
 
           <button className={styles.toggleCuotas} onClick={() => setShowCuotas(!showCuotas)}>
             {showCuotas ? "Ocultar cuotas" : "Ver cuotas"}

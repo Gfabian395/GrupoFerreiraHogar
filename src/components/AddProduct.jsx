@@ -11,7 +11,6 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import styles from "../styles/AddProduct.module.css";
 
 /* ================= DICCIONARIOS DE COLORES AMPLIADOS ================= */
-// 1. De Texto a Color (para cuando escriben)
 const diccionarioColores = {
   "verde": "#008000",
   "verde claro": "#90ee90",
@@ -54,7 +53,6 @@ const diccionarioColores = {
   "beige": "#f5f5dc"
 };
 
-// 2. De Color a Texto (para cuando usan el selector visual)
 const diccionarioHexANombre = {
   "#008000": "Verde",
   "#90ee90": "Verde Claro",
@@ -88,6 +86,18 @@ const diccionarioHexANombre = {
   "#800080": "Púrpura",
   "#a52a2a": "Marrón",
   "#f5f5dc": "Beige"
+};
+
+/* ================= CAMPOS PREDETERMINADOS POR CATEGORÍA ================= */
+const fichasPorCategoria = {
+  "celulares": ["Marca", "Modelo", "Memoria RAM", "Almacenamiento", "Cámara Principal", "Batería"],
+  "smart tv": ["Marca", "Modelo", "Pulgadas", "Resolución", "Smart TV", "Puertos HDMI"],
+  "bicicletas": ["Marca", "Modelo", "Rodado", "Material del cuadro", "Velocidades", "Frenos"],
+  "herramientas": ["Marca", "Modelo", "Potencia", "Alimentación", "Velocidad máxima"],
+  "heladeras": ["Marca", "Modelo", "Capacidad", "Eficiencia Energética", "Sistema de Frío"],
+  "cocinas": ["Marca", "Modelo", "Tipo de Alimentación", "Hornallas", "Horno con Luz"],
+  "colchones": ["Marca", "Modelo", "Medidas", "Densidad", "Firmeza"],
+  "default": ["Marca", "Modelo", "Material", "Garantía", "Origen"]
 };
 
 /* ================= UTILS ================= */
@@ -126,6 +136,22 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const [loading, setLoading] = useState(false);
 
   const [variantImages, setVariantImages] = useState({});
+
+  // Ficha técnica unificada a base de objetos { label, value }
+  const [fichaTecnica, setFichaTecnica] = useState(() => {
+    if (producto?.fichaTecnica) {
+      if (Array.isArray(producto.fichaTecnica)) {
+        return producto.fichaTecnica.map(item => ({
+          label: item.label || item.etiqueta || item.key || "",
+          value: item.value || item.valor || ""
+        }));
+      }
+      return Object.entries(producto.fichaTecnica).map(([label, value]) => ({ label, value }));
+    }
+    const catKey = categoriaId ? categoriaId.toLowerCase().trim() : "default";
+    const keysPredeterminadas = fichasPorCategoria[catKey] || fichasPorCategoria["default"];
+    return keysPredeterminadas.map(label => ({ label, value: "" }));
+  });
 
   const [variantes, setVariantes] = useState(
     producto?.variantes?.map((v) => ({
@@ -183,6 +209,20 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     setVariantes(variantes.filter((_, i) => i !== index));
   };
 
+  const handleAddFichaRow = () => {
+    setFichaTecnica([...fichaTecnica, { label: "", value: "" }]);
+  };
+
+  const handleRemoveFichaRow = (index) => {
+    setFichaTecnica(fichaTecnica.filter((_, i) => i !== index));
+  };
+
+  const handleFichaChange = (index, field, value) => {
+    const nuevaFicha = [...fichaTecnica];
+    nuevaFicha[index][field] = value;
+    setFichaTecnica(nuevaFicha);
+  };
+
   const handleVariantChange = (index, field, value) => {
     const newVariantes = [...variantes];
     const oldAttr = newVariantes[index].attr;
@@ -196,7 +236,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       });
     }
 
-    // IDA: Texto -> Color
     if (field === "attr" && newVariantes[index].tipoVariante === "color") {
       const colorBuscado = value.trim().toLowerCase();
       if (diccionarioColores[colorBuscado]) {
@@ -204,10 +243,8 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       }
     }
 
-    // VUELTA: Color -> Texto
     if (field === "colorHex" && newVariantes[index].tipoVariante === "color") {
       const targetRgb = hexToRgb(value);
-      
       if (targetRgb) {
         let minDistance = Infinity;
         let closestName = newVariantes[index].attr; 
@@ -218,14 +255,12 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             const distance = Math.pow(targetRgb.r - rgb.r, 2) +
                              Math.pow(targetRgb.g - rgb.g, 2) +
                              Math.pow(targetRgb.b - rgb.b, 2);
-            
             if (distance < minDistance) {
               minDistance = distance;
               closestName = name;
             }
           }
         }
-        
         newVariantes[index].attr = closestName;
       }
     }
@@ -233,7 +268,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     setVariantes(newVariantes);
   };
 
-  // Función para copiar el stock del modelo padre al color
   const handleCopyStockFromModel = (colorIndex, modeloPadreAttr) => {
     const parentModel = variantes.find(v => v.tipoVariante === "modelo" && v.attr === modeloPadreAttr);
     if (parentModel) {
@@ -247,7 +281,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     }
   };
 
-  // Función para borrar la imagen asociada a una variante (sea temporal o guardada)
   const handleRemoveVariantImage = (index) => {
     if (variantImages[index]) {
       const newImages = { ...variantImages };
@@ -296,7 +329,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       const variantesProcesadas = await Promise.all(
         variantes.map(async (v, i) => {
           let variantImageURL = v.image || "";
-          // Ahora procesa imágenes tanto para "modelo" como para "color"
           if (variantImages[i]) {
             const fileName = `${Date.now()}-${variantImages[i].name}`;
             const storageRef = ref(storage, `variants/${fileName}`);
@@ -310,7 +342,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             price: Number(v.price),
             priceJuego: v.priceJuego !== "" ? Number(v.priceJuego) : null,
             unidadesPorJuego: v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
-            image: variantImageURL, // Guarda la imagen sin importar si es color o modelo
+            image: variantImageURL,
             colorHex: v.tipoVariante === "color" ? v.colorHex : "",
             stock: {
               "Los Andes 4320": Number(v.stock4320),
@@ -321,7 +353,20 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         })
       );
 
-      const nuevoProducto = { name, tag, image: imageURL, variantes: variantesProcesadas };
+      const fichaTecnicaLimpia = fichaTecnica
+        .filter(item => item.label.trim() !== "")
+        .map(item => ({
+          label: item.label.trim(),
+          value: item.value.trim()
+        }));
+
+      const nuevoProducto = { 
+        name, 
+        tag, 
+        image: imageURL, 
+        variantes: variantesProcesadas,
+        fichaTecnica: fichaTecnicaLimpia
+      };
       if (!producto) nuevoProducto.createdAt = serverTimestamp();
 
       await onSave(nuevoProducto);
@@ -375,6 +420,48 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             <img src={producto.image} alt="Principal" style={{ width: 80, borderRadius: 6 }} />
           )}
         </div>
+
+        {/* ================= SECCIÓN FICHA TÉCNICA ================= */}
+        <fieldset className={styles.treeFieldset} style={{ marginTop: "15px" }}>
+          <legend>Ficha Técnica</legend>
+          <p style={{ fontSize: "0.8rem", color: "#64748b", marginBottom: "10px" }}>
+            Campos sugeridos automáticamente según la categoría seleccionada. Podés modificarlos o agregar más.
+          </p>
+
+          {fichaTecnica.map((item, index) => (
+            <div key={index} style={{ display: "flex", gap: "8px", marginBottom: "8px", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Característica (Ej: Marca)"
+                value={item.label}
+                onChange={(e) => handleFichaChange(index, "label", e.target.value)}
+                style={{ flex: 1, padding: "6px 8px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+              />
+              <input
+                type="text"
+                placeholder="Valor (Ej: Samsung)"
+                value={item.value}
+                onChange={(e) => handleFichaChange(index, "value", e.target.value)}
+                style={{ flex: 1, padding: "6px 8px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveFichaRow(index)}
+                style={{ background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: "4px", padding: "6px 10px", cursor: "pointer", fontSize: "0.85rem" }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={handleAddFichaRow}
+            style={{ marginTop: "5px", padding: "6px 12px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "0.85rem", fontWeight: "600", cursor: "pointer", color: "#334155" }}
+          >
+            + Agregar Línea de Ficha Técnica
+          </button>
+        </fieldset>
 
         <fieldset className={styles.treeFieldset}>
           <legend>Variedades / Opciones</legend>
@@ -441,7 +528,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                 {hijos.length > 0 && (
                   <div className={styles.coloresScroll}>
                     {hijos.map((color) => {
-                      // Comprueba si esta variante en particular tiene una imagen cargada o lista para subir
                       const hasImage = !!variantImages[color._originalIndex] || !!color.image;
                       
                       return (

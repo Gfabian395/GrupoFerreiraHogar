@@ -649,6 +649,65 @@
   height: 26px !important;
 }
 
+/* --- FICHA TÉCNICA UNIVERSAL --- */
+.fichaContainer {
+  margin: 10px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.toggleFicha {
+  width: 100%;
+  padding: 8px 12px;
+  background: #f1f5f9;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.toggleFicha:hover {
+  background: #e2e8f0;
+}
+
+.fichaContent {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.fichaRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  border-bottom: 1px dashed #f1f5f9;
+  padding-bottom: 4px;
+}
+
+.fichaRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.fichaLabel {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.fichaValue {
+  color: #0f172a;
+  text-align: right;
+}
 /* ===============================
    RESPONSIVE GRID WIDTHS - MOBILE FIXED
 ================================ */
