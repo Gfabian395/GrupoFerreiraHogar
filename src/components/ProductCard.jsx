@@ -34,7 +34,7 @@ export default function ProductCard({
   userRole,
   initialVariant = 0,
 }) {
-  const [selectedVariant, setSelectedVariant] = useState(initialVariant);
+  const [selectedVariant, setSelectedVariant] = useState(Number(initialVariant) || 0);
   const [selectedModel, setSelectedModel] = useState(null);
   const [formatoCompra, setFormatoCompra] = useState("unidad");
   const [showCuotas, setShowCuotas] = useState(false);
@@ -116,7 +116,9 @@ export default function ProductCard({
   const handleVariantSelect = (index) => {
     setSelectedVariant(index);
     const v = variantes[index];
-    if (!(Number(v?.priceJuego || 0) > 0 && Number(v?.unidadesPorJuego || 0) > 1)) setFormatoCompra("unidad");
+    if (!(Number(v?.priceJuego || 0) > 0 && Number(v?.unidadesPorJuego || 0) > 1)) {
+      setFormatoCompra("unidad");
+    }
   };
 
   useEffect(() => {

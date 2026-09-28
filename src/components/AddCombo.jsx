@@ -224,14 +224,14 @@ export default function AddCombo({ onClose, onSave, products = [] }) {
                       const j6Price = v.priceJuego6 || basePrice * 6;
 
                       return (
-                        <g font-style="normal" key={v.attr}>
+                        <optgroup key={v.attr} label={v.attr}>
                           <option value={`${v.attr}|unidad`}>
                             {v.attr} (Unidad) - ${basePrice.toLocaleString("es-AR")}
                           </option>
                           <option value={`${v.attr}|juego6`}>
                             {v.attr} (Juego x6) - ${j6Price.toLocaleString("es-AR")}
                           </option>
-                        </g>
+                        </optgroup>
                       );
                     })}
                   </select>
