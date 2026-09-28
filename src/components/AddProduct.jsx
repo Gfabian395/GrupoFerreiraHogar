@@ -115,7 +115,13 @@ const hexToRgb = (hex) => {
   } : null;
 };
 
-const createEmptyVariant = () => ({
+const getDefaultFicha = (categoriaId) => {
+  const catKey = categoriaId ? categoriaId.toLowerCase().trim() : "default";
+  const keysPredeterminadas = fichasPorCategoria[catKey] || fichasPorCategoria["default"];
+  return keysPredeterminadas.map(label => ({ label, value: "" }));
+};
+
+const createEmptyVariant = (categoriaId) => ({
   attr: "",
   price: "",
   priceJuego: "",
@@ -127,6 +133,7 @@ const createEmptyVariant = () => ({
   stock4320: 0,
   stock4034: 0,
   stock2440: 0,
+  fichaTecnica: getDefaultFicha(categoriaId),
 });
 
 export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
@@ -137,40 +144,45 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
   const [variantImages, setVariantImages] = useState({});
 
-  // Ficha técnica unificada a base de objetos { label, value }
-  const [fichaTecnica, setFichaTecnica] = useState(() => {
-    if (producto?.fichaTecnica) {
-      if (Array.isArray(producto.fichaTecnica)) {
-        return producto.fichaTecnica.map(item => ({
-          label: item.label || item.etiqueta || item.key || "",
-          value: item.value || item.valor || ""
-        }));
-      }
-      return Object.entries(producto.fichaTecnica).map(([label, value]) => ({ label, value }));
-    }
-    const catKey = categoriaId ? categoriaId.toLowerCase().trim() : "default";
-    const keysPredeterminadas = fichasPorCategoria[catKey] || fichasPorCategoria["default"];
-    return keysPredeterminadas.map(label => ({ label, value: "" }));
-  });
+  const [variantes, setVariantes] = useState(() => {
+    if (producto?.variantes && producto.variantes.length > 0) {
+      return producto.variantes.map((v) => {
+        let fichaParsed = [];
+        if (v.fichaTecnica) {
+          if (Array.isArray(v.fichaTecnica)) {
+            fichaParsed = v.fichaTecnica.map(item => ({
+              label: item.label || item.etiqueta || item.key || "",
+              value: item.value || item.valor || ""
+            }));
+          } else {
+            fichaParsed = Object.entries(v.fichaTecnica).map(([label, value]) => ({ label, value }));
+          }
+        }
+        if (fichaParsed.length === 0) {
+          fichaParsed = getDefaultFicha(categoriaId);
+        }
 
-  const [variantes, setVariantes] = useState(
-    producto?.variantes?.map((v) => ({
-      attr: v.attr || "",
-      price: v.price ?? "",
-      priceJuego: v.priceJuego ?? "",
-      unidadesPorJuego: v.unidadesPorJuego ?? "",
-      tipoVariante: v.tipoVariante || (v.colorHex ? "color" : "modelo"),
-      modeloPadre: v.modelo || "", 
-      image: v.image || "",
-      colorHex: v.colorHex || "#000000",
-      stock4320: v.stock?.["Los Andes 4320"] ?? 0,
-      stock4034: v.stock?.["Los Andes 4034"] ?? 0,
-      stock2440:
-        v.stock?.["Jofre 2440"] ??
-        v.stock?.["Mosconi"] ??
-        0,
-    })) || [createEmptyVariant()]
-  );
+        return {
+          attr: v.attr || "",
+          price: v.price ?? "",
+          priceJuego: v.priceJuego ?? "",
+          unidadesPorJuego: v.unidadesPorJuego ?? "",
+          tipoVariante: v.tipoVariante || (v.colorHex ? "color" : "modelo"),
+          modeloPadre: v.modelo || "", 
+          image: v.image || "",
+          colorHex: v.colorHex || "#000000",
+          stock4320: v.stock?.["Los Andes 4320"] ?? 0,
+          stock4034: v.stock?.["Los Andes 4034"] ?? 0,
+          stock2440:
+            v.stock?.["Jofre 2440"] ??
+            v.stock?.["Mosconi"] ??
+            0,
+          fichaTecnica: fichaParsed,
+        };
+      });
+    }
+    return [createEmptyVariant(categoriaId)];
+  });
 
   useEffect(() => {
     const handleEsc = (e) => e.key === "Escape" && onClose?.();
@@ -179,7 +191,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   }, [onClose]);
 
   const handleAddVariant = () => {
-    setVariantes([...variantes, createEmptyVariant()]);
+    setVariantes([...variantes, createEmptyVariant(categoriaId)]);
   };
 
   const handleAddColorToModel = (index) => {
@@ -191,12 +203,13 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     }
 
     const nuevaVarianteColor = {
-      ...createEmptyVariant(),
+      ...createEmptyVariant(categoriaId),
       tipoVariante: "color",
       modeloPadre: modeloSeleccionado.attr, 
       price: modeloSeleccionado.price, 
       priceJuego: modeloSeleccionado.priceJuego,
       unidadesPorJuego: modeloSeleccionado.unidadesPorJuego,
+      fichaTecnica: modeloSeleccionado.fichaTecnica ? JSON.parse(JSON.stringify(modeloSeleccionado.fichaTecnica)) : getDefaultFicha(categoriaId),
     };
 
     const nuevasVariantes = [...variantes];
@@ -209,18 +222,22 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     setVariantes(variantes.filter((_, i) => i !== index));
   };
 
-  const handleAddFichaRow = () => {
-    setFichaTecnica([...fichaTecnica, { label: "", value: "" }]);
+  const handleAddFichaRow = (variantIndex) => {
+    const nuevasVariantes = [...variantes];
+    nuevasVariantes[variantIndex].fichaTecnica.push({ label: "", value: "" });
+    setVariantes(nuevasVariantes);
   };
 
-  const handleRemoveFichaRow = (index) => {
-    setFichaTecnica(fichaTecnica.filter((_, i) => i !== index));
+  const handleRemoveFichaRow = (variantIndex, fichaIndex) => {
+    const nuevasVariantes = [...variantes];
+    nuevasVariantes[variantIndex].fichaTecnica = nuevasVariantes[variantIndex].fichaTecnica.filter((_, i) => i !== fichaIndex);
+    setVariantes(nuevasVariantes);
   };
 
-  const handleFichaChange = (index, field, value) => {
-    const nuevaFicha = [...fichaTecnica];
-    nuevaFicha[index][field] = value;
-    setFichaTecnica(nuevaFicha);
+  const handleFichaChange = (variantIndex, fichaIndex, field, value) => {
+    const nuevasVariantes = [...variantes];
+    nuevasVariantes[variantIndex].fichaTecnica[fichaIndex][field] = value;
+    setVariantes(nuevasVariantes);
   };
 
   const handleVariantChange = (index, field, value) => {
@@ -335,6 +352,14 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             await uploadBytes(storageRef, variantImages[i]);
             variantImageURL = await getDownloadURL(storageRef);
           }
+
+          const fichaTecnicaLimpia = (v.fichaTecnica || [])
+            .filter(item => item.label.trim() !== "")
+            .map(item => ({
+              label: item.label.trim(),
+              value: item.value.trim()
+            }));
+
           return {
             attr: v.attr,
             tipoVariante: v.tipoVariante,
@@ -349,23 +374,16 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
               "Los Andes 4034": Number(v.stock4034),
               "Jofre 2440": Number(v.stock2440),
             },
+            fichaTecnica: fichaTecnicaLimpia,
           };
         })
       );
-
-      const fichaTecnicaLimpia = fichaTecnica
-        .filter(item => item.label.trim() !== "")
-        .map(item => ({
-          label: item.label.trim(),
-          value: item.value.trim()
-        }));
 
       const nuevoProducto = { 
         name, 
         tag, 
         image: imageURL, 
-        variantes: variantesProcesadas,
-        fichaTecnica: fichaTecnicaLimpia
+        variantes: variantesProcesadas
       };
       if (!producto) nuevoProducto.createdAt = serverTimestamp();
 
@@ -421,48 +439,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           )}
         </div>
 
-        {/* ================= SECCIÓN FICHA TÉCNICA ================= */}
-        <fieldset className={styles.treeFieldset} style={{ marginTop: "15px" }}>
-          <legend>Ficha Técnica</legend>
-          <p style={{ fontSize: "0.8rem", color: "#64748b", marginBottom: "10px" }}>
-            Campos sugeridos automáticamente según la categoría seleccionada. Podés modificarlos o agregar más.
-          </p>
-
-          {fichaTecnica.map((item, index) => (
-            <div key={index} style={{ display: "flex", gap: "8px", marginBottom: "8px", alignItems: "center" }}>
-              <input
-                type="text"
-                placeholder="Característica (Ej: Marca)"
-                value={item.label}
-                onChange={(e) => handleFichaChange(index, "label", e.target.value)}
-                style={{ flex: 1, padding: "6px 8px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-              />
-              <input
-                type="text"
-                placeholder="Valor (Ej: Samsung)"
-                value={item.value}
-                onChange={(e) => handleFichaChange(index, "value", e.target.value)}
-                style={{ flex: 1, padding: "6px 8px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "0.85rem" }}
-              />
-              <button
-                type="button"
-                onClick={() => handleRemoveFichaRow(index)}
-                style={{ background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: "4px", padding: "6px 10px", cursor: "pointer", fontSize: "0.85rem" }}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={handleAddFichaRow}
-            style={{ marginTop: "5px", padding: "6px 12px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "0.85rem", fontWeight: "600", cursor: "pointer", color: "#334155" }}
-          >
-            + Agregar Línea de Ficha Técnica
-          </button>
-        </fieldset>
-
         <fieldset className={styles.treeFieldset}>
           <legend>Variedades / Opciones</legend>
 
@@ -515,7 +491,46 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                     <label>Stk 2440 <input type="number" min="0" value={modelo.stock2440} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
                   </div>
 
-                  <div className={styles.variantActions}>
+                  {/* ================= SECCIÓN FICHA TÉCNICA POR VARIANTE ================= */}
+                  <fieldset style={{ marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
+                    <legend style={{ fontSize: "0.8rem", fontWeight: "600", color: "#475569" }}>Ficha Técnica Específica</legend>
+                    
+                    {modelo.fichaTecnica?.map((item, fIndex) => (
+                      <div key={fIndex} style={{ display: "flex", gap: "6px", marginBottom: "6px", alignItems: "center" }}>
+                        <input
+                          type="text"
+                          placeholder="Característica"
+                          value={item.label}
+                          onChange={(e) => handleFichaChange(modelo._originalIndex, fIndex, "label", e.target.value)}
+                          style={{ flex: 1, padding: "4px 6px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Valor"
+                          value={item.value}
+                          onChange={(e) => handleFichaChange(modelo._originalIndex, fIndex, "value", e.target.value)}
+                          style={{ flex: 1, padding: "4px 6px", borderRadius: "4px", border: "1px solid #cbd5e1", fontSize: "0.8rem" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFichaRow(modelo._originalIndex, fIndex)}
+                          style={{ background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", borderRadius: "4px", padding: "4px 8px", cursor: "pointer", fontSize: "0.8rem" }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => handleAddFichaRow(modelo._originalIndex)}
+                      style={{ marginTop: "4px", padding: "4px 8px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "0.75rem", fontWeight: "600", cursor: "pointer", color: "#334155" }}
+                    >
+                      + Agregar Ficha Técnica
+                    </button>
+                  </fieldset>
+
+                  <div className={styles.variantActions} style={{ marginTop: "15px" }}>
                     <button type="button" onClick={() => handleAddColorToModel(modelo._originalIndex)} className={styles.btnAddColor}>
                       + Agregar Color
                     </button>

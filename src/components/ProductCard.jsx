@@ -47,6 +47,7 @@ export default function ProductCard({
           ...v,
           priceJuego: v.priceJuego ?? null,
           unidadesPorJuego: v.unidadesPorJuego ?? null,
+          fichaTecnica: v.fichaTecnica ?? null, // Soporte de ficha técnica por variante
           stock: {
             "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
             "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
@@ -64,25 +65,29 @@ export default function ProductCard({
 
   const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
 
-  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA (Soporta Map de Firestore o Array)
+  const variant = variantes[selectedVariant] ?? null;
+
+  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA (Prioriza la variante seleccionada, sino usa la general del producto)
   const fichaTecnicaProcesada = useMemo(() => {
-    if (!producto?.fichaTecnica) return [];
-    if (Array.isArray(producto.fichaTecnica)) {
-      return producto.fichaTecnica
+    const fuenteFicha = variant?.fichaTecnica || producto?.fichaTecnica;
+    if (!fuenteFicha) return [];
+
+    if (Array.isArray(fuenteFicha)) {
+      return fuenteFicha
         .map((item) => ({
           label: item.label || item.etiqueta || item.key,
           value: item.value || item.valor,
         }))
         .filter((item) => item.label && item.value);
     }
-    if (typeof producto.fichaTecnica === "object") {
-      return Object.entries(producto.fichaTecnica).map(([label, value]) => ({
+    if (typeof fuenteFicha === "object") {
+      return Object.entries(fuenteFicha).map(([label, value]) => ({
         label,
         value,
       }));
     }
     return [];
-  }, [producto]);
+  }, [variant, producto]);
 
   // AGRUPAMIENTO INTELIGENTE POR MODELO
   const agrupadoPorModelo = useMemo(() => {
@@ -143,8 +148,6 @@ export default function ProductCard({
       setSelectedModel(agrupadoPorModelo[0].nombre);
     }
   }, [selectedVariant, variantes, agrupadoPorModelo, producto]);
-
-  const variant = variantes[selectedVariant] ?? null;
 
   const modeloActual = agrupadoPorModelo.find((m) => m.nombre === selectedModel) || agrupadoPorModelo[0];
   const imagenMostrar = modeloActual?.imagenPrincipal || producto?.image || null;
@@ -425,14 +428,14 @@ export default function ProductCard({
             </div>
           </fieldset>
 
-          {/* FICHA TÉCNICA DESPLEGABLE UNIVERSAL */}
+          {/* FICHA TÉCNICA DINÁMICA POR VARIANTE */}
           <div className={styles.fichaContainer}>
             <button 
               type="button" 
               className={styles.toggleFicha} 
               onClick={() => setShowFichaTecnica(!showFichaTecnica)}
             >
-              <span>📋 Ficha técnica</span>
+              <span>📋 Ficha técnica ({variant?.attr || "General"})</span>
               <span>{showFichaTecnica ? "▲" : "▼"}</span>
             </button>
 
