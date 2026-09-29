@@ -250,6 +250,36 @@ export default function ProductCard({
     } catch (err) { alert("Error al guardar stock"); }
   };
 
+  // Función para eliminar variantes sin stock
+  const handleEliminarVariantesSinStock = async () => {
+    if (!esJefe) return alert("❌ Solo el jefe puede realizar esta acción.");
+    if (!window.confirm("¿Estás seguro de eliminar todas las variantes sin stock?")) return;
+
+    const variantesConStock = variantes.filter((v) => getStockTotalVariante(v) > 0);
+    
+    if (variantesConStock.length === 0) {
+      return alert("❌ No podés eliminar todas las variantes; debe quedar al menos una.");
+    }
+
+    if (variantesConStock.length === variantes.length) {
+      return alert("ℹ️ No hay variantes sin stock para eliminar.");
+    }
+
+    setVariantes(variantesConStock);
+    setSelectedVariant(0);
+
+    try {
+      await updateDoc(doc(db, "categorias", categoriaId, "productos", producto.id), {
+        variantes: variantesConStock,
+      });
+      await sendNotification("eliminó variantes sin stock", { producto: producto.name });
+      alert("✅ Variantes sin stock eliminadas correctamente.");
+    } catch (err) {
+      console.error("Error al eliminar variantes sin stock:", err);
+      alert("❌ Error al guardar los cambios en la base de datos.");
+    }
+  };
+
   const handleAddToCart = async (branch) => {
     if (!variant || precioSeleccionado <= 0) return;
     const stockSucursal = Number(variant.stock?.[branch] || 0);
@@ -544,12 +574,22 @@ export default function ProductCard({
           </div>
 
           <div className={styles.cardButtons}>
-            <button type="button" className={styles.printBudget} onClick={handlePrintPresupuesto}>📄 Imprimir Presupuesto</button>
             <button className={styles.whatsapp} onClick={handleWhatsApp}>Pedir por WhatsApp</button>
             <button className={styles.share} onClick={handleShare}>Compartir</button>
             <button className={styles.mpButton} onClick={handleComprar} disabled={!sucursalDisponible || precioSeleccionado <= 0}>
               <SiMercadopago size={50} style={{ marginRight: "5px" }} /> Pagar
             </button>
+            <button type="button" className={styles.printBudget} onClick={handlePrintPresupuesto}>📄 Imprimir Presupuesto</button>
+            
+            {esJefe && (
+              <button 
+                type="button"
+                className={styles.deleteStockBtn} 
+                onClick={handleEliminarVariantesSinStock}
+              >
+                🗑️ Eliminar variantes sin stock
+              </button>
+            )}
           </div>
         </div>
       </article>

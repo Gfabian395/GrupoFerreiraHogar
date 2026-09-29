@@ -199,18 +199,15 @@ export const Productos = () => {
       FILTRO Y ORDEN DE PRODUCTOS
    =============================== */
 
-  // CORRECCIÓN: Función segura para obtener el precio, descartando ceros y vacíos.
   const getPrecioParaOrdenar = (item, orden) => {
     const precios = (item.variantes || []).map((v) => Number(v.price || 0));
-    
+
     if (item.price) {
       precios.push(Number(item.price));
     }
 
-    // 🔥 FILTRAMOS CUALQUIER 0 PARA QUE NO ROMPA EL MATH.MIN
     const preciosValidos = precios.filter((p) => !isNaN(p) && p > 0);
 
-    // Si un producto no tiene precio válido, en ASC lo mandamos al fondo (Infinity), en DESC a 0
     if (preciosValidos.length === 0) return orden === "asc" ? Infinity : 0;
 
     return orden === "asc"
@@ -227,7 +224,6 @@ export const Productos = () => {
       return getPrecioParaOrdenar(b, "desc") - getPrecioParaOrdenar(a, "desc");
     }
 
-    // "ninguno": Mantiene el orden alfabético por nombre original de fetchProductos
     return (a.name || "").localeCompare(b.name || "", "es", {
       sensitivity: "base",
     });
@@ -361,27 +357,6 @@ export const Productos = () => {
     setAddOpen(true);
   };
 
-  const loadImageBase64 = (url) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-
-        resolve(canvas.toDataURL("image/png"));
-      };
-
-      img.onerror = reject;
-      img.src = url;
-    });
-  };
-
   const handleIncreasePrices = async () => {
     const porcentajeInput = prompt("¿Qué porcentaje querés aumentar? (ej: 10 para 10%)");
 
@@ -513,7 +488,6 @@ export const Productos = () => {
           print-color-adjust: exact;
         }
 
-        /* 4 columnas exactas por línea en A4 */
         .container {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -521,7 +495,6 @@ export const Productos = () => {
           justify-content: center;
         }
 
-        /* Tarjeta Modo Claro */
         .item {
           display: flex;
           flex-direction: column;
@@ -592,7 +565,6 @@ export const Productos = () => {
           margin-top: 4px;
         }
 
-        /* Contenedor Cuadrado Perfecto con Bordes Suaves */
         .qr-container {
           display: flex;
           align-items: center;
@@ -623,32 +595,22 @@ export const Productos = () => {
         if (!data.variantes) continue;
 
         for (const [index, variante] of data.variantes.entries()) {
-
-          /* =================================================================
-              SISTEMA DE CONTROL DE STOCK (Suma todas las sucursales del objeto)
-              ================================================================= */
           const totalStockVariante = Object.values(variante?.stock || {}).reduce(
             (total, cantidad) => total + Number(cantidad || 0),
             0
           );
 
-          // Si el stock es 0 o menor, se informa en consola y salta a la siguiente
           if (totalStockVariante <= 0) {
-            console.warn(`[SALTEADO - SIN STOCK] ${data.name} (${variante.attr || "Estándar"}) no se incluirá.`);
             continue;
           }
 
-          // Flag manual por las dudas
           if (variante.disponible === false) {
-            console.warn(`[SALTEADO - NO DISPONIBLE] ${data.name} (${variante.attr || "Estándar"}) tiene disponible: false.`);
             continue;
           }
 
-          // Si pasó los filtros, se confirma en la consola que va a impresión
           const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
           const qr = await QRCode.toDataURL(url);
 
-          // CORRECCIÓN: Prioriza la foto principal del producto (data.image) ante todo
           const imageUrl = data.image || variante.image || "";
 
           html += `
@@ -845,6 +807,69 @@ export const Productos = () => {
     }
   };
 
+  /* ===============================
+     ELIMINAR PRODUCTOS SIN STOCK
+  =============================== */
+  const handleDeleteSinStockMasivo = async () => {
+    if (!canDelete) return;
+
+    if (!window.confirm("¿Estás seguro de eliminar permanentemente todos los productos que tengan stock 0 en todas las sucursales?")) return;
+
+    try {
+      setLoading(true);
+      const ref = collection(db, "categorias", categoriaId, "productos");
+      const snap = await getDocs(ref);
+
+      let countEliminados = 0;
+
+      const promesasEliminacion = snap.docs.map(async (documento) => {
+        const data = documento.data();
+
+        if (data.type === "combo") return;
+
+        const variantes = data.variantes || [];
+
+        const sinStockEnAbsoluto = variantes.length === 0 || variantes.every((v) => {
+          const stockTotalVariante = Object.values(v?.stock || {}).reduce(
+            (total, cantidad) => total + Number(cantidad || 0),
+            0
+          );
+          return stockTotalVariante <= 0;
+        });
+
+        if (sinStockEnAbsoluto) {
+          countEliminados++;
+          const docRef = doc(db, "categorias", categoriaId, "productos", documento.id);
+          return deleteDoc(docRef);
+        }
+      });
+
+      await Promise.all(promesasEliminacion);
+
+      await sendNotification("eliminó masivamente productos sin stock", {
+        tipo: "eliminacion_masiva",
+        cantidad: countEliminados,
+      });
+
+      alert(`Se eliminaron ${countEliminados} productos sin stock correctamente.`);
+      await fetchProductos();
+    } catch (error) {
+      console.error("Error eliminando productos sin stock:", error);
+      alert("Hubo un error al intentar eliminar los productos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ===============================
+     CÁLCULO DE CONTADOR (PRODUCTOS Y VARIANTES)
+  =============================== */
+  const totalProductosCount = productos.length;
+  const totalVariantesCount = productos.reduce((acc, p) => {
+    if (p.type === "combo") return acc + 1;
+    return acc + (p.variantes ? p.variantes.length : 0);
+  }, 0);
+
   if (loading || role === null) return <Loader />;
 
   return (
@@ -888,6 +913,24 @@ export const Productos = () => {
         >
           💰 Mayor a menor
         </button>
+
+        {/* 📊 Contador exclusivo para el Jefe */}
+        {isJefe && (
+          <div style={{ display: "inline-flex", alignItems: "center", padding: "0 8px", fontSize: "13px", fontWeight: "600", color: "#334155", background: "#f1f5f9", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
+            Prod: {totalProductosCount} | Var: {totalVariantesCount}
+          </div>
+        )}
+
+        {/* 🗑️ Botón exclusivo para Jefes */}
+        {canDelete && (
+          <button
+            style={{ backgroundColor: "#ef4444", color: "white" }}
+            onClick={handleDeleteSinStockMasivo}
+            title="Elimina productos con stock 0 en todas las sucursales"
+          >
+            🗑️ Limpiar Sin Stock
+          </button>
+        )}
       </div>
 
       {productos.length === 0 ? (
@@ -901,8 +944,8 @@ export const Productos = () => {
                   key={item.id}
                   combo={item}
                   productos={productos}
-                  Role={role} // CORRECCIÓN: Sincronizado con la prop 'Role' (con R mayúscula)
-                  onEdit={() => handleEditProduct(item)} // CORRECCIÓN: Habilita el botón editar en el combo
+                  Role={role}
+                  onEdit={() => handleEditProduct(item)}
                   onDeleteCombo={
                     canDelete
                       ? (deletedId) =>
@@ -990,7 +1033,6 @@ export const Productos = () => {
         />
       )}
 
-      {/* BOTÓN CALCULADORA (Jefe, Encargado y Vendedor) */}
       {(isJefe || isEncargado || role === "vendedor") && (
         <button
           className={styles.calculatorFab}
@@ -1000,7 +1042,6 @@ export const Productos = () => {
         </button>
       )}
 
-      {/* BOTÓN AGREGAR PRODUCTO (Solo Jefe y Encargado) */}
       {canAddOrEdit && (
         <button
           className={styles.fab}
@@ -1013,7 +1054,6 @@ export const Productos = () => {
         </button>
       )}
 
-      {/* MODAL CALCULADORA */}
       {showCalculator && (
         <div
           className={styles.calculatorOverlay}
@@ -1025,18 +1065,15 @@ export const Productos = () => {
         </div>
       )}
 
-      {/* 🟢 Cambiamos la condición para que "vendedor" también renderice el Drop */}
       {(isJefe || isEncargado || role === "vendedor") && (
         <Drop
-          userRole={role} // 👈 Le pasamos el rol (si usás la versión con userRole interna)
+          userRole={role}
 
-          // Métodos protegidos por rol directamente desde las props de renderizado:
           onPDFStock={(isJefe || isEncargado) ? handlePDFStock : null}
           onGenerateQR={(isJefe || isEncargado) ? handleGenerateQR : null}
           onIncreasePrices={isJefe ? handleIncreasePrices : null}
           onDecreasePrices={isJefe ? handleDecreasePrices : null}
 
-          // 🔥 Ahora disponible para Jefe, Encargado y Vendedor
           showSinStock={showSinStock}
           onToggleSinStock={() => setShowSinStock(prev => !prev)}
         />
