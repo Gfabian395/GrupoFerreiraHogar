@@ -142,6 +142,10 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Estados de control de permisos de sucursal
+  const [userRole, setUserRole] = useState(null);
+  const [sucursalAsignada, setSucursalAsignada] = useState(null);
+
   const [variantImages, setVariantImages] = useState({});
 
   const [variantes, setVariantes] = useState(() => {
@@ -184,11 +188,34 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     return [createEmptyVariant(categoriaId)];
   });
 
+  // Cargar rol y sucursal del usuario logueado
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "usuarios", currentUser.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            setUserRole(data.role);
+            setSucursalAsignada(data.sucursalAsignada);
+          }
+        } catch (err) {
+          console.error("Error al obtener datos del usuario:", err);
+        }
+      }
+    };
+    fetchUserData();
+  }, []);
+
   useEffect(() => {
     const handleEsc = (e) => e.key === "Escape" && onClose?.();
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
+
+  const esJefe = userRole === "jefe";
+  const esEncargado = userRole === "encargado";
 
   const handleAddVariant = () => {
     setVariantes([...variantes, createEmptyVariant(categoriaId)]);
@@ -289,9 +316,9 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     const parentModel = variantes.find(v => v.tipoVariante === "modelo" && v.attr === modeloPadreAttr);
     if (parentModel) {
       const newVariantes = [...variantes];
-      newVariantes[colorIndex].stock4320 = parentModel.stock4320;
-      newVariantes[colorIndex].stock4034 = parentModel.stock4034;
-      newVariantes[colorIndex].stock2440 = parentModel.stock2440;
+      if (esJefe || sucursalAsignada === "Los Andes 4320") newVariantes[colorIndex].stock4320 = parentModel.stock4320;
+      if (esJefe || sucursalAsignada === "Los Andes 4034") newVariantes[colorIndex].stock4034 = parentModel.stock4034;
+      if (esJefe || sucursalAsignada === "Jofre 2440") newVariantes[colorIndex].stock2440 = parentModel.stock2440;
       setVariantes(newVariantes);
     } else {
       alert("No se encontró el modelo padre para copiar el stock.");
@@ -360,6 +387,15 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
               value: item.value.trim()
             }));
 
+          // Si es encargado, conservamos el stock anterior de las sucursales que NO le corresponden
+          // para no pisar accidentalmente los valores de otras sucursales en Firestore.
+          const varianteAnterior = producto?.variantes?.[i];
+          const stockFinal = {
+            "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
+            "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
+            "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
+          };
+
           return {
             attr: v.attr,
             tipoVariante: v.tipoVariante,
@@ -369,11 +405,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             unidadesPorJuego: v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
             image: variantImageURL,
             colorHex: v.tipoVariante === "color" ? v.colorHex : "",
-            stock: {
-              "Los Andes 4320": Number(v.stock4320),
-              "Los Andes 4034": Number(v.stock4034),
-              "Jofre 2440": Number(v.stock2440),
-            },
+            stock: stockFinal,
             fichaTecnica: fichaTecnicaLimpia,
           };
         })
@@ -485,10 +517,17 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                     <input type="number" min="0" step="1" value={modelo.unidadesPorJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "unidadesPorJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
                   </label>
 
+                  {/* STOCK SUCURSALES (Filtrado según rol) */}
                   <div className={styles.grid3Cols}>
-                    <label>Stk 4320 <input type="number" min="0" value={modelo.stock4320} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
-                    <label>Stk 4034 <input type="number" min="0" value={modelo.stock4034} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
-                    <label>Stk 2440 <input type="number" min="0" value={modelo.stock2440} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                    {(esJefe || sucursalAsignada === "Los Andes 4320") && (
+                      <label>Stk 4320 <input type="number" min="0" value={modelo.stock4320} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                    )}
+                    {(esJefe || sucursalAsignada === "Los Andes 4034") && (
+                      <label>Stk 4034 <input type="number" min="0" value={modelo.stock4034} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                    )}
+                    {(esJefe || sucursalAsignada === "Jofre 2440") && (
+                      <label>Stk 2440 <input type="number" min="0" value={modelo.stock2440} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                    )}
                   </div>
 
                   {/* ================= SECCIÓN FICHA TÉCNICA POR VARIANTE ================= */}
@@ -609,10 +648,17 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                             </button>
                           </div>
 
+                          {/* STOCK SUCURSALES (Filtrado según rol en variante color) */}
                           <div className={styles.grid3Cols}>
-                            <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            {(esJefe || sucursalAsignada === "Los Andes 4320") && (
+                              <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            )}
+                            {(esJefe || sucursalAsignada === "Los Andes 4034") && (
+                              <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            )}
+                            {(esJefe || sucursalAsignada === "Jofre 2440") && (
+                              <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            )}
                           </div>
 
                           <button type="button" onClick={() => handleRemoveVariant(color._originalIndex)} className={styles.btnRemoveVariantMini}>

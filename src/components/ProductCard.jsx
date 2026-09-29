@@ -41,13 +41,32 @@ export default function ProductCard({
   const [showCarrusel, setShowCarrusel] = useState(false);
   const [showFichaTecnica, setShowFichaTecnica] = useState(false);
 
+  // Estados para manejar los datos completos del usuario logueado (incluyendo sucursalAsignada)
+  const [userData, setUserData] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      try {
+        const snap = await getDoc(doc(db, "usuarios", user.uid));
+        if (snap.exists()) {
+          setUserData(snap.data());
+        }
+      } catch (e) {
+        console.error("Error al obtener datos del usuario", e);
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const [variantes, setVariantes] = useState(() =>
     producto?.variantes
       ? producto.variantes.map((v) => ({
           ...v,
           priceJuego: v.priceJuego ?? null,
           unidadesPorJuego: v.unidadesPorJuego ?? null,
-          fichaTecnica: v.fichaTecnica ?? null, // Soporte de ficha técnica por variante
+          fichaTecnica: v.fichaTecnica ?? null,
           stock: {
             "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
             "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
@@ -60,14 +79,16 @@ export default function ProductCard({
   const { addToCart, items } = useCart();
   const { categoriaId } = useParams();
 
-  const esJefe = userRole === "jefe";
-  const esEncargado = userRole === "encargado";
+  // Validación robusta de roles y sucursal asignada
+  const esJefe = userRole === "jefe" || userData?.role === "jefe" || userData?.roles?.jefe;
+  const esEncargado = userRole === "encargado" || userData?.role === "encargado" || userData?.roles?.encargado;
+  const sucursalEncargado = userData?.sucursalAsignada || null;
 
   const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
 
   const variant = variantes[selectedVariant] ?? null;
 
-  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA (Prioriza la variante seleccionada, sino usa la general del producto)
+  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA
   const fichaTecnicaProcesada = useMemo(() => {
     const fuenteFicha = variant?.fichaTecnica || producto?.fichaTecnica;
     if (!fuenteFicha) return [];
@@ -212,11 +233,15 @@ export default function ProductCard({
 
   const getItemUnits = (item) => Number(item.qty || 1) * Number(item.unitsToDiscount ?? item.unidadesNecesarias ?? item.unidadesPorJuego ?? 1);
 
+  // Modificar stock validando si es Jefe o el Encargado asignado a esa sucursal exacta
   const updateStock = async (sucursal, delta) => {
-    if (!esJefe) return;
+    const puedeModificar = esJefe || (esEncargado && sucursalEncargado === sucursal);
+    if (!puedeModificar) return alert("❌ No tenés permisos para modificar el stock de esta sucursal.");
+
     const antes = Number(variant.stock?.[sucursal] ?? 0);
     const despues = Math.max(antes + delta, 0);
     if (antes === despues) return;
+    
     const nuevasVariantes = variantes.map((v, i) => i === selectedVariant ? { ...v, stock: { ...v.stock, [sucursal]: despues } } : v);
     setVariantes(nuevasVariantes);
     try {
@@ -492,6 +517,9 @@ export default function ProductCard({
             {variant && Object.entries(variant.stock || {}).map(([sucursal, cantidad]) => {
               const cant = Number(cantidad || 0);
               let clase = styles.ok; if (cant <= 0) clase = styles.out; else if (cant < unidadesNecesarias) clase = styles.low;
+              
+              const esSuSucursal = esJefe || (esEncargado && sucursalEncargado === sucursal);
+
               return (
                 <div key={sucursal} className={`${styles.branch} ${clase}`}>
                   <div className={styles.branchMeta}>
@@ -499,8 +527,15 @@ export default function ProductCard({
                     <small>{cant} unidades {tieneJuego && `/ ${Math.floor(cant / unidadesPorJuego)} juegos`}</small>
                   </div>
                   <div className={styles.stockControls}>
-                    {esJefe && (<><button disabled={cant === 0} onClick={() => updateStock(sucursal, -1)}>-</button><strong>{cant}</strong><button onClick={() => updateStock(sucursal, 1)}>+</button></>)}
-                    {!esJefe && <strong>{cant}</strong>}
+                    {esSuSucursal ? (
+                      <>
+                        <button disabled={cant === 0} onClick={() => updateStock(sucursal, -1)}>-</button>
+                        <strong>{cant}</strong>
+                        <button onClick={() => updateStock(sucursal, 1)}>+</button>
+                      </>
+                    ) : (
+                      <strong>{cant}</strong>
+                    )}
                     <button className={styles.cartMini} disabled={cant < unidadesNecesarias} onClick={() => handleAddToCart(sucursal)}>🛒</button>
                   </div>
                 </div>
