@@ -68,9 +68,9 @@ export default function ProductCard({
           unidadesPorJuego: v.unidadesPorJuego ?? null,
           fichaTecnica: v.fichaTecnica ?? null,
           stock: {
-            "Los Andes 4320": v.stock?.["Los Andes 4320"] ?? 0,
-            "Los Andes 4034": v.stock?.["Los Andes 4034"] ?? 0,
-            "Jofre 2440": v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ?? 0,
+            "Los Andes 4320": Number(v.stock?.["Los Andes 4320"] ?? 0),
+            "Los Andes 4034": Number(v.stock?.["Los Andes 4034"] ?? 0),
+            "Jofre 2440": Number(v.stock?.["Jofre 2440"] ?? v.stock?.["Mosconi"] ?? 0),
           },
         }))
       : []
@@ -84,31 +84,10 @@ export default function ProductCard({
   const esEncargado = userRole === "encargado" || userData?.role === "encargado" || userData?.roles?.encargado;
   const sucursalEncargado = userData?.sucursalAsignada || null;
 
+  // Cálculo automático y dinámico del stock total sumando las sucursales de la variante
   const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
 
   const variant = variantes[selectedVariant] ?? null;
-
-  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA
-  const fichaTecnicaProcesada = useMemo(() => {
-    const fuenteFicha = variant?.fichaTecnica || producto?.fichaTecnica;
-    if (!fuenteFicha) return [];
-
-    if (Array.isArray(fuenteFicha)) {
-      return fuenteFicha
-        .map((item) => ({
-          label: item.label || item.etiqueta || item.key,
-          value: item.value || item.valor,
-        }))
-        .filter((item) => item.label && item.value);
-    }
-    if (typeof fuenteFicha === "object") {
-      return Object.entries(fuenteFicha).map(([label, value]) => ({
-        label,
-        value,
-      }));
-    }
-    return [];
-  }, [variant, producto]);
 
   // AGRUPAMIENTO INTELIGENTE POR MODELO
   const agrupadoPorModelo = useMemo(() => {
@@ -138,6 +117,32 @@ export default function ProductCard({
 
     return Object.values(grupos);
   }, [variantes, producto]);
+
+  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA (Prioriza el modelo base del grupo antes que colores o variantes individuales)
+  const fichaTecnicaProcesada = useMemo(() => {
+    const modeloActualGrupo = agrupadoPorModelo.find((m) => m.nombre === selectedModel);
+    const varianteBaseModelo = modeloActualGrupo?.variantes.find(v => (v.tipoVariante || (v.colorHex ? "color" : "modelo")) === 'modelo') || modeloActualGrupo?.variantes[0];
+
+    // Se prioriza la ficha técnica del modelo base, luego la variante actual, y por último el producto general
+    const fuenteFicha = varianteBaseModelo?.fichaTecnica || variant?.fichaTecnica || producto?.fichaTecnica;
+    if (!fuenteFicha) return [];
+
+    if (Array.isArray(fuenteFicha)) {
+      return fuenteFicha
+        .map((item) => ({
+          label: item.label || item.etiqueta || item.key,
+          value: item.value || item.valor,
+        }))
+        .filter((item) => item.label && item.value);
+    }
+    if (typeof fuenteFicha === "object") {
+      return Object.entries(fuenteFicha).map(([label, value]) => ({
+        label,
+        value,
+      }));
+    }
+    return [];
+  }, [variant, producto, agrupadoPorModelo, selectedModel]);
 
   const handleVariantSelect = (index) => {
     setSelectedVariant(index);
@@ -483,14 +488,14 @@ export default function ProductCard({
             </div>
           </fieldset>
 
-          {/* FICHA TÉCNICA DINÁMICA POR VARIANTE */}
+          {/* FICHA TÉCNICA DINÁMICA POR MODELO BASE O HEREDADA */}
           <div className={styles.fichaContainer}>
             <button 
               type="button" 
               className={styles.toggleFicha} 
               onClick={() => setShowFichaTecnica(!showFichaTecnica)}
             >
-              <span>📋 Ficha técnica ({variant?.attr || "General"})</span>
+              <span>📋 Ficha técnica ({selectedModel || "General"})</span>
               <span>{showFichaTecnica ? "▲" : "▼"}</span>
             </button>
 

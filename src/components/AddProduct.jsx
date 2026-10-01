@@ -217,6 +217,43 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const esJefe = userRole === "jefe";
   const esEncargado = userRole === "encargado";
 
+  // Efecto para calcular y actualizar automáticamente el stock del modelo base en base a sus variantes hijas
+  useEffect(() => {
+    if (producto) {
+      setVariantes((prevVariantes) => {
+        let huboCambios = false;
+        const nuevasVariantes = prevVariantes.map((v) => {
+          if (v.tipoVariante === "modelo") {
+            const hijos = prevVariantes.filter(
+              (c) => c.tipoVariante === "color" && c.modeloPadre === v.attr && v.attr !== ""
+            );
+            if (hijos.length > 0) {
+              const suma4320 = hijos.reduce((acc, h) => acc + Number(h.stock4320 || 0), 0);
+              const suma4034 = hijos.reduce((acc, h) => acc + Number(h.stock4034 || 0), 0);
+              const suma2440 = hijos.reduce((acc, h) => acc + Number(h.stock2440 || 0), 0);
+
+              if (
+                v.stock4320 !== suma4320 ||
+                v.stock4034 !== suma4034 ||
+                v.stock2440 !== suma2440
+              ) {
+                huboCambios = true;
+                return {
+                  ...v,
+                  stock4320: suma4320,
+                  stock4034: suma4034,
+                  stock2440: suma2440,
+                };
+              }
+            }
+          }
+          return v;
+        });
+        return huboCambios ? nuevasVariantes : prevVariantes;
+      });
+    }
+  }, [variantes, producto]);
+
   const handleAddVariant = () => {
     setVariantes([...variantes, createEmptyVariant(categoriaId)]);
   };
@@ -236,7 +273,8 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       price: modeloSeleccionado.price, 
       priceJuego: modeloSeleccionado.priceJuego,
       unidadesPorJuego: modeloSeleccionado.unidadesPorJuego,
-      fichaTecnica: modeloSeleccionado.fichaTecnica ? JSON.parse(JSON.stringify(modeloSeleccionado.fichaTecnica)) : getDefaultFicha(categoriaId),
+      // Los colores no manejan ficha técnica propia (se hereda del modelo base)
+      fichaTecnica: [],
     };
 
     const nuevasVariantes = [...variantes];
@@ -380,15 +418,16 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             variantImageURL = await getDownloadURL(storageRef);
           }
 
-          const fichaTecnicaLimpia = (v.fichaTecnica || [])
-            .filter(item => item.label.trim() !== "")
-            .map(item => ({
-              label: item.label.trim(),
-              value: item.value.trim()
-            }));
+          // Solo el modelo base guarda la ficha técnica; los colores la dejan vacía para heredarla
+          const fichaTecnicaLimpia = v.tipoVariante === "modelo" 
+            ? (v.fichaTecnica || [])
+                .filter(item => item.label.trim() !== "")
+                .map(item => ({
+                  label: item.label.trim(),
+                  value: item.value.trim()
+                }))
+            : [];
 
-          // Si es encargado, conservamos el stock anterior de las sucursales que NO le corresponden
-          // para no pisar accidentalmente los valores de otras sucursales en Firestore.
           const varianteAnterior = producto?.variantes?.[i];
           const stockFinal = {
             "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
@@ -517,22 +556,58 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                     <input type="number" min="0" step="1" value={modelo.unidadesPorJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "unidadesPorJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
                   </label>
 
-                  {/* STOCK SUCURSALES (Filtrado según rol) */}
+                  {/* STOCK SUCURSALES */}
                   <div className={styles.grid3Cols}>
                     {(esJefe || sucursalAsignada === "Los Andes 4320") && (
-                      <label>Stk 4320 <input type="number" min="0" value={modelo.stock4320} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                      <label>
+                        Stk 4320 {producto && <span style={{fontSize: "0.7rem", color: "#64748b"}}>(Suma de variantes)</span>}
+                        <input 
+                          type="number" 
+                          min="0" 
+                          value={modelo.stock4320} 
+                          readOnly={!!producto}
+                          disabled={!!producto}
+                          style={producto ? { background: "#f1f5f9", cursor: "not-allowed" } : {}}
+                          onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4320", e.target.value)} 
+                          onWheel={(e) => e.target.blur()} 
+                        />
+                      </label>
                     )}
                     {(esJefe || sucursalAsignada === "Los Andes 4034") && (
-                      <label>Stk 4034 <input type="number" min="0" value={modelo.stock4034} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                      <label>
+                        Stk 4034 {producto && <span style={{fontSize: "0.7rem", color: "#64748b"}}>(Suma de variantes)</span>}
+                        <input 
+                          type="number" 
+                          min="0" 
+                          value={modelo.stock4034} 
+                          readOnly={!!producto}
+                          disabled={!!producto}
+                          style={producto ? { background: "#f1f5f9", cursor: "not-allowed" } : {}}
+                          onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4034", e.target.value)} 
+                          onWheel={(e) => e.target.blur()} 
+                        />
+                      </label>
                     )}
                     {(esJefe || sucursalAsignada === "Jofre 2440") && (
-                      <label>Stk 2440 <input type="number" min="0" value={modelo.stock2440} onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                      <label>
+                        Stk 2440 {producto && <span style={{fontSize: "0.7rem", color: "#64748b"}}>(Suma de variantes)</span>}
+                        <input 
+                          type="number" 
+                          min="0" 
+                          value={modelo.stock2440} 
+                          readOnly={!!producto}
+                          disabled={!!producto}
+                          style={producto ? { background: "#f1f5f9", cursor: "not-allowed" } : {}}
+                          onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} 
+                          onWheel={(e) => e.target.blur()} 
+                        />
+                      </label>
                     )}
                   </div>
 
-                  {/* ================= SECCIÓN FICHA TÉCNICA POR VARIANTE ================= */}
+                  {/* ================= SECCIÓN FICHA TÉCNICA (SOLO EN MODELO BASE) ================= */}
                   <fieldset style={{ marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
-                    <legend style={{ fontSize: "0.8rem", fontWeight: "600", color: "#475569" }}>Ficha Técnica Específica</legend>
+                    <legend style={{ fontSize: "0.8rem", fontWeight: "600", color: "#475569" }}>Ficha Técnica del Modelo Base</legend>
                     
                     {modelo.fichaTecnica?.map((item, fIndex) => (
                       <div key={fIndex} style={{ display: "flex", gap: "6px", marginBottom: "6px", alignItems: "center" }}>
@@ -591,7 +666,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                           </div>
                           
                           <label>
-                            Nombre Color (Ej: Tapizado Flores)
+                            Nombre Color (Ej: Azul)
                             <input type="text" value={color.attr} onChange={(e) => handleVariantChange(color._originalIndex, "attr", formatText(e.target.value))} placeholder="Ej: Azul" />
                           </label>
 
@@ -634,21 +709,22 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '15px 0 5px 0' }}>
                             <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Stock sucursales</span>
-                            <button 
-                              type="button" 
-                              onClick={() => handleCopyStockFromModel(color._originalIndex, color.modeloPadre)}
-                              style={{ 
-                                fontSize: "0.75rem", padding: "4px 8px", cursor: "pointer", 
-                                borderRadius: "4px", border: "1px solid #cbd5e1", 
-                                background: "#f1f5f9", color: "#334155", fontWeight: "600" 
-                              }}
-                              title="Copiar las mismas cantidades que pusiste en el modelo base"
-                            >
-                              🔄 Repetir stock
-                            </button>
+                            {!producto && (
+                              <button 
+                                type="button" 
+                                onClick={() => handleCopyStockFromModel(color._originalIndex, color.modeloPadre)}
+                                style={{ 
+                                  fontSize: "0.75rem", padding: "4px 8px", cursor: "pointer", 
+                                  borderRadius: "4px", border: "1px solid #cbd5e1", 
+                                  background: "#f1f5f9", color: "#334155", fontWeight: "600" 
+                                }}
+                                title="Copiar las mismas cantidades que pusiste en el modelo base"
+                              >
+                                🔄 Repetir stock
+                              </button>
+                            )}
                           </div>
 
-                          {/* STOCK SUCURSALES (Filtrado según rol en variante color) */}
                           <div className={styles.grid3Cols}>
                             {(esJefe || sucursalAsignada === "Los Andes 4320") && (
                               <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
@@ -673,14 +749,17 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             );
           })}
 
-          <button type="button" onClick={handleAddVariant} className={styles.btnAddNewModel}>
-            + Agregar Nuevo Modelo Base
+          <button type="button" onClick={handleAddVariant} className={styles.btnAddModel}>
+            + Agregar Otro Modelo Base
           </button>
         </fieldset>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Guardando..." : producto ? "Guardar cambios" : "Agregar producto"}
-        </button>
+        <div className={styles.formActions}>
+          <button type="button" onClick={onClose} className={styles.btnCancel}>Cancelar</button>
+          <button type="submit" disabled={loading} className={styles.btnSubmit}>
+            {loading ? "Guardando..." : "Guardar Producto"}
+          </button>
+        </div>
       </form>
     </div>
   );
