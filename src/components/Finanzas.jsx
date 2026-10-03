@@ -90,8 +90,21 @@ const Finanzas = () => {
   };
   
   const borrarFiltro = () => {
-    setFechaDesde(""); setFechaHasta("");
-    setVentasFiltradas(ventas); setCobrosFiltrados(cobros); setGastosFiltrados(gastos);
+    setFechaDesde(""); 
+    setFechaHasta("");
+    // Restablecer vista por defecto al mes actual
+    setVentasFiltradas(ventas.filter(v => {
+      const f = obtenerObjetoFecha(v.fecha);
+      return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
+    }));
+    setCobrosFiltrados(cobros.filter(c => {
+      const f = obtenerObjetoFecha(c.fecha);
+      return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
+    }));
+    setGastosFiltrados(gastos.filter(g => {
+      const f = obtenerObjetoFecha(g.fecha);
+      return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
+    }));
   };
 
   const handleCargarGasto = async (e) => {
@@ -266,6 +279,12 @@ const Finanzas = () => {
         
         setHistorialBalances(historialTemp);
 
+        // Guardar la TOTALIDAD de los datos recuperados
+        setVentas(todasLasVentas);
+        setCobros(cobrosGenerados);
+        setGastos(todosLosGastos);
+
+        // Inicializar los datos filtrados únicamente con los del mes actual por defecto
         const ventasMesActual = todasLasVentas.filter(v => {
           const f = obtenerObjetoFecha(v.fecha);
           return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
@@ -281,13 +300,8 @@ const Finanzas = () => {
           return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
         });
 
-        setVentas(ventasMesActual);
         setVentasFiltradas(ventasMesActual);
-        
-        setCobros(cobrosMesActual);
         setCobrosFiltrados(cobrosMesActual);
-        
-        setGastos(gastosMesActual);
         setGastosFiltrados(gastosMesActual);
 
       } catch (error) {
