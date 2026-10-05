@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import styles from "../styles/ProductCard.module.css";
 import { useCart } from "../context/CartContext";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
   doc,
   updateDoc,
@@ -33,6 +33,7 @@ export default function ProductCard({
   fromCombo = false,
   userRole,
   initialVariant = 0,
+  isHighlighted: isHighlightedProp,
 }) {
   const [selectedVariant, setSelectedVariant] = useState(Number(initialVariant) || 0);
   const [selectedModel, setSelectedModel] = useState(null);
@@ -40,6 +41,18 @@ export default function ProductCard({
   const [showCuotas, setShowCuotas] = useState(false);
   const [showCarrusel, setShowCarrusel] = useState(false);
   const [showFichaTecnica, setShowFichaTecnica] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+
+  // Detección automática del resaltado por Query Params o Prop
+  const [searchParams] = useSearchParams();
+  const highlightedQuery = searchParams.get("highlight") || searchParams.get("search") || searchParams.get("id") || searchParams.get("productoId");
+  
+  const isHighlighted = useMemo(() => {
+    if (typeof isHighlightedProp === "boolean") return isHighlightedProp;
+    if (!highlightedQuery || !producto) return false;
+    return String(producto.id) === String(highlightedQuery) || 
+           String(producto.slug) === String(highlightedQuery);
+  }, [isHighlightedProp, highlightedQuery, producto]);
 
   // Estados para manejar los datos completos del usuario logueado (incluyendo sucursalAsignada)
   const [userData, setUserData] = useState(null);
@@ -118,12 +131,11 @@ export default function ProductCard({
     return Object.values(grupos);
   }, [variantes, producto]);
 
-  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA (Prioriza el modelo base del grupo antes que colores o variantes individuales)
+  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA
   const fichaTecnicaProcesada = useMemo(() => {
     const modeloActualGrupo = agrupadoPorModelo.find((m) => m.nombre === selectedModel);
     const varianteBaseModelo = modeloActualGrupo?.variantes.find(v => (v.tipoVariante || (v.colorHex ? "color" : "modelo")) === 'modelo') || modeloActualGrupo?.variantes[0];
 
-    // Se prioriza la ficha técnica del modelo base, luego la variante actual, y por último el producto general
     const fuenteFicha = varianteBaseModelo?.fichaTecnica || variant?.fichaTecnica || producto?.fichaTecnica;
     if (!fuenteFicha) return [];
 
@@ -176,7 +188,7 @@ export default function ProductCard({
   }, [selectedVariant, variantes, agrupadoPorModelo, producto]);
 
   const modeloActual = agrupadoPorModelo.find((m) => m.nombre === selectedModel) || agrupadoPorModelo[0];
-  const imagenMostrar = modeloActual?.imagenPrincipal || producto?.image || null;
+  const imagenMostrar = variant?.image || modeloActual?.imagenPrincipal || producto?.image || null;
 
   const precioUnidad = Number(variant?.price || 0);
   const precioJuego = Number(variant?.priceJuego || 0);
@@ -238,7 +250,6 @@ export default function ProductCard({
 
   const getItemUnits = (item) => Number(item.qty || 1) * Number(item.unitsToDiscount ?? item.unidadesNecesarias ?? item.unidadesPorJuego ?? 1);
 
-  // Modificar stock validando si es Jefe o el Encargado asignado a esa sucursal exacta
   const updateStock = async (sucursal, delta) => {
     const puedeModificar = esJefe || (esEncargado && sucursalEncargado === sucursal);
     if (!puedeModificar) return alert("❌ No tenés permisos para modificar el stock de esta sucursal.");
@@ -255,7 +266,6 @@ export default function ProductCard({
     } catch (err) { alert("Error al guardar stock"); }
   };
 
-  // Función para eliminar variantes sin stock
   const handleEliminarVariantesSinStock = async () => {
     if (!esJefe) return alert("❌ Solo el jefe puede realizar esta acción.");
     if (!window.confirm("¿Estás seguro de eliminar todas las variantes sin stock?")) return;
@@ -325,11 +335,158 @@ export default function ProductCard({
     } catch (error) { console.error("Error comprando:", error); }
   };
 
+  // GENERACIÓN DE TARJETA EXCLUSIVAMENTE CON TEXTO (SIN IMAGEN)
+  const generateProductCardImage = async () => {
+    const width = 450;
+    const padding = 20;
+
+    const fichaItems = fichaTecnicaProcesada.length > 0 ? fichaTecnicaProcesada : [
+      { label: "Marca", value: producto.marca || "Genérico" },
+      { label: "Origen", value: producto.origen || "Nacional / Importado" },
+      { label: "Garantía", value: producto.garantia || "6 meses" }
+    ];
+
+    let currentY = padding;
+    currentY += 45; 
+    currentY += 40; 
+    currentY += 50; 
+    currentY += 35 + (fichaItems.length * 24);
+    currentY += 35 + (cuotas.length * 32) + padding;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width * 2;
+    canvas.height = currentY * 2;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(2, 2);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, currentY);
+
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(1, 1, width - 2, currentY - 2);
+
+    let y = padding + 15;
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 22px 'Segoe UI', sans-serif";
+    ctx.fillText(producto.name, padding, y);
+
+    y += 35;
+    ctx.fillStyle = "#16a34a";
+    ctx.font = "bold 24px 'Segoe UI', sans-serif";
+    const precioTexto = formatARS(precioSeleccionado);
+    ctx.fillText(precioTexto, padding, y);
+
+    const precioWidth = ctx.measureText(precioTexto).width;
+    ctx.fillStyle = "#64748b";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(`/ ${formatoActual === "juego" ? `Juego x${unidadesPorJuego}` : "Unidad"}`, padding + precioWidth + 12, y);
+
+    y += 30;
+
+    ctx.fillStyle = "#334155";
+    ctx.font = "bold 13px sans-serif";
+    ctx.fillText("Paso 1: Elegí tu modelo y color", padding, y);
+
+    y += 12;
+    ctx.strokeStyle = "#3b82f6";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(padding, y, 100, 36);
+
+    ctx.fillStyle = "#1d4ed8";
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillText(variant?.attr || "Blanco", padding + 12, y + 22);
+
+    y += 50;
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(padding, y, width - (padding * 2), 30 + (fichaItems.length * 24));
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.strokeRect(padding, y, width - (padding * 2), 30 + (fichaItems.length * 24));
+
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 13px sans-serif";
+    ctx.fillText(`📋 Ficha técnica (${variant?.attr || "General"})`, padding + 12, y + 20);
+
+    let fy = y + 40;
+    fichaItems.forEach((item) => {
+      ctx.fillStyle = "#475569";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(`${item.label}:`, padding + 12, fy);
+
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillText(String(item.value), width - padding - 12 - ctx.measureText(String(item.value)).width, fy);
+
+      fy += 24;
+    });
+
+    y = fy + 15;
+
+    ctx.fillStyle = "#2563eb";
+    ctx.font = "bold 13px sans-serif";
+    ctx.fillText("Cuotas disponibles:", padding, y);
+
+    y += 15;
+    cuotas.forEach((c) => {
+      ctx.fillStyle = "#f1f5f9";
+      ctx.fillRect(padding, y, width - (padding * 2), 26);
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.strokeRect(padding, y, width - (padding * 2), 26);
+
+      ctx.fillStyle = "#1e293b";
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillText(`✔️  ${c}`, padding + 12, y + 17);
+
+      y += 32;
+    });
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/png", 0.95);
+    });
+  };
+
   const handleShare = async () => {
-    const url = `${window.location.origin}/producto/${categoriaId}/${producto.id}?v=${selectedVariant}`;
-    await navigator.clipboard.writeText(url);
-    const msj = `Mirá este producto 👇\n${producto.name} - ${variant.attr}\nFormato: ${formatoActual === "juego" ? `Juego x${unidadesPorJuego}` : "Por unidad"}\nPrecio: ${formatARS(precioSeleccionado)}\n${url}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msj)}`, "_blank");
+    if (isSharing) return;
+    setIsSharing(true);
+
+    try {
+      const blob = await generateProductCardImage();
+
+      if (!blob) {
+        alert("Ocurrió un error al generar la tarjeta.");
+        setIsSharing(false);
+        return;
+      }
+
+      const file = new File([blob], `producto-${producto.name}.png`, { type: "image/png" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `${producto.name} - ${variant?.attr}`,
+          text: `Mirá este producto: ${producto.name} - ${formatARS(precioSeleccionado)}`,
+          files: [file],
+        });
+      } else if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        alert("📋 ¡Imagen de la tarjeta copiada al portapapeles!\n\nAbrí tu chat de WhatsApp y presioná Ctrl + V para enviarla.");
+      } else {
+        const link = document.createElement("a");
+        link.download = `tarjeta-${producto.name}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        alert("Imagen descargada. Podés adjuntarla manualmente en tu mensaje.");
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Error al compartir la tarjeta:", error);
+        alert("Ocurrió un error al generar o compartir la imagen.");
+      }
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const handleWhatsApp = () => {
@@ -367,7 +524,7 @@ export default function ProductCard({
 
   return (
     <div className={styles.productWrapper}>
-      <article className={styles.productCard}>
+      <article className={`${styles.productCard} ${isHighlighted ? styles.highlightCard : ''}`}>
         {(esJefe || esEncargado) && (
           <div className={styles.productActions}>
             <button className={styles.edit} onClick={() => onEdit?.({ ...producto, variantes })}><i className='bx bxs-pencil'></i></button>
@@ -488,7 +645,7 @@ export default function ProductCard({
             </div>
           </fieldset>
 
-          {/* FICHA TÉCNICA DINÁMICA POR MODELO BASE O HEREDADA */}
+          {/* FICHA TÉCNICA DINÁMICA */}
           <div className={styles.fichaContainer}>
             <button 
               type="button" 
@@ -580,7 +737,9 @@ export default function ProductCard({
 
           <div className={styles.cardButtons}>
             <button className={styles.whatsapp} onClick={handleWhatsApp}>Pedir por WhatsApp</button>
-            <button className={styles.share} onClick={handleShare}>Compartir</button>
+            <button className={styles.share} onClick={handleShare} disabled={isSharing}>
+              {isSharing ? "Generando..." : "Compartir"}
+            </button>
             <button className={styles.mpButton} onClick={handleComprar} disabled={!sucursalDisponible || precioSeleccionado <= 0}>
               <SiMercadopago size={50} style={{ marginRight: "5px" }} /> Pagar
             </button>

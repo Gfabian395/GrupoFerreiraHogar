@@ -1,143 +1,50 @@
 /* ===============================
-   OVERLAY – NEON HUD (BASE)
+   GRID & CARD WRAPPER (AUTOSCROLL FIX & LAYOUT CORREGIDO)
 ================================ */
-.overlay {
-  position: fixed;
-  inset: 0;
-
-  background:
-    radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.12), transparent 60%),
-    radial-gradient(circle at 80% 80%, rgba(14, 165, 233, 0.12), transparent 60%),
-    rgba(241, 245, 249, 0.88);
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  display: flex;
-  align-items: center;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 270px));
+  gap: 20px;
   justify-content: center;
-
-  padding: 14px;
-  z-index: 999;
+  align-items: start;
+  width: 100%;
+  margin-top: 15px;
 }
 
-/* ===============================
-   SELECTOR – CYBERPUNK NEON
-================================ */
-.selector {
-  position: relative;
-  z-index: 10000;
-
-  /* CORRECCIÓN APLICADA AQUÍ */
-  width: 420px;
-  max-width: calc(100vw - 32px);
-
-  padding: 20px 18px 22px;
-  border-radius: 22px;
-
+/* No usar display: contents para mantener intacta la referencia de scroll */
+.cardWrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-
-  text-align: center;
-
-  background:
-    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.95), transparent 38%),
-    linear-gradient(180deg, #ffffff, #f3f6fa);
-
-  border: 1px solid rgba(148, 163, 184, 0.38);
-
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.85),
-    0 24px 60px rgba(15, 23, 42, 0.18),
-    0 8px 20px rgba(15, 23, 42, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-
-  animation: hudIn 0.35s cubic-bezier(.16, .84, .44, 1);
+  width: 100%;
+  box-sizing: border-box;
+  scroll-margin-top: 120px; /* Margen superior para el autoscroll suave */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* HUD HANDLE */
-.selector::before {
-  content: "";
-  width: 42px;
-  height: 4px;
-  border-radius: 999px;
-  margin: 0 auto 10px;
-
-  background: linear-gradient(90deg,
-      #00ffff,
-      #ff00ff,
-      #00ffff);
-
-  box-shadow:
-    0 0 8px rgba(0, 255, 255, 0.8),
-    0 0 16px rgba(255, 0, 255, 0.6);
-}
-
-/* ===============================
-   BUTTONS – NEON ACTIONS
-================================ */
-.selector button {
-  position: relative;
-  overflow: hidden;
-
-  padding: 16px;
+/* EFECTO DE RESALTADO EN ROJO INTENSO (AJUSTADO EXACTO A LA CARD) */
+.highlightCard {
+  animation: pulseGlowCardRed 2.5s ease-in-out infinite !important;
   border-radius: 16px;
-  border: 1px solid rgba(0, 255, 255, 0.4);
-
-  background:
-    linear-gradient(180deg, rgba(15, 25, 45, 0.95), rgba(5, 10, 25, 0.95));
-
-  color: #e8faff;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-
-  cursor: pointer;
-
-  box-shadow:
-    0 0 10px rgba(0, 255, 255, 0.25),
-    inset 0 0 10px rgba(0, 0, 0, 0.7);
-
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
+  position: relative;
+  z-index: 10;
 }
 
-/* Glow sweep */
-.selector button::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-
-  background: linear-gradient(120deg,
-      transparent 20%,
-      rgba(0, 255, 255, 0.25),
-      transparent 80%);
-
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-.selector button:hover {
-  transform: translateY(-1px);
-  border-color: #00ffff;
-
-  box-shadow:
-    0 0 18px rgba(0, 255, 255, 0.7),
-    0 0 28px rgba(255, 0, 255, 0.45);
-}
-
-.selector button:hover::after {
-  opacity: 1;
-}
-
-.selector button:active {
-  transform: translateY(0);
-  box-shadow:
-    0 0 10px rgba(0, 255, 255, 0.4),
-    inset 0 0 16px rgba(0, 0, 0, 0.85);
+@keyframes pulseGlowCardRed {
+  0% {
+    border: 3px solid #ff0033;
+    box-shadow: 0 0 12px rgba(255, 0, 51, 0.7), inset 0 0 10px rgba(255, 0, 51, 0.15);
+    background-color: rgba(255, 0, 51, 0.04);
+  }
+  50% {
+    border: 3px solid #ff0000;
+    box-shadow: 0 0 25px #ff0000, 0 0 10px #ff0055, inset 0 0 20px rgba(255, 0, 0, 0.25);
+    background-color: rgba(255, 0, 0, 0.12);
+  }
+  100% {
+    border: 3px solid #ff0033;
+    box-shadow: 0 0 12px rgba(255, 0, 51, 0.7), inset 0 0 10px rgba(255, 0, 51, 0.15);
+    background-color: rgba(255, 0, 51, 0.04);
+  }
 }
 
 /* ===============================
@@ -146,76 +53,13 @@
 .container {
   padding: 0.75rem;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ===============================
-   FLOATING ACTION BUTTON – NEON
+   BUSCADOR & FILTROS
 ================================ */
-.fab {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: 2px solid #0ef;
-  background: radial-gradient(circle at top left,
-      #0ef,
-      #2563eb);
-  color: #1f293a;
-  font-size: 22px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    0 0 18px rgba(0, 238, 255, 0.6),
-    0 12px 30px rgba(0, 0, 0, 0.35);
-  z-index: 999;
-  transition: all 0.25s ease;
-}
-
-.fab:active {
-  transform: scale(0.95);
-  box-shadow:
-    0 0 12px rgba(0, 238, 255, 0.4),
-    0 8px 20px rgba(0, 0, 0, 0.3);
-}
-
-.fab:hover {
-  transform: scale(1.1) rotate(6deg);
-  box-shadow:
-    0 0 28px rgba(0, 238, 255, 0.9),
-    0 18px 40px rgba(0, 0, 0, 0.45);
-}
-
-.fab::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 2px solid rgba(0, 238, 255, 0.4);
-  opacity: 0;
-  animation: pulseGlow 2.5s infinite;
-}
-
-@keyframes pulseGlow {
-  0% {
-    transform: scale(0.85);
-    opacity: 0;
-  }
-
-  40% {
-    opacity: 0.6;
-  }
-
-  100% {
-    transform: scale(1.2);
-    opacity: 0;
-  }
-}
-
 .searchWrapper {
   margin-bottom: 20px;
   display: flex;
@@ -227,142 +71,37 @@
   max-width: 420px;
   padding: 12px 18px;
   border-radius: 12px;
-  color:  rgba(194, 148, 54);
+  color: rgba(194, 148, 54, 1);
   font-size: 15px;
-  border: 2px solid rgba(194, 148, 54);
+  border: 2px solid rgba(194, 148, 54, 1);
   outline: none;
-  box-shadow:
-    0 0 8px  rgba(194, 148, 54),
-    0 0 20px  rgba(194, 148, 54);
+  box-shadow: 0 0 8px rgba(194, 148, 54, 0.6), 0 0 20px rgba(194, 148, 54, 0.3);
   transition: all 0.25s ease;
 }
 
 .neonSearch::placeholder {
-  color:  rgba(194, 148, 54);
-}
-
-/* ===============================
-   MOBILE RESPONSIVE (SMARTPHONES)
-================================ */
-@media (max-width: 480px) {
-
-  .overlay {
-    align-items: center;
-    padding-bottom: 8vh;
-  }
-
-  .selector {
-    max-width: 100%;
-    border-radius: 20px;
-  }
-
-  .grid {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .fab {
-    width: 48px;
-    height: 48px;
-    font-size: 24px;
-  }
-}
-
-.eyeFab {
-  position: fixed;
-  bottom: calc(90px + env(safe-area-inset-bottom));
-  right: calc(16px + env(safe-area-inset-right));
-
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 0, 255, 0.5);
-
-  background:
-    radial-gradient(circle at 30% 30%, #ff00ff, #1a0a2f);
-
-  color: #0a0014;
-  font-size: 22px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-
-  box-shadow:
-    0 0 16px rgba(255, 0, 255, 0.8),
-    0 0 32px rgba(255, 0, 255, 0.6);
-
-  z-index: 999;
-  transition: transform 0.15s ease, box-shadow 0.25s ease;
-}
-
-.eyeFab:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 24px rgba(255, 0, 255, 1),
-    0 0 40px rgba(255, 0, 255, 0.8);
-}
-
-.eyeFab:active {
-  transform: translateY(0);
-  box-shadow:
-    0 0 12px rgba(255, 0, 255, 0.5),
-    inset 0 0 12px rgba(0, 0, 0, 0.8);
-}
-
-.eyeFab i {
-  font-size: 24px;
-  filter: drop-shadow(0 0 6px rgba(255, 0, 255, 0.9));
-}
-
-.downloadOverlay{
-  position: fixed;
-  inset: 0;
-
-  background: rgba(0,0,0,0.85);
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  z-index: 9999;
-
-  pointer-events: all;
-}
-
-.downloadText{
-  margin-top: 18px;
-  color: #00fff7;
-  font-size: 18px;
-  font-weight: 600;
-  text-shadow: 0 0 10px #00fff7;
+  color: rgba(194, 148, 54, 0.8);
 }
 
 .priceFilters {
   display: flex;
   gap: 12px;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
   margin: 20px 0;
 }
 
 .priceFilters button {
   padding: 10px 18px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
-
-  color: black;
+  color: #0f172a;
   font-size: 0.95rem;
   font-weight: 600;
-
   cursor: pointer;
-
   transition: all 0.25s ease;
 }
 
@@ -370,54 +109,187 @@
   transform: translateY(-2px);
   background: rgba(0, 255, 255, 0.12);
   border-color: rgba(0, 255, 255, 0.4);
-
-  box-shadow:
-    0 0 10px rgba(0,255,255,0.2),
-    0 0 20px rgba(0,255,255,0.1);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2), 0 0 20px rgba(0, 255, 255, 0.1);
 }
 
 .activeFilter {
-  background: linear-gradient(
-    135deg,
-    #00e5ff,
-    #0099ff
-  ) !important;
-
+  background: linear-gradient(135deg, #00e5ff, #0099ff) !important;
   color: #fff !important;
   border-color: transparent !important;
-
-  box-shadow:
-    0 0 15px rgba(0,229,255,0.5),
-    0 0 30px rgba(0,229,255,0.25);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.5), 0 0 30px rgba(0, 229, 255, 0.25);
 }
 
-.activeFilter:hover {
-  transform: translateY(-2px);
+.counterBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+/* ===============================
+   OVERLAY – NEON HUD (BASE)
+================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+      circle at 50% 20%,
+      rgba(37, 99, 235, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(14, 165, 233, 0.12),
+      transparent 60%
+    ),
+    rgba(241, 245, 249, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  z-index: 999;
+}
+
+/* ===============================
+   SELECTOR – CYBERPUNK NEON
+================================ */
+.selector {
+  position: relative;
+  z-index: 10000;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  padding: 20px 18px 22px;
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+  background: radial-gradient(
+      circle at 18% 10%,
+      rgba(255, 255, 255, 0.95),
+      transparent 38%
+    ),
+    linear-gradient(180deg, #ffffff, #f3f6fa);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.85),
+    0 24px 60px rgba(15, 23, 42, 0.18), 0 8px 20px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  animation: hudIn 0.35s cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+.selector::before {
+  content: "";
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  margin: 0 auto 10px;
+  background: linear-gradient(90deg, #00ffff, #ff00ff, #00ffff);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.8), 0 0 16px rgba(255, 0, 255, 0.6);
+}
+
+.selector button {
+  position: relative;
+  overflow: hidden;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  background: linear-gradient(
+    180deg,
+    rgba(15, 25, 45, 0.95),
+    rgba(5, 10, 25, 0.95)
+  );
+  color: #e8faff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.25), inset 0 0 10px rgba(0, 0, 0, 0.7);
+  transition: transform 0.15s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.selector button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 20%,
+    rgba(0, 255, 255, 0.25),
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.selector button:hover {
+  transform: translateY(-1px);
+  border-color: #00ffff;
+  box-shadow: 0 0 18px rgba(0, 255, 255, 0.7), 0 0 28px rgba(255, 0, 255, 0.45);
+}
+
+.selector button:hover::after {
+  opacity: 1;
+}
+
+.selector button:active {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4), inset 0 0 16px rgba(0, 0, 0, 0.85);
+}
+
+/* ===============================
+   FLOATING ACTION BUTTONS
+================================ */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid #0ef;
+  background: radial-gradient(circle at top left, #0ef, #2563eb);
+  color: #1f293a;
+  font-size: 22px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 18px rgba(0, 238, 255, 0.6), 0 12px 30px rgba(0, 0, 0, 0.35);
+  z-index: 999;
+  transition: all 0.25s ease;
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+.fab:hover {
+  transform: scale(1.1) rotate(6deg);
+  box-shadow: 0 0 28px rgba(0, 238, 255, 0.9), 0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
 .calculatorFab {
   position: fixed;
   bottom: 160px;
-  right: 20px; /* separado del botón + */
-
+  right: 20px;
   width: 60px;
   height: 60px;
-
   border: none;
   border-radius: 50%;
-
   font-size: 28px;
   cursor: pointer;
-
   background: #00e5ff;
   color: #000;
-
   z-index: 9999;
-
-  box-shadow:
-    0 0 10px rgba(0, 229, 255, 0.5),
-    0 0 20px rgba(0, 229, 255, 0.3);
-
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5), 0 0 20px rgba(0, 229, 255, 0.3);
   transition: all 0.2s ease;
 }
 
@@ -429,12 +301,75 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.65);
-
   display: flex;
   justify-content: center;
   align-items: center;
-
   z-index: 99998;
+}
+
+.eyeFab {
+  position: fixed;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  right: calc(16px + env(safe-area-inset-right));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 0, 255, 0.5);
+  background: radial-gradient(circle at 30% 30%, #ff00ff, #1a0a2f);
+  color: #0a0014;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 16px rgba(255, 0, 255, 0.8), 0 0 32px rgba(255, 0, 255, 0.6);
+  z-index: 999;
+  transition: transform 0.15s ease, box-shadow 0.25s ease;
+}
+
+.downloadOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  pointer-events: all;
+}
+
+.downloadText {
+  margin-top: 18px;
+  color: #00fff7;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 0 10px #00fff7;
+}
+
+/* ===============================
+   MOBILE RESPONSIVE (SMARTPHONES)
+================================ */
+@media (max-width: 480px) {
+  .overlay {
+    align-items: center;
+    padding-bottom: 8vh;
+  }
+
+  .selector {
+    max-width: 100%;
+    border-radius: 20px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr; /* Una sola columna en dispositivos móviles */
+  }
+
+  .fab {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
 }
 
 /* ===============================
@@ -446,7 +381,6 @@
     transform: translateY(18px) scale(0.94);
     filter: blur(6px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0) scale(1);

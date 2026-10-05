@@ -7,7 +7,6 @@ import {
   getDocs,
   getDoc,
   deleteDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 import { ref, deleteObject } from "firebase/storage";
 import { auth, db, storage } from "../firebase/firebaseConfig";
@@ -17,7 +16,6 @@ import styles from "../styles/Categorias.module.css";
 import CardCategory from "../components/CardCategory";
 import AddCategory from "../components/AddCategory";
 import { Loader } from "../components/Loader";
-import ClientBot from "../components/ClientBot";
 
 export const Categorias = () => {
   const [categorias, setCategorias] = useState([]);
@@ -38,7 +36,6 @@ export const Categorias = () => {
       const user = auth.currentUser;
 
       if (!user) {
-        // Si no hay user (invitado), asumimos rol catalogo desde localStorage
         const guest = localStorage.getItem("guestUser");
         if (guest) {
           setRole(JSON.parse(guest).role);
@@ -65,7 +62,7 @@ export const Categorias = () => {
     const data = snap.docs
       .map((d) => ({ id: d.id, ...d.data() }))
       .sort((a, b) =>
-        a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+        (a.nombre || "").localeCompare(b.nombre || "", "es", { sensitivity: "base" })
       );
 
     setCategorias(data);
@@ -91,7 +88,7 @@ export const Categorias = () => {
       if (productos.length > 0) {
         grouped[cat.id] = {
           categoriaId: cat.id,
-          categoriaNombre: cat.data().nombre,
+          categoriaNombre: cat.data().nombre || cat.data().name || "Sin nombre",
           productos,
         };
       }
@@ -112,7 +109,7 @@ export const Categorias = () => {
     if (!search.trim()) return [];
     if (!productosPorCategoria) return [];
 
-    const q = search.toLowerCase();
+    const q = search.toLowerCase().trim();
 
     return Object.values(productosPorCategoria)
       .map((cat) => {
@@ -120,17 +117,22 @@ export const Categorias = () => {
           const nombre = (p.name || p.nombre || "").toLowerCase();
 
           const variantesTexto = (p.variantes || [])
-            .map((v) =>
-              Object.values(v)
-                .join(" ")
-                .toLowerCase()
-            )
+            .map((v) => {
+              if (typeof v === "string") return v.toLowerCase();
+              if (typeof v === "object" && v !== null) {
+                return (
+                  (v.attr || "") +
+                  " " +
+                  Object.keys(v).join(" ") +
+                  " " +
+                  Object.values(v).join(" ")
+                ).toLowerCase();
+              }
+              return "";
+            })
             .join(" ");
 
-          return (
-            nombre.includes(q) ||
-            variantesTexto.includes(q)
-          );
+          return nombre.includes(q) || variantesTexto.includes(q);
         });
 
         if (productosFiltrados.length === 0) return null;
@@ -179,21 +181,13 @@ export const Categorias = () => {
     if (!canAddOrEdit) return;
 
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const userSnap = await getDoc(doc(db, "usuarios", user.uid));
-      const userName = userSnap.exists()
-        ? userSnap.data().nombre
-        : "Desconocido";
-
       const { id, nombre, descripcion, tag, imagenUrl, imagePath } = data;
 
       if (id) {
         const old = categorias.find((c) => c.id === id);
 
         if (old?.imagePath && old.imagePath !== imagePath) {
-          await deleteObject(ref(storage, old.imagePath)).catch(() => { });
+          await deleteObject(ref(storage, old.imagePath)).catch(() => {});
         }
 
         await updateDoc(doc(db, "categorias", id), {
@@ -222,6 +216,13 @@ export const Categorias = () => {
     }
   };
 
+  const handleSelectProduct = (categoriaId, productoId) => {
+    setSearch("");
+    navigate(`/categorias/${categoriaId}/productos?producto=${productoId}`, {
+      state: { productoId },
+    });
+  };
+
   if (role === null) return <Loader />;
 
   return (
@@ -245,11 +246,7 @@ export const Categorias = () => {
                   <div
                     key={p.id}
                     className={styles.searchItem}
-                    onClick={() =>
-                      navigate(
-                        `/categorias/${cat.categoriaId}/productos?producto=${p.id}`
-                      )
-                    }
+                    onClick={() => handleSelectProduct(cat.categoriaId, p.id)}
                   >
                     {p.name || p.nombre}
                   </div>
@@ -260,14 +257,14 @@ export const Categorias = () => {
         )}
       </div>
 
-      {/* BOTÓN FLOTANTE GOOGLE MAPS (Encima del botón +) */}
+      {/* BOTÓN FLOTANTE GOOGLE MAPS */}
       {canAddOrEdit && (
         <button
           className={styles.mapFloatBtn}
-          onClick={() => navigate('/viajes')} // Ajusta la ruta a donde tengas tu componente Viajes
+          onClick={() => navigate("/viajes")}
           title="Calculadora de Envíos (Google Maps)"
         >
-          <i className='bx bxs-map'></i>
+          <i className="bx bxs-map"></i>
         </button>
       )}
 
@@ -294,19 +291,19 @@ export const Categorias = () => {
             onEdit={
               canAddOrEdit
                 ? () => {
-                  setCategoryToEdit(cat);
-                  setIsModalOpen(true);
-                }
+                    setCategoryToEdit(cat);
+                    setIsModalOpen(true);
+                  }
                 : null
             }
             onDelete={
               canDelete
                 ? async () => {
-                  if (!confirm("¿Eliminar categoría?")) return;
-                  await deleteDoc(doc(db, "categorias", cat.id));
-                  fetchCategorias();
-                  fetchProductos();
-                }
+                    if (!confirm("¿Eliminar categoría?")) return;
+                    await deleteDoc(doc(db, "categorias", cat.id));
+                    fetchCategorias();
+                    fetchProductos();
+                  }
                 : null
             }
           />
@@ -324,7 +321,6 @@ export const Categorias = () => {
           categoryToEdit={categoryToEdit}
         />
       )}
-      {/* {role === "catalogo" && <ClientBot />} */}
     </>
   );
 };

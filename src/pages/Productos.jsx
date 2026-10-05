@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { collection, getDocs, addDoc, doc, setDoc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase/firebaseConfig";
 import ProductCard from "../components/ProductCard";
@@ -15,6 +15,7 @@ import Cuotas from "../components/Cuotas";
 
 export const Productos = () => {
   const { categoriaId } = useParams();
+  const location = useLocation();
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,56 @@ export const Productos = () => {
   const canDelete = isJefe;
   const [ordenPrecio, setOrdenPrecio] = useState("ninguno");
   const [showCalculator, setShowCalculator] = useState(false);
+
+  // Referencias directas a los nodos del DOM para garantizar el autoscroll
+  const itemRefs = useRef({});
+
+  /* ===============================
+      SCROLL AUTOMÁTICO AL PRODUCTO BUSCADO
+   =============================== */
+  useEffect(() => {
+    if (loading || productos.length === 0) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    const targetId = searchParams.get("producto") || location.state?.productoId;
+
+    if (!targetId) return;
+
+    // Si el producto buscado no está visible porque no hay stock y el filtro está apagado, lo encendemos
+    const estaVisible = productosFiltrados.some((p) => p.id === targetId);
+    if (!estaVisible && !showSinStock) {
+      setShowSinStock(true);
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const executeScroll = () => {
+      const element = itemRefs.current[targetId] || document.getElementById(`prod-${targetId}`);
+
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        // APLICA EL EFECTO NEÓN DE RESALTADO
+        element.classList.add(styles.highlightCard);
+
+        // Remueve el resplandor tras 3 segundos
+        setTimeout(() => {
+          element.classList.remove(styles.highlightCard);
+        }, 3000);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(executeScroll, 100);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(executeScroll);
+    }, 200);
+
+    return () => clearTimeout(timeoutId);
+  }, [loading, productos, location, showSinStock]);
 
   /* ===============================
      ATAJOS DE TECLADO
@@ -940,36 +991,48 @@ export const Productos = () => {
           {productosOrdenados.map((item) => {
             if (item.type === "combo") {
               return (
-                <ComboCard
+                <div
                   key={item.id}
-                  combo={item}
-                  productos={productos}
-                  Role={role}
-                  onEdit={() => handleEditProduct(item)}
-                  onDeleteCombo={
-                    canDelete
-                      ? (deletedId) =>
-                        setProductos((prev) =>
-                          prev.filter((p) => p.id !== deletedId)
-                        )
-                      : null
-                  }
-                />
+                  id={`prod-${item.id}`}
+                  data-producto-id={item.id}
+                  ref={(el) => (itemRefs.current[item.id] = el)}
+                >
+                  <ComboCard
+                    combo={item}
+                    productos={productos}
+                    Role={role}
+                    onEdit={() => handleEditProduct(item)}
+                    onDeleteCombo={
+                      canDelete
+                        ? (deletedId) =>
+                          setProductos((prev) =>
+                            prev.filter((p) => p.id !== deletedId)
+                          )
+                        : null
+                    }
+                  />
+                </div>
               );
             }
 
             return (
-              <ProductCard
+              <div
                 key={item.id}
-                producto={item}
-                userRole={role}
-                onEdit={canAddOrEdit ? () => handleEditProduct(item) : null}
-                onDelete={
-                  canDelete
-                    ? () => handleDelete(item.id, item.name)
-                    : null
-                }
-              />
+                id={`prod-${item.id}`}
+                data-producto-id={item.id}
+                ref={(el) => (itemRefs.current[item.id] = el)}
+              >
+                <ProductCard
+                  producto={item}
+                  userRole={role}
+                  onEdit={canAddOrEdit ? () => handleEditProduct(item) : null}
+                  onDelete={
+                    canDelete
+                      ? () => handleDelete(item.id, item.name)
+                      : null
+                  }
+                />
+              </div>
             );
           })}
         </div>
