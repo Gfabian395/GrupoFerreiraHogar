@@ -215,44 +215,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   }, [onClose]);
 
   const esJefe = userRole === "jefe";
-  const esEncargado = userRole === "encargado";
-
-  // Efecto para calcular y actualizar automáticamente el stock del modelo base en base a sus variantes hijas
-  useEffect(() => {
-    if (producto) {
-      setVariantes((prevVariantes) => {
-        let huboCambios = false;
-        const nuevasVariantes = prevVariantes.map((v) => {
-          if (v.tipoVariante === "modelo") {
-            const hijos = prevVariantes.filter(
-              (c) => c.tipoVariante === "color" && c.modeloPadre === v.attr && v.attr !== ""
-            );
-            if (hijos.length > 0) {
-              const suma4320 = hijos.reduce((acc, h) => acc + Number(h.stock4320 || 0), 0);
-              const suma4034 = hijos.reduce((acc, h) => acc + Number(h.stock4034 || 0), 0);
-              const suma2440 = hijos.reduce((acc, h) => acc + Number(h.stock2440 || 0), 0);
-
-              if (
-                v.stock4320 !== suma4320 ||
-                v.stock4034 !== suma4034 ||
-                v.stock2440 !== suma2440
-              ) {
-                huboCambios = true;
-                return {
-                  ...v,
-                  stock4320: suma4320,
-                  stock4034: suma4034,
-                  stock2440: suma2440,
-                };
-              }
-            }
-          }
-          return v;
-        });
-        return huboCambios ? nuevasVariantes : prevVariantes;
-      });
-    }
-  }, [variantes, producto]);
 
   const handleAddVariant = () => {
     setVariantes([...variantes, createEmptyVariant(categoriaId)]);
@@ -273,7 +235,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       price: modeloSeleccionado.price, 
       priceJuego: modeloSeleccionado.priceJuego,
       unidadesPorJuego: modeloSeleccionado.unidadesPorJuego,
-      // Los colores no manejan ficha técnica propia (se hereda del modelo base)
       fichaTecnica: [],
     };
 
@@ -350,19 +311,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     setVariantes(newVariantes);
   };
 
-  const handleCopyStockFromModel = (colorIndex, modeloPadreAttr) => {
-    const parentModel = variantes.find(v => v.tipoVariante === "modelo" && v.attr === modeloPadreAttr);
-    if (parentModel) {
-      const newVariantes = [...variantes];
-      if (esJefe || sucursalAsignada === "Los Andes 4320") newVariantes[colorIndex].stock4320 = parentModel.stock4320;
-      if (esJefe || sucursalAsignada === "Los Andes 4034") newVariantes[colorIndex].stock4034 = parentModel.stock4034;
-      if (esJefe || sucursalAsignada === "Jofre 2440") newVariantes[colorIndex].stock2440 = parentModel.stock2440;
-      setVariantes(newVariantes);
-    } else {
-      alert("No se encontró el modelo padre para copiar el stock.");
-    }
-  };
-
   const handleRemoveVariantImage = (index) => {
     if (variantImages[index]) {
       const newImages = { ...variantImages };
@@ -408,6 +356,19 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         imageURL = await getDownloadURL(storageRef);
       }
 
+      // Pre-calcular sumas de stock de variantes hijas para cada modelo base
+      const stockCalculadoPorModelo = {};
+      variantes.forEach(v => {
+        if (v.tipoVariante === "color" && v.modeloPadre) {
+          if (!stockCalculadoPorModelo[v.modeloPadre]) {
+            stockCalculadoPorModelo[v.modeloPadre] = { 4320: 0, 4034: 0, 2440: 0 };
+          }
+          stockCalculadoPorModelo[v.modeloPadre][4320] += Number(v.stock4320 || 0);
+          stockCalculadoPorModelo[v.modeloPadre][4034] += Number(v.stock4034 || 0);
+          stockCalculadoPorModelo[v.modeloPadre][2440] += Number(v.stock2440 || 0);
+        }
+      });
+
       const variantesProcesadas = await Promise.all(
         variantes.map(async (v, i) => {
           let variantImageURL = v.image || "";
@@ -418,7 +379,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             variantImageURL = await getDownloadURL(storageRef);
           }
 
-          // Solo el modelo base guarda la ficha técnica; los colores la dejan vacía para heredarla
           const fichaTecnicaLimpia = v.tipoVariante === "modelo" 
             ? (v.fichaTecnica || [])
                 .filter(item => item.label.trim() !== "")
@@ -429,11 +389,30 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             : [];
 
           const varianteAnterior = producto?.variantes?.[i];
-          const stockFinal = {
-            "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
-            "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
-            "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
-          };
+          let stockFinal = {};
+
+          if (v.tipoVariante === "modelo") {
+            const tieneHijos = stockCalculadoPorModelo[v.attr] !== undefined;
+            if (tieneHijos) {
+              stockFinal = {
+                "Los Andes 4320": stockCalculadoPorModelo[v.attr][4320],
+                "Los Andes 4034": stockCalculadoPorModelo[v.attr][4034],
+                "Jofre 2440": stockCalculadoPorModelo[v.attr][2440],
+              };
+            } else {
+              stockFinal = {
+                "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
+                "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
+                "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
+              };
+            }
+          } else {
+            stockFinal = {
+              "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
+              "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
+              "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
+            };
+          }
 
           return {
             attr: v.attr,
@@ -556,55 +535,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                     <input type="number" min="0" step="1" value={modelo.unidadesPorJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "unidadesPorJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
                   </label>
 
-                  {/* STOCK SUCURSALES */}
-                  <div className={styles.grid3Cols}>
-                    {(esJefe || sucursalAsignada === "Los Andes 4320") && (
-                      <label>
-                        Stk 4320 {producto && <span style={{fontSize: "0.7rem", color: "#64748b"}}>(Suma de variantes)</span>}
-                        <input 
-                          type="number" 
-                          min="0" 
-                          value={modelo.stock4320} 
-                          readOnly={!!producto}
-                          disabled={!!producto}
-                          style={producto ? { background: "#f1f5f9", cursor: "not-allowed" } : {}}
-                          onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4320", e.target.value)} 
-                          onWheel={(e) => e.target.blur()} 
-                        />
-                      </label>
-                    )}
-                    {(esJefe || sucursalAsignada === "Los Andes 4034") && (
-                      <label>
-                        Stk 4034 {producto && <span style={{fontSize: "0.7rem", color: "#64748b"}}>(Suma de variantes)</span>}
-                        <input 
-                          type="number" 
-                          min="0" 
-                          value={modelo.stock4034} 
-                          readOnly={!!producto}
-                          disabled={!!producto}
-                          style={producto ? { background: "#f1f5f9", cursor: "not-allowed" } : {}}
-                          onChange={(e) => handleVariantChange(modelo._originalIndex, "stock4034", e.target.value)} 
-                          onWheel={(e) => e.target.blur()} 
-                        />
-                      </label>
-                    )}
-                    {(esJefe || sucursalAsignada === "Jofre 2440") && (
-                      <label>
-                        Stk 2440 {producto && <span style={{fontSize: "0.7rem", color: "#64748b"}}>(Suma de variantes)</span>}
-                        <input 
-                          type="number" 
-                          min="0" 
-                          value={modelo.stock2440} 
-                          readOnly={!!producto}
-                          disabled={!!producto}
-                          style={producto ? { background: "#f1f5f9", cursor: "not-allowed" } : {}}
-                          onChange={(e) => handleVariantChange(modelo._originalIndex, "stock2440", e.target.value)} 
-                          onWheel={(e) => e.target.blur()} 
-                        />
-                      </label>
-                    )}
-                  </div>
-
                   {/* ================= SECCIÓN FICHA TÉCNICA (SOLO EN MODELO BASE) ================= */}
                   <fieldset style={{ marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
                     <legend style={{ fontSize: "0.8rem", fontWeight: "600", color: "#475569" }}>Ficha Técnica del Modelo Base</legend>
@@ -709,20 +639,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '15px 0 5px 0' }}>
                             <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Stock sucursales</span>
-                            {!producto && (
-                              <button 
-                                type="button" 
-                                onClick={() => handleCopyStockFromModel(color._originalIndex, color.modeloPadre)}
-                                style={{ 
-                                  fontSize: "0.75rem", padding: "4px 8px", cursor: "pointer", 
-                                  borderRadius: "4px", border: "1px solid #cbd5e1", 
-                                  background: "#f1f5f9", color: "#334155", fontWeight: "600" 
-                                }}
-                                title="Copiar las mismas cantidades que pusiste en el modelo base"
-                              >
-                                🔄 Repetir stock
-                              </button>
-                            )}
                           </div>
 
                           <div className={styles.grid3Cols}>
