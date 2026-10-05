@@ -7,6 +7,12 @@ import styles from "../styles/ClientDetail.module.css";
 import { Loader } from "./Loader";
 
 // ===============================
+// CONFIGURACIÓN DE ENVÍO
+// ===============================
+// Podés poner el número del jefe (con código de país ej: "5491112345678") o dejarlo vacío para seleccionar el grupo "Ventas" manualmente.
+const TELEFONO_JEFE_O_GRUPO = "54911XXXXXXXX"; 
+
+// ===============================
 // FUNCIONES AUXILIARES
 // ===============================
 const formatearFecha = (fecha) => {
@@ -69,7 +75,6 @@ const obtenerFechaHoyInput = () => {
   return `${year}-${month}-${day}`;
 };
 
-// 🛡️ Helper blindado: fuerza TODOS los cálculos a ser números reales
 const obtenerTotalVenta = (venta) => {
   const totalCredito = Number(venta.totalCredito || 0);
   if (totalCredito > 0) return totalCredito;
@@ -499,6 +504,39 @@ Gracias por su compra.`;
     window.open(url, "_blank");
   };
 
+  // 🔴 NUEVA FUNCIÓN: Enviar comprobante al Grupo "Ventas" / Jefe por WhatsApp
+  const enviarComprobanteAlJefe = (venta) => {
+    const productosTexto = venta.productos
+      ?.map((p) => `• ${p.nombre} (x${p.cantidad}, $${Number(p.precio).toLocaleString("es-AR")})`)
+      .join("\n");
+
+    const valorCuota = Number(venta.valorCuota || 0);
+
+    const mensaje = `🧾 *COMPROBANTE DE VENTA — GRUPO VENTAS*
+
+*ID de Venta:* ${venta.id}
+*Cliente:* ${cliente.nombre}
+*DNI:* ${cliente.dni}
+*Dirección:* ${cliente.direccion || "—"} ${cliente.entreCalles ? `· ${cliente.entreCalles}` : ""}
+
+*Fecha:* ${formatearFecha(venta.fecha)}
+*Sucursal:* ${venta.sucursal || "—"}
+*Vendedor:* ${getFirmaTexto(venta.vendedor, usuariosMap)}
+
+*Productos:*
+${productosTexto}
+
+*Cuotas:* ${venta.cuotas} x $${valorCuota.toLocaleString("es-AR")}
+*Total Crédito:* $${obtenerTotalVenta(venta).toLocaleString("es-AR")}`;
+
+    // Si hay teléfono configurado se usa directo, de lo contrario abre WhatsApp para seleccionar el grupo
+    const url = TELEFONO_JEFE_O_GRUPO && TELEFONO_JEFE_O_GRUPO !== "54911XXXXXXXX"
+      ? `https://api.whatsapp.com/send?phone=${TELEFONO_JEFE_O_GRUPO}&text=${encodeURIComponent(mensaje)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+
+    window.open(url, "_blank");
+  };
+
   const enviarComprobantePago = (venta, pago) => {
     const telefonoRaw =
       cliente.telefono1?.replace(/\D/g, "") ||
@@ -884,7 +922,8 @@ Gracias por su pago.`;
                         </div>
                       )}
 
-                    <div style={{ marginTop: "8px" }}>
+                    {/* 🟢 BOTONES DE ENVÍO DE COMPROBANTE */}
+                    <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                       <button
                         onClick={() => reenviarComprobante(venta)}
                         style={{
@@ -897,7 +936,23 @@ Gracias por su pago.`;
                           fontWeight: "500",
                         }}
                       >
-                        📩 Reenviar comprobante de compra
+                        📩 Reenviar comprobante al cliente
+                      </button>
+
+                      {/* 🟢 NUEVO BOTÓN PARA EL GRUPO VENTAS / JEFE */}
+                      <button
+                        onClick={() => enviarComprobanteAlJefe(venta)}
+                        style={{
+                          background: "#25D366",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 14px",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        📲 Enviar comprobante al Grupo Ventas
                       </button>
                     </div>
                   </section>
@@ -1054,7 +1109,8 @@ Gracias por su pago.`;
                                 </div>
                               </div>
 
-                              <div style={{ marginTop: "10px" }}>
+                              {/* 🟢 BOTONES DE ENVÍO DE COMPROBANTE DENTRO DEL MODAL */}
+                              <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                                 <button
                                   onClick={() => reenviarComprobante(venta)}
                                   style={{
@@ -1067,7 +1123,22 @@ Gracias por su pago.`;
                                     fontWeight: "500",
                                   }}
                                 >
-                                  📩 Reenviar comprobante de compra
+                                  📩 Reenviar comprobante al cliente
+                                </button>
+
+                                <button
+                                  onClick={() => enviarComprobanteAlJefe(venta)}
+                                  style={{
+                                    background: "#25D366",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 14px",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  📲 Enviar comprobante al Grupo Ventas
                                 </button>
                               </div>
                             </section>
