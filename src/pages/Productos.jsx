@@ -551,206 +551,218 @@ export const Productos = () => {
     }
   };
 
-  const handleGenerateQR = async (selectedVariantIds = []) => {
-    try {
-      const ref = collection(db, "categorias", categoriaId, "productos");
-      const snap = await getDocs(ref);
+const handleGenerateQR = async (selectedVariantIds = []) => {
+  try {
+    const ref = collection(db, "categorias", categoriaId, "productos");
+    const snap = await getDocs(ref);
 
-      let html = `
-      <html>
-      <head>
-        <title>Catálogo de Productos QR</title>
-        <style>
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-
-          body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 5px;
-            background-color: #ffffff;
-            color: #1e293b;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          .container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            justify-content: center;
-          }
-
-          .item {
-            display: flex;
-            flex-direction: column;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 10px;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-            page-break-inside: avoid;
-            position: relative;
-            box-sizing: border-box;
-          }
-
-          .img-container {
-            width: 100%;
-            height: 110px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            overflow: hidden;
-            background-color: #f1f5f9;
-            border: 1px solid #e2e8f0;
-          }
-
-          .product-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-
-          .meta-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-          }
-
-          h3 {
-            margin: 0;
-            font-size: 13px;
-            font-weight: 700;
-            color: #0f172a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .attr {
-            font-size: 11px;
-            color: #64748b;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          .price {
-            font-size: 13px;
-            font-weight: 700;
-            color: #0f172a;
-            margin-top: 1px;
-          }
-
-          .qr-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-top: 4px;
-          }
-
-          .qr-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #ffffff;
-            border-radius: 12px; 
-            width: 76px;
-            height: 76px;
-            box-shadow: 0 0 12px rgba(0, 180, 216, 0.25);
-            border: 2px solid #00b4d8;
-          }
-
-          .qr {
-            width: 64px;
-            height: 64px;
-            display: block;
-          }
-        </style>
-      </head>
-      <body>
-
-      <div class="container">
-      `;
-
-      for (const d of snap.docs) {
-        const data = d.data();
-
-        if (!data.variantes) continue;
-
-        for (const [index, variante] of data.variantes.entries()) {
-          const variantKey = `${d.id}_${index}`;
-
-          // Filtrar si hay una lista de selección activa
-          if (selectedVariantIds.length > 0 && !selectedVariantIds.includes(variantKey)) {
-            continue;
-          }
-
-          const totalStockVariante = Object.values(variante?.stock || {}).reduce(
-            (total, cantidad) => total + Number(cantidad || 0),
-            0
-          );
-
-          if (totalStockVariante <= 0 || variante.disponible === false) {
-            continue;
-          }
-
-          const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
-          const qr = await QRCode.toDataURL(url);
-
-          const imageUrl = data.image || variante.image || "";
-
-          html += `
-          <div class="item">
-            ${imageUrl
-              ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
-              : `<div class="img-container" style="color: #94a3b8; font-size: 11px;">Sin foto</div>`
-            }
-
-            <div class="meta-info">
-              <h3>${data.name}</h3>
-              <div class="attr">${variante.attr || "Estándar"}</div>
-              <div class="price">$${Number(variante.price).toLocaleString('es-AR')}</div>
-            </div>
-
-            <div class="qr-wrapper">
-              <div class="qr-container">
-                <img class="qr" src="${qr}" />
-              </div>
-            </div>
-
-          </div>
-          `;
+    let html = `
+    <html>
+    <head>
+      <title>Catálogo de Productos QR</title>
+      <style>
+        @page {
+          size: A4;
+          margin: 8mm;
         }
+
+        body {
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #ffffff;
+          color: #1e293b;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .container {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          justify-content: center;
+        }
+
+        .item {
+          display: flex;
+          flex-direction: column;
+          background: #ffffff;
+          border: 2px solid #000000;
+          border-radius: 10px;
+          padding: 8px;
+          gap: 6px;
+          height: 128mm; /* Altura calculada para permitir exactamente 2 filas por hoja A4 */
+          box-sizing: border-box;
+          page-break-inside: avoid;
+          position: relative;
+        }
+
+        /* Fuerza un salto de página cada 6 elementos (después de 2 filas completas) */
+        .item:nth-child(6n) {
+          page-break-after: always;
+        }
+
+        /* Contenedor cuadrado ajustado para la foto */
+        .img-container {
+          width: 100%;
+          height: 42mm;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          overflow: hidden;
+          background-color: #ffffff;
+          border: 1px solid #cbd5e1;
+          box-sizing: border-box;
+        }
+
+        .product-img {
+          max-width: 100%;
+          max-height: 100%;
+          width: auto;
+          height: auto;
+          object-fit: contain;
+        }
+
+        .meta-info {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+        }
+
+        h3 {
+          margin: 0;
+          font-size: 11px;
+          font-weight: 700;
+          color: #0f172a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .attr {
+          font-size: 10px;
+          color: #64748b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .price {
+          font-size: 11px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-top: 1px;
+        }
+
+        .qr-wrapper {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-top: auto;
+        }
+
+        /* Contenedor del QR con dimensiones proporcionales */
+        .qr-container {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #ffffff;
+          border-radius: 6px;
+          width: 100%;
+          height: 48mm;
+          padding: 4px;
+          border: 1px solid #cbd5e1;
+          box-sizing: border-box;
+        }
+
+        .qr {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          display: block;
+        }
+      </style>
+    </head>
+    <body>
+
+    <div class="container">
+    `;
+
+    for (const d of snap.docs) {
+      const data = d.data();
+
+      if (!data.variantes) continue;
+
+      for (const [index, variante] of data.variantes.entries()) {
+        const variantKey = `${d.id}_${index}`;
+
+        // Filtrar si hay una lista de selección activa
+        if (selectedVariantIds.length > 0 && !selectedVariantIds.includes(variantKey)) {
+          continue;
+        }
+
+        const totalStockVariante = Object.values(variante?.stock || {}).reduce(
+          (total, cantidad) => total + Number(cantidad || 0),
+          0
+        );
+
+        if (totalStockVariante <= 0 || variante.disponible === false) {
+          continue;
+        }
+
+        const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
+        const qr = await QRCode.toDataURL(url);
+
+        const imageUrl = data.image || variante.image || "";
+
+        html += `
+        <div class="item">
+          ${imageUrl
+            ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
+            : `<div class="img-container" style="color: #94a3b8; font-size: 10px;">Sin foto</div>`
+          }
+
+          <div class="meta-info">
+            <h3>${data.name}</h3>
+            <div class="attr">${variante.attr || "Estándar"}</div>
+            <div class="price">$${Number(variante.price).toLocaleString('es-AR')}</div>
+          </div>
+
+          <div class="qr-wrapper">
+            <div class="qr-container">
+              <img class="qr" src="${qr}" />
+            </div>
+          </div>
+
+        </div>
+        `;
       }
-
-      html += `
-      </div>
-
-      <script>
-        window.onload = () => {
-          setTimeout(() => {
-            window.print();
-          }, 300);
-        };
-      </script>
-
-      </body>
-      </html>
-      `;
-
-      const win = window.open("", "_blank");
-      win.document.write(html);
-      win.document.close();
-
-    } catch (error) {
-      console.error(error);
     }
-  };
+
+    html += `
+    </div>
+
+    <script>
+      window.onload = () => {
+        setTimeout(() => {
+          window.print();
+        }, 300);
+      };
+    </script>
+
+    </body>
+    </html>
+    `;
+
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   const handlePDFStock = async () => {
     try {
