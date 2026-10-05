@@ -17,7 +17,7 @@
   position: relative;
   width: 100%;
   min-height: 0;
-/*   padding: 20px; */
+  padding: 20px;
   border-radius: 12px;
   display: grid;
   grid-template-columns: 1fr;

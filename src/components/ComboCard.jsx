@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import styles from "../styles/ComboCard.module.css";
 import { useCart } from "../context/CartContext";
 import ProductCard from "./ProductCard";
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import html2canvas from "html2canvas";
 
 const configuracionCuotas = [
   { cuotas: 2, interes: 15 },
@@ -51,10 +52,12 @@ export default function ComboCard({
 }) {
   const { addToCart, items: cartItems = [] } = useCart();
 
+  const printRef = useRef(null); // Ref al ticket formal oculto
   const [showSingles, setShowSingles] = useState(false);
   const [showCuotas, setShowCuotas] = useState(false);
   const [comboQty, setComboQty] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState({});
+  const [isSharing, setIsSharing] = useState(false);
 
   const esJefe = Role === "jefe";
   const esEncargado = Role === "encargado";
@@ -151,7 +154,7 @@ export default function ComboCard({
   );
 
   const getAvailabilityForVariant = useCallback(
-    (productId, variant, physicalRequiredQty) => { // Cambiado a physicalRequiredQty
+    (productId, variant, physicalRequiredQty) => {
       const stockObj = getStockObj(variant);
       const variantName = variant?.attr?.trim();
 
@@ -168,7 +171,6 @@ export default function ComboCard({
           0
         );
 
-        // ✅ DIVIDIMOS EL STOCK POR LA CANTIDAD FÍSICA NECESARIA (Ej: 6 sillas)
         const availableCombos = Math.floor(
           availableUnits / Number(physicalRequiredQty || 1)
         );
@@ -211,7 +213,6 @@ export default function ComboCard({
       const variant = item.variants[safeIndex] ?? null;
       const variantName = variant?.attr?.trim() ?? "Sin variante";
 
-      // ✅ DETECTAMOS SI EL PRODUCTO ES UN "JUEGO x6" O SIMILAR
       const multiplier = Number(
         variant?.unidadesPorJuego ??
         item.product?.unidadesPorJuego ??
@@ -219,7 +220,6 @@ export default function ComboCard({
         1
       );
 
-      // ✅ MULTIPLICAMOS LO QUE PIDE EL COMBO POR LAS UNIDADES QUE TRAE EL JUEGO
       const physicalQty = item.requiredQty * multiplier;
 
       const availability = variant
@@ -235,8 +235,8 @@ export default function ComboCard({
         variant,
         variantIndex: safeIndex,
         variantName,
-        multiplier,       // Guardamos el multiplicador
-        physicalQty,      // Guardamos la cantidad física real necesaria
+        multiplier,
+        physicalQty,
         stockTotal: getStockTotal(variant),
         branch: availability.branch,
         availableUnits: availability.availableUnits,
@@ -284,10 +284,6 @@ export default function ComboCard({
     (component) => !component.variant || component.availableCombos <= 0
   );
 
-  if (isBroken) {
-    console.warn(`🚨 [ComboCard Alerta Stock] Combo deshabilitado por falta de stock crítico en:`, brokenItems);
-  }
-
   const cuotas = useMemo(() => {
     if (!comboTotal) return [];
 
@@ -302,7 +298,10 @@ export default function ComboCard({
       .map(({ cuotas, interes }) => {
         const monto = comboTotal * (1 + interes / 100);
         const cuota = Math.ceil(monto / cuotas / 1000) * 1000;
-        return `${cuotas} cuotas ${formatARS(cuota)}`;
+        return {
+          cuotas,
+          montoCuota: formatARS(cuota),
+        };
       });
   }, [comboTotal]);
 
@@ -310,7 +309,6 @@ export default function ComboCard({
     return selectedComponents
       .map((component) => {
         const qtyText = component.requiredQty > 1 ? `${component.requiredQty} ` : "";
-        // Agregamos un texto si es un juego (ej: para que en el carrito diga "Juego x6")
         const multText = component.multiplier > 1 ? ` (Juego x${component.multiplier})` : "";
 
         return `${qtyText}${component.product.name} ${component.variantName}${multText}`;
@@ -349,7 +347,6 @@ export default function ComboCard({
       variant: component.variantName,
       variantIndex: component.variantIndex,
       quantity: component.requiredQty,
-      // ✅ ACÁ ESTABA EL ERROR: Le mandamos la CANTIDAD FÍSICA REAL (Ej: 6) para descontar stock
       unitsToDiscount: component.physicalQty,
       totalUnitsToDiscount: component.physicalQty * comboQty,
       branch: component.branch,
@@ -434,282 +431,459 @@ export default function ComboCard({
     }
   };
 
+  /* =========================================
+     COMPARTIR PRESUPUESTO ESTILO TICKET LIMPIO (IMG 1)
+  ========================================= */
+  const handleSharePresupuesto = async () => {
+    if (!printRef.current) return;
+    setIsSharing(true);
+
+    try {
+      const canvas = await html2canvas(printRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      const dataUrl = canvas.toDataURL("image/png");
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `Presupuesto-${combo.name}.png`, {
+        type: "image/png",
+      });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Presupuesto ${combo.name}`,
+          text: `Presupuesto para ${combo.name}:\nTotal: ${formatARS(comboTotal)}`,
+          files: [file],
+        });
+      } else {
+        const link = document.createElement("a");
+        link.download = `Presupuesto-${combo.name}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+    } catch (error) {
+      console.error("Error generando la imagen del presupuesto:", error);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const currentDate = new Date().toLocaleDateString("es-AR");
+
   return (
-    <article className={styles.card}>
-      <div className={styles.browserBar}>
-        <div className={styles.browserDots}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div className={styles.addressBar}>tu-tienda.com</div>
-      </div>
-
-      <section className={styles.hero}>
-        {(puedeEditar || puedeEliminar) && (
-          <div className={styles.adminActions}>
-            {puedeEditar && (
-              <button
-                type="button"
-                className={styles.adminEditBtn}
-                onClick={handleEditCombo}
-                title="Editar combo"
-              >
-                ✏️
-              </button>
-            )}
-
-            {puedeEliminar && (
-              <button
-                type="button"
-                className={styles.adminDeleteBtn}
-                onClick={deleteCombo}
-                title="Eliminar combo"
-              >
-                🗑
-              </button>
-            )}
+    <>
+      <article className={styles.card}>
+        <div className={styles.browserBar}>
+          <div className={styles.browserDots}>
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
-        )}
-
-        {combo.image || selectedComponents[0]?.image ? (
-          <img
-            src={combo.image || selectedComponents[0]?.image}
-            alt={combo.name}
-            className={styles.heroImage}
-          />
-        ) : (
-          <div className={styles.noImage}>Sin imagen</div>
-        )}
-
-        <div className={styles.heroPrice}>
-          <span>PRECIO DEL COMBO:</span>
-          <strong>{formatARS(comboUnitPrice)}</strong>
+          <div className={styles.addressBar}>tu-tienda.com</div>
         </div>
-      </section>
 
-      <div className={styles.content}>
-        <h3 className={styles.comboName}>{combo.name}</h3>
+        <section className={styles.hero}>
+          {(puedeEditar || puedeEliminar) && (
+            <div className={styles.adminActions}>
+              {puedeEditar && (
+                <button
+                  type="button"
+                  className={styles.adminEditBtn}
+                  onClick={handleEditCombo}
+                  title="Editar combo"
+                >
+                  ✏️
+                </button>
+              )}
 
-        {selectedComponents.map((component, stepIndex) => (
-          <section key={component.productId} className={styles.step}>
-            <header className={styles.stepHeader}>
-              <h4>
-                Paso {stepIndex + 1}: Elegí tu Variante de{" "}
-                {component.product.name}
-              </h4>
-              <p>
-                requiere {component.requiredQty}{" "}
-                {component.multiplier > 1
-                  ? `juego(s) de ${component.multiplier} unidades`
-                  : component.requiredQty === 1
-                  ? "unidad"
-                  : "unidades"}
-              </p>
-            </header>
-
-            <div className={styles.variantGrid}>
-              {component.variants.map((variant, variantIndex) => {
-                const stockTotal = getStockTotal(variant);
-                
-                // Calculamos cuánto requiere físicamente ESTA variante específica
-                const varMultiplier = Number(
-                  variant?.unidadesPorJuego ??
-                  component.product?.unidadesPorJuego ??
-                  component.product?.unidadesNecesarias ??
-                  1
-                );
-                const varPhysicalQty = component.requiredQty * varMultiplier;
-
-                const availability = getAvailabilityForVariant(
-                  component.productId,
-                  variant,
-                  varPhysicalQty
-                );
-
-                const selected = component.variantIndex === variantIndex;
-                const noStock = stockTotal <= 0;
-                const noComboStock = availability.availableCombos <= 0;
-                const disabled = !esJefe && noComboStock;
-
-                let meta = `Stock: ${stockTotal}`;
-
-                if (noStock) {
-                  meta = "AGOTADO";
-                } else if (noComboStock) {
-                  meta = `SIN STOCK (Dispo: ${stockTotal})`;
-                }
-
-                return (
-                  <button
-                    type="button"
-                    key={`${component.productId}-${variantIndex}`}
-                    className={`
-                      ${styles.variantOption}
-                      ${selected ? styles.selected : ""}
-                      ${disabled ? styles.disabled : ""}
-                    `}
-                    disabled={disabled}
-                    onClick={() =>
-                      handleVariantSelect(component.productId, variantIndex)
-                    }
-                  >
-                    <span className={styles.swatch}>
-                      {variant.image ? (
-                        <img src={variant.image} alt={variant.attr} />
-                      ) : (
-                        <span className={styles.swatchFallback}></span>
-                      )}
-
-                      {noComboStock && <span className={styles.cross}></span>}
-                    </span>
-
-                    <strong>{variant.attr}</strong>
-                    <small>{meta}</small>
-                  </button>
-                );
-              })}
+              {puedeEliminar && (
+                <button
+                  type="button"
+                  className={styles.adminDeleteBtn}
+                  onClick={deleteCombo}
+                  title="Eliminar combo"
+                >
+                  🗑
+                </button>
+              )}
             </div>
-          </section>
-        ))}
+          )}
 
-        {isBroken && (
-          <div className={styles.alertBroken}>
-            <strong>⚠ Este combo no se puede vender así.</strong>
-            <ul>
-              {brokenItems.map((item) => (
-                <li key={item.productId}>
-                  {item.product.name} - {item.variantName}: requiere{" "}
-                  {item.physicalQty} unidades, stock insuficiente.
-                </li>
+          {combo.image || selectedComponents[0]?.image ? (
+            <img
+              src={combo.image || selectedComponents[0]?.image}
+              alt={combo.name}
+              className={styles.heroImage}
+            />
+          ) : (
+            <div className={styles.noImage}>Sin imagen</div>
+          )}
+
+          <div className={styles.heroPrice}>
+            <span>PRECIO DEL COMBO:</span>
+            <strong>{formatARS(comboUnitPrice)}</strong>
+          </div>
+        </section>
+
+        <div className={styles.content}>
+          <h3 className={styles.comboName}>{combo.name}</h3>
+
+          {selectedComponents.map((component, stepIndex) => (
+            <section key={component.productId} className={styles.step}>
+              <header className={styles.stepHeader}>
+                <h4>
+                  Paso {stepIndex + 1}: Elegí tu Variante de{" "}
+                  {component.product.name}
+                </h4>
+                <p>
+                  requiere {component.requiredQty}{" "}
+                  {component.multiplier > 1
+                    ? `juego(s) de ${component.multiplier} unidades`
+                    : component.requiredQty === 1
+                    ? "unidad"
+                    : "unidades"}
+                </p>
+              </header>
+
+              <div className={styles.variantGrid}>
+                {component.variants.map((variant, variantIndex) => {
+                  const stockTotal = getStockTotal(variant);
+
+                  const varMultiplier = Number(
+                    variant?.unidadesPorJuego ??
+                    component.product?.unidadesPorJuego ??
+                    component.product?.unidadesNecesarias ??
+                    1
+                  );
+                  const varPhysicalQty = component.requiredQty * varMultiplier;
+
+                  const availability = getAvailabilityForVariant(
+                    component.productId,
+                    variant,
+                    varPhysicalQty
+                  );
+
+                  const selected = component.variantIndex === variantIndex;
+                  const noStock = stockTotal <= 0;
+                  const noComboStock = availability.availableCombos <= 0;
+                  const disabled = !esJefe && noComboStock;
+
+                  let meta = `Stock: ${stockTotal}`;
+
+                  if (noStock) {
+                    meta = "AGOTADO";
+                  } else if (noComboStock) {
+                    meta = `SIN STOCK (Dispo: ${stockTotal})`;
+                  }
+
+                  return (
+                    <button
+                      type="button"
+                      key={`${component.productId}-${variantIndex}`}
+                      className={`
+                        ${styles.variantOption}
+                        ${selected ? styles.selected : ""}
+                        ${disabled ? styles.disabled : ""}
+                      `}
+                      disabled={disabled}
+                      onClick={() =>
+                        handleVariantSelect(component.productId, variantIndex)
+                      }
+                    >
+                      <span className={styles.swatch}>
+                        {variant.image ? (
+                          <img src={variant.image} alt={variant.attr} />
+                        ) : (
+                          <span className={styles.swatchFallback}></span>
+                        )}
+
+                        {noComboStock && <span className={styles.cross}></span>}
+                      </span>
+
+                      <strong>{variant.attr}</strong>
+                      <small>{meta}</small>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+
+          {isBroken && (
+            <div className={styles.alertBroken}>
+              <strong>⚠ Este combo no se puede vender así.</strong>
+              <ul>
+                {brokenItems.map((item) => (
+                  <li key={item.productId}>
+                    {item.product.name} - {item.variantName}: requiere{" "}
+                    {item.physicalQty} unidades, stock insuficiente.
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className={styles.summary}>
+            <strong>Selección actual:</strong>
+            <span>{selectionSummary || "Sin selección"}</span>
+          </div>
+
+          <div className={styles.qtyBox}>
+            <div>
+              <strong>Combos a sumar</strong>
+              <small>
+                {availableCombos > 0
+                  ? `${availableCombos} combo${
+                      availableCombos === 1 ? "" : "s"
+                    } disponible${availableCombos === 1 ? "" : "s"}`
+                  : "Sin combos disponibles"}
+              </small>
+            </div>
+
+            <div className={styles.qtyControls}>
+              <button
+                type="button"
+                disabled={comboQty <= 1}
+                onClick={() => setComboQty((q) => Math.max(q - 1, 1))}
+              >
+                -
+              </button>
+
+              <strong>{comboQty}</strong>
+
+              <button
+                type="button"
+                disabled={comboQty >= availableCombos}
+                onClick={() =>
+                  setComboQty((q) => Math.min(q + 1, availableCombos))
+                }
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {comboQty > 1 && (
+            <div className={styles.totalBox}>
+              <span>Total:</span>
+              <strong>{formatARS(comboTotal)}</strong>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className={styles.toggleCuotas}
+            onClick={() => setShowCuotas((v) => !v)}
+          >
+            {showCuotas ? "Ocultar cuotas" : "Ver cuotas"}
+          </button>
+
+          {showCuotas && (
+            <div className={styles.cuotasInline}>
+              {cuotas.map((item, index) => (
+                <span key={index} className={styles.cuota}>
+                  {item.cuotas} cuotas {item.montoCuota}
+                </span>
               ))}
-            </ul>
+            </div>
+          )}
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.primary}
+              onClick={addComboToCart}
+              disabled={isBroken}
+            >
+              Sumar combo al carrito
+            </button>
+
+            <button
+              type="button"
+              className={styles.mpButton}
+              onClick={handleMercadoPago}
+              disabled={isBroken}
+            >
+              Pagar con Mercado Pago
+            </button>
+
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => setShowSingles(true)}
+            >
+              Comprar por separado
+            </button>
+
+            <button
+              type="button"
+              className={styles.shareBtn}
+              onClick={handleSharePresupuesto}
+              disabled={isSharing}
+            >
+              {isSharing ? "Generando..." : "📲 Compartir Presupuesto"}
+            </button>
+          </div>
+        </div>
+
+        {showSingles && (
+          <div className={styles.overlay} onClick={() => setShowSingles(false)}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <header className={styles.modalHeader}>
+                <h4>Comprar productos por separado</h4>
+                <button type="button" onClick={() => setShowSingles(false)}>
+                  ✕
+                </button>
+              </header>
+
+              <div className={styles.modalContent}>
+                {selectedComponents.map((component) => (
+                  <ProductCard
+                    key={`${component.product.id}-${component.variantIndex}`}
+                    producto={{
+                      ...component.product,
+                      comboId: combo.id,
+                    }}
+                    fromCombo
+                    Role={Role}
+                    initialVariant={component.variantIndex}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
+      </article>
 
-        <div className={styles.summary}>
-          <strong>Selección actual:</strong>
-          <span>{selectionSummary || "Sin selección"}</span>
-        </div>
+      {/* ==============================================================
+          PLANTILLA DE PRESUPUESTO ESTILO TICKET (EXCLUSIVO PARA CAPTURA DE IMAGEN)
+         ============================================================== */}
+      <div
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+        }}
+      >
+        <div
+          ref={printRef}
+          style={{
+            width: "450px",
+            backgroundColor: "#ffffff",
+            padding: "24px",
+            boxSizing: "border-box",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            color: "#1e293b",
+            borderRadius: "12px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "22px",
+              fontWeight: "900",
+              color: "#0f2942",
+              margin: "0 0 4px 0",
+              letterSpacing: "0.5px",
+              textTransform: "uppercase",
+            }}
+          >
+            PRESUPUESTO DE COMPRA
+          </h2>
+          <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 16px 0" }}>
+            Fecha: {currentDate}
+          </p>
 
-        <div className={styles.qtyBox}>
-          <div>
-            <strong>Combos a sumar</strong>
-            <small>
-              {availableCombos > 0
-                ? `${availableCombos} combo${
-                    availableCombos === 1 ? "" : "s"
-                  } disponible${availableCombos === 1 ? "" : "s"}`
-                : "Sin combos disponibles"}
-            </small>
+          <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" }} />
+
+          {/* LISTA DE COMPONENTES DEL COMBO */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "16px" }}>
+            {selectedComponents.map((comp) => {
+              const unitPrice = Number(comp.variant?.price || comp.product?.price || 0);
+              const calculatedTotal = unitPrice * comp.requiredQty;
+
+              return (
+                <div key={comp.productId} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ paddingRight: "10px" }}>
+                    <strong style={{ fontSize: "15px", color: "#0f172a", display: "block" }}>
+                      {comp.product.name}
+                    </strong>
+                    <span style={{ fontSize: "13px", color: "#64748b" }}>
+                      Variante: {comp.variantName} | {comp.requiredQty} u. {unitPrice > 0 ? `x ${formatARS(unitPrice)}` : ""}
+                    </span>
+                  </div>
+                  <strong style={{ fontSize: "15px", color: "#0f172a", whiteSpace: "nowrap" }}>
+                    {calculatedTotal > 0 ? formatARS(calculatedTotal) : formatARS(comboUnitPrice)}
+                  </strong>
+                </div>
+              );
+            })}
           </div>
 
-          <div className={styles.qtyControls}>
-            <button
-              type="button"
-              disabled={comboQty <= 1}
-              onClick={() => setComboQty((q) => Math.max(q - 1, 1))}
-            >
-              -
-            </button>
+          <hr style={{ border: "none", borderTop: "1px solid #e2e8f0", margin: "12px 0" }} />
 
-            <strong>{comboQty}</strong>
-
-            <button
-              type="button"
-              disabled={comboQty >= availableCombos}
-              onClick={() =>
-                setComboQty((q) => Math.min(q + 1, availableCombos))
-              }
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {comboQty > 1 && (
-          <div className={styles.totalBox}>
-            <span>Total:</span>
+          {/* TOTALES */}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "15px", color: "#475569", marginBottom: "8px" }}>
+            <span>Subtotal</span>
             <strong>{formatARS(comboTotal)}</strong>
           </div>
-        )}
 
-        <button
-          type="button"
-          className={styles.toggleCuotas}
-          onClick={() => setShowCuotas((v) => !v)}
-        >
-          {showCuotas ? "Ocultar cuotas" : "Ver cuotas"}
-        </button>
-
-        {showCuotas && (
-          <div className={styles.cuotasInline}>
-            {cuotas.map((cuota, index) => (
-              <span key={index} className={styles.cuota}>
-                {cuota}
-              </span>
-            ))}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <span style={{ fontSize: "18px", fontWeight: "900", color: "#16a34a" }}>TOTAL CONTADO</span>
+            <span style={{ fontSize: "22px", fontWeight: "900", color: "#16a34a" }}>{formatARS(comboTotal)}</span>
           </div>
-        )}
 
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.primary}
-            onClick={addComboToCart}
-            disabled={isBroken}
-          >
-            Sumar combo al carrito
-          </button>
+          {/* CUOTAS DISPONIBLES */}
+          {cuotas.length > 0 && (
+            <div style={{ marginBottom: "20px" }}>
+              <h4 style={{ fontSize: "14px", color: "#2563eb", margin: "0 0 10px 0", fontWeight: "700" }}>
+                Cuotas disponibles:
+              </h4>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {cuotas.map((c, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      backgroundColor: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "6px",
+                      padding: "8px 12px",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      color: "#1e293b",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <span style={{ color: "#7c3aed" }}>✔</span> {c.cuotas} cuotas {c.montoCuota}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-          <button
-            type="button"
-            className={styles.mpButton}
-            onClick={handleMercadoPago}
-            disabled={isBroken}
+          {/* PIE DE PÁGINA */}
+          <div
+            style={{
+              backgroundColor: "#f0f9ff",
+              border: "1px solid #bae6fd",
+              borderRadius: "6px",
+              padding: "10px",
+              textAlign: "center",
+              color: "#0284c7",
+              fontSize: "13px",
+              fontWeight: "600",
+            }}
           >
-            Pagar con Mercado Pago
-          </button>
-
-          <button
-            type="button"
-            className={styles.secondary}
-            onClick={() => setShowSingles(true)}
-          >
-            Comprar por separado
-          </button>
+            Presupuesto válido por 15 días.
+          </div>
         </div>
       </div>
-
-      {showSingles && (
-        <div className={styles.overlay} onClick={() => setShowSingles(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <header className={styles.modalHeader}>
-              <h4>Comprar productos por separado</h4>
-              <button type="button" onClick={() => setShowSingles(false)}>
-                ✕
-              </button>
-            </header>
-
-            <div className={styles.modalContent}>
-              {selectedComponents.map((component) => (
-                <ProductCard
-                  key={`${component.product.id}-${component.variantIndex}`}
-                  producto={{
-                    ...component.product,
-                    comboId: combo.id,
-                  }}
-                  fromCombo
-                  Role={Role}
-                  initialVariant={component.variantIndex}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </article>
+    </>
   );
 }
