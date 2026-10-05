@@ -35,6 +35,10 @@ export const Productos = () => {
   const [ordenPrecio, setOrdenPrecio] = useState("ninguno");
   const [showCalculator, setShowCalculator] = useState(false);
 
+  // Estados para la selección e impresión de QR
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [selectedVariants, setSelectedVariants] = useState([]);
+
   // Referencias directas a los nodos del DOM para garantizar el autoscroll
   const itemRefs = useRef({});
 
@@ -514,131 +518,164 @@ export const Productos = () => {
     }
   };
 
-  const handleGenerateQR = async () => {
+  /* ===============================
+     GENERACIÓN DE QR Y SELECCIÓN
+  =============================== */
+
+  const openQRSelector = () => {
+    setQrModalOpen(true);
+  };
+
+  const toggleSelectVariant = (variantKey) => {
+    setSelectedVariants((prev) =>
+      prev.includes(variantKey)
+        ? prev.filter((id) => id !== variantKey)
+        : [...prev, variantKey]
+    );
+  };
+
+  const toggleSelectAllVariants = () => {
+    const allKeys = [];
+    productos.forEach((p) => {
+      if (p.variantes) {
+        p.variantes.forEach((_, index) => {
+          allKeys.push(`${p.id}_${index}`);
+        });
+      }
+    });
+
+    if (selectedVariants.length === allKeys.length) {
+      setSelectedVariants([]);
+    } else {
+      setSelectedVariants(allKeys);
+    }
+  };
+
+  const handleGenerateQR = async (selectedVariantIds = []) => {
     try {
       const ref = collection(db, "categorias", categoriaId, "productos");
       const snap = await getDocs(ref);
 
       let html = `
-    <html>
-    <head>
-      <title>Catálogo de Productos QR</title>
-      <style>
-        @page {
-          size: A4;
-          margin: 10mm;
-        }
+      <html>
+      <head>
+        <title>Catálogo de Productos QR</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
 
-        body {
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          margin: 0;
-          padding: 5px;
-          background-color: #ffffff;
-          color: #1e293b;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
+          body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 5px;
+            background-color: #ffffff;
+            color: #1e293b;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
 
-        .container {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 12px;
-          justify-content: center;
-        }
+          .container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            justify-content: center;
+          }
 
-        .item {
-          display: flex;
-          flex-direction: column;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 10px;
-          gap: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-          page-break-inside: avoid;
-          position: relative;
-          box-sizing: border-box;
-        }
+          .item {
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 10px;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            page-break-inside: avoid;
+            position: relative;
+            box-sizing: border-box;
+          }
 
-        .img-container {
-          width: 100%;
-          height: 110px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 10px;
-          overflow: hidden;
-          background-color: #f1f5f9;
-          border: 1px solid #e2e8f0;
-        }
+          .img-container {
+            width: 100%;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #f1f5f9;
+            border: 1px solid #e2e8f0;
+          }
 
-        .product-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
+          .product-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
 
-        .meta-info {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
+          .meta-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
 
-        h3 {
-          margin: 0;
-          font-size: 13px;
-          font-weight: 700;
-          color: #0f172a;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+          h3 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
-        .attr {
-          font-size: 11px;
-          color: #64748b;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+          .attr {
+            font-size: 11px;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
 
-        .price {
-          font-size: 13px;
-          font-weight: 700;
-          color: #0f172a;
-          margin-top: 1px;
-        }
+          .price {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 1px;
+          }
 
-        .qr-wrapper {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin-top: 4px;
-        }
+          .qr-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 4px;
+          }
 
-        .qr-container {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #ffffff;
-          border-radius: 12px; 
-          width: 76px;
-          height: 76px;
-          box-shadow: 0 0 12px rgba(0, 180, 216, 0.25);
-          border: 2px solid #00b4d8;
-        }
+          .qr-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border-radius: 12px; 
+            width: 76px;
+            height: 76px;
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.25);
+            border: 2px solid #00b4d8;
+          }
 
-        .qr {
-          width: 64px;
-          height: 64px;
-          display: block;
-        }
-      </style>
-    </head>
-    <body>
+          .qr {
+            width: 64px;
+            height: 64px;
+            display: block;
+          }
+        </style>
+      </head>
+      <body>
 
-    <div class="container">
-    `;
+      <div class="container">
+      `;
 
       for (const d of snap.docs) {
         const data = d.data();
@@ -646,16 +683,19 @@ export const Productos = () => {
         if (!data.variantes) continue;
 
         for (const [index, variante] of data.variantes.entries()) {
+          const variantKey = `${d.id}_${index}`;
+
+          // Filtrar si hay una lista de selección activa
+          if (selectedVariantIds.length > 0 && !selectedVariantIds.includes(variantKey)) {
+            continue;
+          }
+
           const totalStockVariante = Object.values(variante?.stock || {}).reduce(
             (total, cantidad) => total + Number(cantidad || 0),
             0
           );
 
-          if (totalStockVariante <= 0) {
-            continue;
-          }
-
-          if (variante.disponible === false) {
+          if (totalStockVariante <= 0 || variante.disponible === false) {
             continue;
           }
 
@@ -665,44 +705,43 @@ export const Productos = () => {
           const imageUrl = data.image || variante.image || "";
 
           html += `
-        <div class="item">
-          
-          ${imageUrl
+          <div class="item">
+            ${imageUrl
               ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
               : `<div class="img-container" style="color: #94a3b8; font-size: 11px;">Sin foto</div>`
             }
 
-          <div class="meta-info">
-            <h3>${data.name}</h3>
-            <div class="attr">${variante.attr || "Estándar"}</div>
-            <div class="price">$${Number(variante.price).toLocaleString('es-AR')}</div>
-          </div>
-
-          <div class="qr-wrapper">
-            <div class="qr-container">
-              <img class="qr" src="${qr}" />
+            <div class="meta-info">
+              <h3>${data.name}</h3>
+              <div class="attr">${variante.attr || "Estándar"}</div>
+              <div class="price">$${Number(variante.price).toLocaleString('es-AR')}</div>
             </div>
-          </div>
 
-        </div>
-        `;
+            <div class="qr-wrapper">
+              <div class="qr-container">
+                <img class="qr" src="${qr}" />
+              </div>
+            </div>
+
+          </div>
+          `;
         }
       }
 
       html += `
-    </div>
+      </div>
 
-    <script>
-      window.onload = () => {
-        setTimeout(() => {
-          window.print();
-        }, 300);
-      };
-    </script>
+      <script>
+        window.onload = () => {
+          setTimeout(() => {
+            window.print();
+          }, 300);
+        };
+      </script>
 
-    </body>
-    </html>
-    `;
+      </body>
+      </html>
+      `;
 
       const win = window.open("", "_blank");
       win.document.write(html);
@@ -1038,6 +1077,82 @@ export const Productos = () => {
         </div>
       )}
 
+      {/* MODAL DE SELECCIÓN DE VARIANTES / PRODUCTOS PARA IMPRIMIR QR */}
+      {qrModalOpen && (
+        <div className={styles.overlay} onClick={() => setQrModalOpen(false)}>
+          <div
+            className={styles.selector}
+            style={{ maxWidth: "550px", width: "90%", maxHeight: "80vh", overflowY: "auto", textAlign: "left" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 10px 0" }}>Seleccionar Productos para QR</h3>
+            <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 15px 0" }}>
+              Marque las variantes que desea incluir en el catálogo de códigos QR.
+            </p>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+              <button
+                type="button"
+                onClick={toggleSelectAllVariants}
+                style={{ fontSize: "12px", padding: "6px 12px" }}
+              >
+                {selectedVariants.length > 0 ? "Deseleccionar todo" : "Seleccionar todo"}
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "350px", overflowY: "auto", paddingRight: "5px" }}>
+              {productos.map((prod) => {
+                if (!prod.variantes || prod.type === "combo") return null;
+
+                return (
+                  <div key={prod.id} style={{ borderBottom: "1px solid #e2e8f0", pb: "8px" }}>
+                    <strong style={{ fontSize: "14px" }}>{prod.name}</strong>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px", paddingLeft: "10px" }}>
+                      {prod.variantes.map((v, idx) => {
+                        const variantKey = `${prod.id}_${idx}`;
+                        const isChecked = selectedVariants.includes(variantKey);
+
+                        return (
+                          <label key={variantKey} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleSelectVariant(variantKey)}
+                            />
+                            <span>{v.attr || "Estándar"} - ${Number(v.price || 0).toLocaleString('es-AR')}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
+              <button
+                type="button"
+                onClick={() => setQrModalOpen(false)}
+                style={{ background: "#cbd5e1", color: "#1e293b" }}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleGenerateQR(selectedVariants);
+                  setQrModalOpen(false);
+                }}
+                style={{ background: "#00b4d8", color: "#ffffff" }}
+              >
+                Imprimir QR ({selectedVariants.length === 0 ? "Todos" : selectedVariants.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectorOpen && canAddOrEdit && (
         <div
           className={styles.overlay}
@@ -1133,7 +1248,7 @@ export const Productos = () => {
           userRole={role}
 
           onPDFStock={(isJefe || isEncargado) ? handlePDFStock : null}
-          onGenerateQR={(isJefe || isEncargado) ? handleGenerateQR : null}
+          onGenerateQR={(isJefe || isEncargado) ? openQRSelector : null}
           onIncreasePrices={isJefe ? handleIncreasePrices : null}
           onDecreasePrices={isJefe ? handleDecreasePrices : null}
 
