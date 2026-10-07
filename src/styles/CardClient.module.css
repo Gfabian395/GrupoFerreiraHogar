@@ -2,155 +2,104 @@
 .clientWrapper {
   width: 100%;
   display: grid;
-  gap: 1rem;
-  justify-content: stretch;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
   padding: 1rem 0;
   box-sizing: border-box;
-  min-width: 0;
 }
 
 /* ================= CLIENT CARD ================= */
 .clientCard {
   background: #ffffff;
   width: 100%;
-  min-width: 0; /* Clave para el grid */
-  max-width: 100%;
-  overflow: hidden; /* Evita que contenido interno estire la card fuera de rango */
-  box-sizing: border-box;
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  display: grid;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  display: flex !important;
+  flex-direction: column !important;
   gap: 1rem;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
+  position: relative;
 }
 
 .clientCard:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.12);
 }
 
-/* ================= CLIENTES ESTADOS Y COLORES DINÁMICOS ================= */
-
-/* 🟢 EXCELENTE: Verde Óptimo / VIP */
+/* ================= ESTADOS Y BORDES DINÁMICOS ================= */
 .cardVip {
-  border: 2px solid #22c55e !important;
-  background: #dcfce7 !important;
+  border: 1.5px solid #22c55e !important;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%) !important;
 }
 
-/* 🟢 BUENO: Verde Claro / Confiable (Premium) */
 .cardPremium {
-  border: 2px solid #4ade80 !important;
-  background: #f0fdf4 !important;
+  border: 1.5px solid #4ade80 !important;
+  background: linear-gradient(180deg, #f7fee7 0%, #ffffff 100%) !important;
 }
 
-/* 🟡 REGULAR: Amarillo / Alerta Suave (Casos Liliana, Beatriz y Nuevos) */
 .cardRegular {
-  border: 2px solid #eab308 !important;
-  background: #fef9c3 !important;
+  border: 1.5px solid #eab308 !important;
+  background: linear-gradient(180deg, #fefce8 0%, #ffffff 100%) !important;
 }
 
-/* 🔴 MAL PAGADOR: Rojo / Rosado Advertencia Crítica */
 .cardBadPay {
-  border: 2px solid #ef4444 !important;
-  background: #fee2e2 !important;
+  border: 1.5px solid #ef4444 !important;
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%) !important;
 }
 
-/* 🔴 MANUALMENTE BLOQUEADO: Recupera el Rojo fuerte de advertencia */
 .cardBlocked {
-  border: 2px solid #ff3b3b !important;
-  background: #ffe5e5 !important;
+  border: 1.5px solid #ff3b3b !important;
+  background: linear-gradient(180deg, #fff1f2 0%, #ffffff 100%) !important;
 }
 
-/* ================= CLIENT HEADER ================= */
-.clientHeader {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  gap: .75rem;
-  align-items: center;
-  min-width: 0;
+/* ================= 1. FILA SUPERIOR (3 puntos a la IZQ / Activo a la DER) ================= */
+.clientHeaderTop {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100%;
 }
 
-.avatar img {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #38bdf8;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.avatar img:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-}
-
-.identity {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.identity h3 {
-  font-size: 1.15rem;
-  font-weight: 600;
-  display: flex;
-  gap: .35rem;
-  color: black;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.status {
-  font-size: .75rem;
-  padding: .35rem .6rem;
-  border-radius: 999px;
-  font-weight: 600;
-  text-align: center;
-  min-width: 50px;
-}
-
-.ok {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
-}
-
-.blocked {
-  background: rgba(239, 68, 68, 0.15);
-  color: #dc2626;
-}
-
-/* ================= MENU ================= */
+/* Menú 3 puntos a la izquierda */
 .clientMenu {
-  position: relative;
+  display: flex;
+  justify-content: space-between;
+}
+
+.clientInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .menuBtn {
   border: none;
-  background: rgba(0, 0, 0, 0.05);
-  font-size: 1.3rem;
+  background: rgba(15, 23, 42, 0.05);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
   cursor: pointer;
-  padding: .25rem .5rem;
-  border-radius: .5rem;
-  color: black;
-  transition: background 0.2s ease, transform 0.2s ease;
+  color: #334155;
+  transition: background 0.2s;
 }
 
 .menuBtn:hover {
-  background: rgba(56, 189, 248, 0.25);
-  transform: scale(1.05);
+  background: rgba(15, 23, 42, 0.1);
 }
 
 .menuDropdown {
-  position: absolute;
-  right: 0;
-  top: 130%;
-  background: white;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-  min-width: 190px;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  min-width: 170px;
   overflow: hidden;
   z-index: 100;
 }
@@ -159,97 +108,243 @@
   width: 100%;
   border: none;
   background: transparent;
-  padding: .6rem .75rem;
-  font-size: .85rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.85rem;
   text-align: left;
   cursor: pointer;
-  color: black;
-  transition: background 0.2s ease;
+  color: #1e293b;
+  transition: background 0.15s;
 }
 
 .menuDropdown button:hover {
-  background: rgba(56, 189, 248, 0.1);
+  background: #f1f5f9;
 }
 
 .danger {
-  color: #ef4444;
+  color: #ef4444 !important;
 }
 
-/* ================= CLIENT INFO ================= */
-.clientInfo {
-  display: grid;
-  gap: .6rem;
-  min-width: 0;
+/* Estado a la derecha */
+.status {
+  order: 2;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  display: inline-block;
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: .4rem;
-  font-size: .9rem;
-  min-width: 0;
+.ok {
+  background: #dcfce7;
+  color: #15803d;
 }
 
-.label {
-  color: black;
-  font-weight: 500;
+.blocked {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
-.value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ================= 2. NOMBRE DEL CLIENTE ================= */
+.identity {
+  width: 100%;
+  text-align: center;
 }
 
-.value a {
-  color: black;
-  text-decoration: none;
+.identity h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.35;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+/* ================= 3. SECCIÓN CONTACTO (WhatsApp) ================= */
+.contactGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.contactItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(241, 245, 249, 0.6);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  word-break: break-all; /* Evita que URLs o teléfonos largos ensanchen la card */
 }
 
-.value a:hover {
+.contactItem a {
+  color: #0284c7;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.contactItem a:hover {
   text-decoration: underline;
 }
 
-/* ==========================================================================
-   📊 CONTENEDOR DE MÉTRICAS (Estilo Etiqueta / Compacto)
-   ========================================================================== */
-.metricsContainer {
+/* ================= 4. CAJA CENTRAL (Puntuación, Observación y Ficha) ================= */
+.mainDataCard {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 0.85rem;
+  padding: 0.85rem;
   display: flex;
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #e2e8f0;
-  flex-wrap: wrap;
-  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.metricBox {
-  flex: 1;
-  min-width: 65px;
+/* Sección Puntuación */
+.puntuacionSection {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 3px 6px;
-  border-radius: 6px;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed #e2e8f0;
 }
 
-.metricLabel {
-  font-size: 9px;
+.rowPuntuacion {
+      display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+    flex-direction: column;
+}
+
+.leyendaPuntuacion {
   font-weight: 600;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.detallePuntuacion {
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* Sección Observación */
+.observacionSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.observacionTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 
-.metricValue {
-  font-size: 11px;
+.observacionTexto {
+  font-size: 0.83rem;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.35;
+  font-style: italic;
+}
+
+/* Sección Ficha de Compras */
+.fichaSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fichaTitle {
+  font-size: 0.78rem;
   font-weight: 700;
+  color: #0284c7;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.fichaTexto {
+  font-size: 0.83rem;
+  color: #334155;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Alerta especial cuando el cliente está bloqueado */
+.alertaBloqueo {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.alertaBloqueoHeader {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #dc2626;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.alertaBloqueoTexto {
+  font-size: 0.82rem;
+  color: #991b1b;
+  margin: 0;
+}
+
+/* ================= 5. TRES CAJITAS INFERIORES (Métricas) ================= */
+.metricsContainer {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.metricBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.25rem;
+  border-radius: 0.6rem;
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.metricLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  margin-bottom: 0.2rem;
+}
+
+.metricValue {
+  font-size: 1rem;
+  font-weight: 800;
 }
 
 .boxTotal {
   background-color: #f1f5f9;
+  border-color: #e2e8f0;
 }
 
 .boxTotal .metricLabel {
@@ -257,11 +352,12 @@
 }
 
 .boxTotal .metricValue {
-  color: #1e293b;
+  color: #0f172a;
 }
 
 .boxActive {
   background-color: #eff6ff;
+  border-color: #bfdbfe;
 }
 
 .boxActive .metricLabel {
@@ -274,6 +370,7 @@
 
 .boxCompleted {
   background-color: #f0fdf4;
+  border-color: #bbf7d0;
 }
 
 .boxCompleted .metricLabel {
@@ -284,99 +381,17 @@
   color: #15803d;
 }
 
-/* ==========================================================================
-   ⭐ FILA DE PUNTUACIÓN EN LA INFO DEL CLIENTE
-   ========================================================================== */
-.rowPuntuacion {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: .4rem;
-  font-size: .9rem;
-  align-items: center;
-  min-width: 0;
-}
-
-.valuePuntuacion {
-  color: black;
-  font-weight: 700;
-}
-
-.leyendaPuntuacion {
-  font-weight: 500;
-  font-size: 0.85rem;
-  opacity: 0.6;
-  margin-left: 4px;
-}
-
-.detallePuntuacion {
-  grid-column: 1 / -1;
-  font-size: 0.85rem;
-  color: #4b5563;
-  margin-top: 2px;
-  font-style: italic;
-  padding-left: 4px;
-  word-break: break-word; /* Rompe palabras largas para que no fuercen el ancho */
-}
-
-/* ===============================
-   ALERTA DE CLIENTE BLOQUEADO
-   =============================== */
-.alertaBloqueo {
-  background-color: #fef2f2;
-  border: 1.5px solid #ef4444;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
-  min-width: 0;
-}
-
-.alertaBloqueoHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 13px;
-  color: #dc2626;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.alertaBloqueoTexto {
-  font-size: 13px;
-  color: #7f1d1d;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
 /* ================= MOBILE ================= */
-@media (max-width: 360px) {
-  .row,
-  .rowPuntuacion {
-    grid-template-columns: 1fr;
-  }
-
-  .clientHeader {
-    grid-template-columns: auto 1fr auto;
-  }
-
-  .metricsContainer {
-    gap: 4px;
-  }
-
-  .metricBox {
-    padding: 2px 5px;
-    min-width: 52px;
+@media (max-width: 480px) {
+  .clientCard {
+    padding: 1rem;
   }
 
   .metricLabel {
-    font-size: 8px;
+    font-size: 0.58rem;
   }
 
   .metricValue {
-    font-size: 10px;
+    font-size: 0.9rem;
   }
 }

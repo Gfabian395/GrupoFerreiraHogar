@@ -157,7 +157,7 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
       <article className={`${styles.clientCard} ${cardStatusClass}`} onClick={handleCardClick}>
         {/* HEADER */}
         <header className={styles.clientHeader}>
-          <div className={styles.avatar}>
+          {/* <div className={styles.avatar}>
             <img
               src={
                 fotoUrl ||
@@ -165,18 +165,10 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
               }
               alt={nombre}
             />
-          </div>
-
-          <div className={styles.identity}>
-            <h3>{nombre}</h3>
-          </div>
+          </div> */}
 
           {/* MENU */}
-          <div
-            className={styles.clientMenu}
-            ref={menuRef}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className={styles.clientMenu} ref={menuRef} onClick={(e) => e.stopPropagation()} >
             <button
               className={styles.menuBtn}
               onClick={(e) => {
@@ -190,7 +182,7 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
             {open && (
               <div className={styles.menuDropdown}>
                 <button onClick={() => onEdit(cliente)}>✏️ Editar cliente</button>
-                
+
                 {/* 📝 BOTÓN DE OBSERVACIONES ACTIVO */}
                 <button
                   onClick={(e) => {
@@ -229,51 +221,24 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
                 </button>
               </div>
             )}
+
+            {/* ESTADO */}
+            <span
+              className={`${styles.status} ${estado === "Activo" ? styles.ok : styles.blocked
+                }`}
+            >
+              {estado}
+            </span>
           </div>
 
-          {/* ESTADO */}
-          <span
-            className={`${styles.status} ${estado === "Activo" ? styles.ok : styles.blocked
-              }`}
-          >
-            {estado}
-          </span>
+          <div className={styles.identity}>
+            <h3>{nombre}</h3>
+          </div>
+
+
         </header>
 
-        {/* INFO */}
-        <div className={styles.clientInfo}>
-          {telefono1 && limpiarNumero(telefono1).length > 9 && (
-            <div className={styles.row}>
-              <span className={styles.label}>📱 WhatsApp</span>
-              <span className={styles.value}>
-                <a
-                  href={`https://wa.me/${limpiarNumero(telefono1)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {telefono1}
-                </a>
-              </span>
-            </div>
-          )}
-
-          {telefono2 && limpiarNumero(telefono2).length > 9 && (
-            <div className={styles.row}>
-              <span className={styles.label}>📱 WhatsApp 2</span>
-              <span className={styles.value}>
-                <a
-                  href={`https://wa.me/${limpiarNumero(telefono2)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {telefono2}
-                </a>
-              </span>
-            </div>
-          )}
-
+        
           {/* 🌟 INDICADOR DE PUNTUACIÓN (SOLO SI TIENE HISTORIAL REAL Y NO ESTÁ BLOQUEADO) */}
           {estado !== "Bloqueado" && tieneHistorial && (
             <div className={styles.rowPuntuacion}>
@@ -309,6 +274,41 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
               </div>
             </div>
           )}
+
+        {/* INFO */}
+        <div className={styles.clientInfo}>
+          {telefono1 && limpiarNumero(telefono1).length > 9 && (
+            <div className={styles.row}>
+              <span className={styles.label}>📱 WhatsApp</span>
+              <span className={styles.value}>
+                <a
+                  href={`https://wa.me/${limpiarNumero(telefono1)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {telefono1}
+                </a>
+              </span>
+            </div>
+          )}
+
+          {telefono2 && limpiarNumero(telefono2).length > 9 && (
+            <div className={styles.row}>
+              <span className={styles.label}>📱 WhatsApp 2</span>
+              <span className={styles.value}>
+                <a
+                  href={`https://wa.me/${limpiarNumero(telefono2)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {telefono2}
+                </a>
+              </span>
+            </div>
+          )}
+
 
           {/* 🚫 AVISO VISUAL DE ALERTA LLAMATIVA SI ESTÁ BLOQUEADO */}
           {estado === "Bloqueado" && (
