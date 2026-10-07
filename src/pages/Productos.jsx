@@ -551,19 +551,35 @@ export const Productos = () => {
     }
   };
 
-const handleGenerateQR = async (selectedVariantIds = []) => {
-  try {
-    const ref = collection(db, "categorias", categoriaId, "productos");
-    const snap = await getDocs(ref);
+  const handleGenerateQR = async (selectedVariantIds = [], itemsPerPage /* = 6 */) => {
+    try {
+      const ref = collection(db, "categorias", categoriaId, "productos");
+      const snap = await getDocs(ref);
 
-    let html = `
+      // Mapeo de layouts según la cantidad elegida por página
+      const layouts = {
+        2: { cols: 1, height: '132mm', qrHeight: '45mm' },
+        4: { cols: 2, height: '132mm', qrHeight: '40mm' },
+        6: { cols: 3, height: '130mm', qrHeight: '38mm' },
+        8: { cols: 2, height: '65mm', qrHeight: '26mm' },
+        9: { cols: 3, height: '86mm', qrHeight: '28mm' },
+        12: { cols: 3, height: '65mm', qrHeight: '24mm' },
+      };
+
+      const currentLayout = layouts[itemsPerPage] || layouts[6];
+
+      let html = `
     <html>
     <head>
       <title>Catálogo de Productos QR</title>
       <style>
         @page {
-          size: A4;
+          size: A4 portrait;
           margin: 8mm;
+        }
+
+        * {
+          box-sizing: border-box;
         }
 
         body {
@@ -578,34 +594,37 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
 
         .container {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 10px;
+          grid-template-columns: repeat(${currentLayout.cols}, 1fr);
+          gap: 6px;
           justify-content: center;
+          width: 100%;
         }
 
         .item {
           display: flex;
           flex-direction: column;
           background: #ffffff;
-          border: 2px solid #000000;
-          border-radius: 10px;
-          padding: 8px;
-          gap: 6px;
-          height: 128mm; /* Altura calculada para permitir exactamente 2 filas por hoja A4 */
-          box-sizing: border-box;
-          page-break-inside: avoid;
+          border: 1.5px solid #000000;
+          border-radius: 8px;
+          padding: 6px;
+          gap: 4px;
+          height: ${currentLayout.height};
           position: relative;
+          overflow: hidden;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
-        /* Fuerza un salto de página cada 6 elementos (después de 2 filas completas) */
-        .item:nth-child(6n) {
+        /* Fuerza el salto de página exacto según los elementos por hoja elegidos */
+        .item:nth-child(${itemsPerPage}n) {
           page-break-after: always;
+          break-after: page;
         }
 
-        /* Contenedor cuadrado ajustado para la foto */
         .img-container {
           width: 100%;
-          height: 42mm;
+          flex: 1;
+          min-height: 0;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -613,14 +632,11 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
           overflow: hidden;
           background-color: #ffffff;
           border: 1px solid #cbd5e1;
-          box-sizing: border-box;
         }
 
         .product-img {
           max-width: 100%;
           max-height: 100%;
-          width: auto;
-          height: auto;
           object-fit: contain;
         }
 
@@ -662,7 +678,6 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
           margin-top: auto;
         }
 
-        /* Contenedor del QR con dimensiones proporcionales */
         .qr-container {
           display: flex;
           align-items: center;
@@ -670,10 +685,9 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
           background: #ffffff;
           border-radius: 6px;
           width: 100%;
-          height: 48mm;
-          padding: 4px;
+          height: ${currentLayout.qrHeight};
+          padding: 2px;
           border: 1px solid #cbd5e1;
-          box-sizing: border-box;
         }
 
         .qr {
@@ -682,6 +696,24 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
           object-fit: contain;
           display: block;
         }
+
+        @media print {
+          body {
+            background: none;
+          }
+          .container {
+            display: grid !important;
+            grid-template-columns: repeat(${currentLayout.cols}, 1fr) !important;
+          }
+          .item {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .item:nth-child(${itemsPerPage}n) {
+            page-break-after: always !important;
+            break-after: page !important;
+          }
+        }
       </style>
     </head>
     <body>
@@ -689,44 +721,43 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
     <div class="container">
     `;
 
-    for (const d of snap.docs) {
-      const data = d.data();
+      for (const d of snap.docs) {
+        const data = d.data();
+        if (!data.variantes) continue;
 
-      if (!data.variantes) continue;
+        for (const [index, variante] of data.variantes.entries()) {
+          const variantKey = `${d.id}_${index}`;
 
-      for (const [index, variante] of data.variantes.entries()) {
-        const variantKey = `${d.id}_${index}`;
-
-        // Filtrar si hay una lista de selección activa
-        if (selectedVariantIds.length > 0 && !selectedVariantIds.includes(variantKey)) {
-          continue;
-        }
-
-        const totalStockVariante = Object.values(variante?.stock || {}).reduce(
-          (total, cantidad) => total + Number(cantidad || 0),
-          0
-        );
-
-        if (totalStockVariante <= 0 || variante.disponible === false) {
-          continue;
-        }
-
-        const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
-        const qr = await QRCode.toDataURL(url);
-
-        const imageUrl = data.image || variante.image || "";
-
-        html += `
-        <div class="item">
-          ${imageUrl
-            ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
-            : `<div class="img-container" style="color: #94a3b8; font-size: 10px;">Sin foto</div>`
+          if (selectedVariantIds.length > 0 && !selectedVariantIds.includes(variantKey)) {
+            continue;
           }
 
+          const totalStockVariante = Object.values(variante?.stock || {}).reduce(
+            (total, cantidad) => total + Number(cantidad || 0),
+            0
+          );
+
+          if (totalStockVariante <= 0 || variante.disponible === false) {
+            continue;
+          }
+
+          const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
+          const qr = await QRCode.toDataURL(url);
+
+          // CORRECCIÓN CLAVE: Priorizar la imagen específica de la variante antes que la general del producto
+          const imageUrl = variante.image || variante.imagen || variante.img || data.image || data.imagen || "";
+
+          html += `
+        <div class="item">
+          ${imageUrl
+              ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
+              : `<div class="img-container" style="color: #94a3b8; font-size: 10px;">Sin foto</div>`
+            }
+
           <div class="meta-info">
-            <h3>${data.name}</h3>
-            <div class="attr">${variante.attr || "Estándar"}</div>
-            <div class="price">$${Number(variante.price).toLocaleString('es-AR')}</div>
+            <h3>${data.name || data.nombre}</h3>
+            <div class="attr">${variante.attr || variante.nombre || "Estándar"}</div>
+            <div class="price">$${Number(variante.price || variante.precio || 0).toLocaleString('es-AR')}</div>
           </div>
 
           <div class="qr-wrapper">
@@ -734,20 +765,19 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
               <img class="qr" src="${qr}" />
             </div>
           </div>
-
         </div>
         `;
+        }
       }
-    }
 
-    html += `
+      html += `
     </div>
 
     <script>
       window.onload = () => {
         setTimeout(() => {
           window.print();
-        }, 300);
+        }, 400);
       };
     </script>
 
@@ -755,14 +785,14 @@ const handleGenerateQR = async (selectedVariantIds = []) => {
     </html>
     `;
 
-    const win = window.open("", "_blank");
-    win.document.write(html);
-    win.document.close();
+      const win = window.open("", "_blank");
+      win.document.write(html);
+      win.document.close();
 
-  } catch (error) {
-    console.error(error);
-  }
-};
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const handlePDFStock = async () => {
     try {
