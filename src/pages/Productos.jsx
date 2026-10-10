@@ -537,7 +537,9 @@ export const Productos = () => {
   const toggleSelectAllVariants = () => {
     const allKeys = [];
     productos.forEach((p) => {
-      if (p.variantes) {
+      if (p.type === "combo") {
+        allKeys.push(`combo_${p.id}`);
+      } else if (p.variantes) {
         p.variantes.forEach((_, index) => {
           allKeys.push(`${p.id}_${index}`);
         });
@@ -723,6 +725,43 @@ export const Productos = () => {
 
       for (const d of snap.docs) {
         const data = d.data();
+
+        // 1. SI ES COMBO
+        if (data.type === "combo") {
+          const comboKey = `combo_${d.id}`;
+
+          if (selectedVariantIds.length > 0 && !selectedVariantIds.includes(comboKey)) {
+            continue;
+          }
+
+          const url = `${window.location.origin}/producto/${categoriaId}/${d.id}`;
+          const qr = await QRCode.toDataURL(url);
+          const imageUrl = data.image || data.imagen || data.img || "";
+
+          html += `
+        <div class="item">
+          ${imageUrl
+              ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
+              : `<div class="img-container" style="color: #94a3b8; font-size: 10px;">Sin foto</div>`
+            }
+
+          <div class="meta-info">
+            <h3>${data.name || data.nombre}</h3>
+            <div class="attr" style="color: #0284c7; font-weight: 600;">Combo / Set</div>
+            <div class="price">$${Number(data.price || data.precio || 0).toLocaleString('es-AR')}</div>
+          </div>
+
+          <div class="qr-wrapper">
+            <div class="qr-container">
+              <img class="qr" src="${qr}" />
+            </div>
+          </div>
+        </div>
+        `;
+          continue;
+        }
+
+        // 2. SI ES PRODUCTO CON VARIANTES
         if (!data.variantes) continue;
 
         for (const [index, variante] of data.variantes.entries()) {
@@ -744,7 +783,6 @@ export const Productos = () => {
           const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
           const qr = await QRCode.toDataURL(url);
 
-          // CORRECCIÓN CLAVE: Priorizar la imagen específica de la variante antes que la general del producto
           const imageUrl = variante.image || variante.imagen || variante.img || data.image || data.imagen || "";
 
           html += `
@@ -790,7 +828,7 @@ export const Productos = () => {
       win.document.close();
 
     } catch (error) {
-      console.error(error);
+      console.error("Error generando PDF de QR:", error);
     }
   };
 
@@ -835,7 +873,7 @@ export const Productos = () => {
         padding:8px;
         overflow:hidden;
         height:200px;
-          width: 500px;
+        width: 500px;
       }
 
       .img{
@@ -884,7 +922,7 @@ export const Productos = () => {
             "https://via.placeholder.com/150";
 
           const nombre = variante
-            ? `${data.name} - ${variante.attr || ""}`
+            ? `${data.name} ${variante.attr || ""}`
             : data.name;
 
           html += `
@@ -1119,7 +1157,7 @@ export const Productos = () => {
         </div>
       )}
 
-      {/* MODAL DE SELECCIÓN DE VARIANTES / PRODUCTOS PARA IMPRIMIR QR */}
+      {/* MODAL DE SELECCIÓN SEPARADO: PRODUCTOS Y COMBOS */}
       {qrModalOpen && (
         <div className={styles.overlay} onClick={() => setQrModalOpen(false)}>
           <div
@@ -1129,7 +1167,7 @@ export const Productos = () => {
           >
             <h3 style={{ margin: "0 0 10px 0" }}>Seleccionar Productos para QR</h3>
             <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 15px 0" }}>
-              Marque las variantes que desea incluir en el catálogo de códigos QR.
+              Marque las variantes y combos que desea incluir en el catálogo de códigos QR.
             </p>
 
             <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
@@ -1142,33 +1180,68 @@ export const Productos = () => {
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "350px", overflowY: "auto", paddingRight: "5px" }}>
-              {productos.map((prod) => {
-                if (!prod.variantes || prod.type === "combo") return null;
+            <div style={{ display: "flex", flexDirection: "column", gap: "15px", maxHeight: "380px", overflowY: "auto", paddingRight: "5px" }}>
+              
+              {/* SECCIÓN 1: PRODUCTOS Y SUS VARIANTES */}
+              <div>
+                <h4 style={{ margin: "0 0 8px 0", color: "#0284c7", fontSize: "14px", borderBottom: "1px solid #bae6fd", paddingBottom: "4px" }}>
+                  📦 Productos Individuales
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {productos.filter((p) => p.type !== "combo").map((prod) => {
+                    if (!prod.variantes) return null;
 
-                return (
-                  <div key={prod.id} style={{ borderBottom: "1px solid #e2e8f0", pb: "8px" }}>
-                    <strong style={{ fontSize: "14px" }}>{prod.name}</strong>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px", paddingLeft: "10px" }}>
-                      {prod.variantes.map((v, idx) => {
-                        const variantKey = `${prod.id}_${idx}`;
-                        const isChecked = selectedVariants.includes(variantKey);
+                    return (
+                      <div key={prod.id} style={{ borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
+                        <strong style={{ fontSize: "13px" }}>{prod.name}</strong>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "4px", paddingLeft: "10px" }}>
+                          {prod.variantes.map((v, idx) => {
+                            const variantKey = `${prod.id}_${idx}`;
+                            const isChecked = selectedVariants.includes(variantKey);
 
-                        return (
-                          <label key={variantKey} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer" }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleSelectVariant(variantKey)}
-                            />
-                            <span>{v.attr || "Estándar"} - ${Number(v.price || 0).toLocaleString('es-AR')}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
+                            return (
+                              <label key={variantKey} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", cursor: "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleSelectVariant(variantKey)}
+                                />
+                                <span>{v.attr || "Estándar"} - ${Number(v.price || 0).toLocaleString('es-AR')}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECCIÓN 2: COMBOS / SETS */}
+              <div>
+                <h4 style={{ margin: "10px 0 8px 0", color: "#0d9488", fontSize: "14px", borderBottom: "1px solid #99f6e4", paddingBottom: "4px" }}>
+                  🎁 Combos / Sets
+                </h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {productos.filter((p) => p.type === "combo").map((combo) => {
+                    const comboKey = `combo_${combo.id}`;
+                    const isChecked = selectedVariants.includes(comboKey);
+
+                    return (
+                      <label key={comboKey} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", background: "#f0fdf4", padding: "6px", borderRadius: "4px", border: "1px solid #dcfce7" }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelectVariant(comboKey)}
+                        />
+                        <span style={{ fontWeight: "600" }}>{combo.name || combo.nombre}</span>
+                        <span style={{ color: "#059669", fontSize: "12px", marginLeft: "auto" }}>${Number(combo.price || combo.precio || 0).toLocaleString('es-AR')}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
 
             <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
