@@ -553,7 +553,7 @@ export const Productos = () => {
     }
   };
 
-  const handleGenerateQR = async (selectedVariantIds = [], itemsPerPage /* = 6 */) => {
+const handleGenerateQR = async (selectedVariantIds = [], itemsPerPage /* = 6 */) => {
     try {
       const ref = collection(db, "categorias", categoriaId, "productos");
       const snap = await getDocs(ref);
@@ -569,6 +569,23 @@ export const Productos = () => {
       };
 
       const currentLayout = layouts[itemsPerPage] || layouts[6];
+
+      // =========================================================================
+      // Detección Universal de Base URL (Desarrollo Wi-Fi Local & Producción)
+      // =========================================================================
+      const isLocalhost = 
+        window.location.hostname === "localhost" || 
+        window.location.hostname === "127.0.0.1";
+
+      let baseUrl = window.location.origin;
+
+      if (isLocalhost) {
+        // En desarrollo local, intentamos usar la IP desde la que estás accediendo
+        // Si accediste como localhost, podés colocar tu IP local Wi-Fi o usar la detección de red
+        const ipLocal = "192.168.0.15"; // 👈 Si accedés desde localhost, cambiá esto por la IP actual de tu PC
+        const puerto = window.location.port ? `:${window.location.port}` : "";
+        baseUrl = `${window.location.protocol}//${ipLocal}${puerto}`;
+      }
 
       let html = `
     <html>
@@ -617,7 +634,6 @@ export const Productos = () => {
           page-break-inside: avoid;
         }
 
-        /* Fuerza el salto de página exacto según los elementos por hoja elegidos */
         .item:nth-child(${itemsPerPage}n) {
           page-break-after: always;
           break-after: page;
@@ -734,30 +750,31 @@ export const Productos = () => {
             continue;
           }
 
-          const url = `${window.location.origin}/producto/${categoriaId}/${d.id}`;
+          // RUTA COMBO
+          const url = `${baseUrl}/categoria/${categoriaId}/combo/${d.id}`;
           const qr = await QRCode.toDataURL(url);
           const imageUrl = data.image || data.imagen || data.img || "";
 
           html += `
-        <div class="item">
-          ${imageUrl
-              ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
-              : `<div class="img-container" style="color: #94a3b8; font-size: 10px;">Sin foto</div>`
-            }
+<div class="item">
+  ${imageUrl
+      ? `<div class="img-container"><img class="product-img" src="${imageUrl}" /></div>`
+      : `<div class="img-container" style="color: #94a3b8; font-size: 10px;">Sin foto</div>`
+    }
 
-          <div class="meta-info">
-            <h3>${data.name || data.nombre}</h3>
-            <div class="attr" style="color: #0284c7; font-weight: 600;">Combo / Set</div>
-            <div class="price">$${Number(data.price || data.precio || 0).toLocaleString('es-AR')}</div>
-          </div>
+  <div class="meta-info">
+    <h3>${data.name || data.nombre}</h3>
+    <div class="attr" style="color: #0284c7; font-weight: 600;">Combo / Set</div>
+    <div class="price">$${Number(data.price || data.precio || 0).toLocaleString('es-AR')}</div>
+  </div>
 
-          <div class="qr-wrapper">
-            <div class="qr-container">
-              <img class="qr" src="${qr}" />
-            </div>
-          </div>
-        </div>
-        `;
+  <div class="qr-wrapper">
+    <div class="qr-container">
+      <img class="qr" src="${qr}" />
+    </div>
+  </div>
+</div>
+`;
           continue;
         }
 
@@ -780,7 +797,8 @@ export const Productos = () => {
             continue;
           }
 
-          const url = `${window.location.origin}/producto/${categoriaId}/${d.id}?v=${index}`;
+          // RUTA PRODUCTO INDIVIDUAL
+          const url = `${baseUrl}/producto/${categoriaId}/${d.id}?v=${index}`;
           const qr = await QRCode.toDataURL(url);
 
           const imageUrl = variante.image || variante.imagen || variante.img || data.image || data.imagen || "";
@@ -1181,7 +1199,7 @@ export const Productos = () => {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "15px", maxHeight: "380px", overflowY: "auto", paddingRight: "5px" }}>
-              
+
               {/* SECCIÓN 1: PRODUCTOS Y SUS VARIANTES */}
               <div>
                 <h4 style={{ margin: "0 0 8px 0", color: "#0284c7", fontSize: "14px", borderBottom: "1px solid #bae6fd", paddingBottom: "4px" }}>

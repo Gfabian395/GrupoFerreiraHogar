@@ -19,9 +19,10 @@ import MigrarClientes from "./pages/MigrarClientes";
 import { CartProvider } from "./context/CartContext";
 import Notificaciones from "./components/Notificaciones";
 import { Loader } from "./components/Loader";
-import Alerta from "./components/Alerta"; // 👈 IMPORTANTE: Importamos tu nueva Alerta
+import Alerta from "./components/Alerta";
 import "./App.css";
 import ProductoDetalle from "./components/ProductoDetalle";
+import ComboDetalle from "./components/ComboDetalle";
 import Viajes from "./components/Viajes";
 
 function App() {
@@ -125,9 +126,6 @@ function App() {
         <Notificaciones />
         <div className="layout">
 
-          {/* 👈 AQUÍ: Renderiza la alerta de pantalla completa por 3 segundos */}
-          {/* <Alerta /> */} {/* ACA SE ACTIVA LA ALERTA EN PANTALLA PARA NO VENDER MAS DE UN PRODUCTO */}
-
           {bloqueado && (
             <div
               style={{
@@ -163,9 +161,15 @@ function App() {
 
               <Route path="/login" element={<PublicRoute><LoginHome onGuestLogin={handleGuestLogin} /></PublicRoute>} />
 
+              {/* 🔓 RUTAS PÚBLICAS PARA QR (Accesibles sin login) */}
+              <Route path="/producto/:categoriaId/:productoId" element={<ProductoDetalle />} />
+              <Route path="/producto/:productoId" element={<ProductoDetalle />} />
+              <Route path="/combo/:comboId" element={<ComboDetalle />} />
+              <Route path="/categoria/:categoriaId/combo/:comboId" element={<ComboDetalle />} />
+
+              {/* 🔒 RUTAS PRIVADAS CON CONTROL DE SESIÓN Y ROL */}
               <Route path="/categorias" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Categorias /></PrivateRoute>} />
               <Route path="/categorias/:categoriaId/productos" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Productos /></PrivateRoute>} />
-              <Route path="/producto/:categoriaId/:productoId" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}> <ProductoDetalle /> </PrivateRoute>} />
               <Route path="/carrito" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Carrito /></PrivateRoute>} />
 
               {/* Solo usuarios reales */}
@@ -177,7 +181,6 @@ function App() {
               <Route path="/finanzas" element={<PrivateRoute role="jefe"><Finanzas /></PrivateRoute>} />
               <Route path="/admin/migrar-clientes" element={<PrivateRoute role="jefe"><MigrarClientes /></PrivateRoute>} />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
               <Route
                 path="/viajes"
                 element={
@@ -186,6 +189,8 @@ function App() {
                   </PrivateRoute>
                 }
               />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
         </div>
