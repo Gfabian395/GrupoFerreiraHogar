@@ -9,7 +9,6 @@ import { Loader } from "./Loader";
 // ===============================
 // CONFIGURACIÓN DE ENVÍO
 // ===============================
-// Podés poner el número del jefe (con código de país ej: "5491112345678") o dejarlo vacío para seleccionar el grupo "Ventas" manualmente.
 const TELEFONO_JEFE_O_GRUPO = "54911XXXXXXXX"; 
 
 // ===============================
@@ -128,35 +127,46 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
 
   const pagosNormalizados = [];
 
-  if (venta.pago?.montoPagado > 0) {
-    pagosNormalizados.push({
-      numero: 1,
-      fecha: venta.fecha || venta.createdAt || "—",
-      monto: venta.pago.montoPagado,
-      montoBase: venta.pago.montoPagado,
-      montoRecargoAtraso: 0,
-      montoRecargoMetodo: 0,
-      metodo: venta.pago.pagoParcial
-        ? "Pago parcial"
-        : venta.pago.primerCuotaPaga
-          ? "Primera cuota"
-          : "Pago inicial",
-      estado: "Pagado",
-      firma: venta.cargadoPor || "Sistema",
+  // 1. Procesamos los pagos regulares del array "pagos"
+  if (Array.isArray(venta.pagos)) {
+    venta.pagos.forEach((pago, index) => {
+      pagosNormalizados.push({
+        numero: pago.numero ?? index + 1,
+        fecha: pago.fecha ?? "—",
+        monto: Number(pago.monto ?? 0),
+        montoBase: Number(pago.montoBase ?? pago.monto ?? 0),
+        montoRecargoAtraso: Number(pago.montoRecargoAtraso ?? 0),
+        montoRecargoMetodo: Number(pago.montoRecargoMetodo ?? 0),
+        metodo: pago.metodo ?? "—",
+        estado: pago.estado ?? "Pagado",
+        firma: pago.firma ?? pago.usuario ?? "—",
+      });
     });
   }
 
-  const pagosExtras = (venta.pagos || []).map((pago, index) => ({
-    numero: pago.numero ?? pagosNormalizados.length + index + 1,
-    fecha: pago.fecha ?? "—",
-    monto: Number(pago.monto ?? 0),
-    montoBase: Number(pago.montoBase ?? pago.monto ?? 0),
-    montoRecargoAtraso: Number(pago.montoRecargoAtraso ?? 0),
-    montoRecargoMetodo: Number(pago.montoRecargoMetodo ?? 0),
-    metodo: pago.metodo ?? "—",
-    estado: "Pagado",
-    firma: pago.firma ?? pago.usuario ?? "—",
-  }));
+  // 2. COMPATIBILIDAD CON DATOS VIEJOS: Si existe el mapa "pago" antiguo y no está contemplado dentro del array, lo incorporamos
+  if (venta.pago?.montoPagado > 0) {
+    const yaExisteEnArray = pagosNormalizados.some(
+      (p) => Math.abs(p.monto - venta.pago.montoPagado) < 1
+    );
+    if (!yaExisteEnArray) {
+      pagosNormalizados.unshift({
+        numero: 1,
+        fecha: venta.fecha || venta.createdAt || "—",
+        monto: venta.pago.montoPagado,
+        montoBase: venta.pago.montoPagado,
+        montoRecargoAtraso: 0,
+        montoRecargoMetodo: 0,
+        metodo: venta.pago.pagoParcial
+          ? "Pago parcial"
+          : venta.pago.primerCuotaPaga
+            ? "Primera cuota"
+            : "Pago inicial",
+        estado: "Pagado",
+        firma: venta.cargadoPor || "Sistema",
+      });
+    }
+  }
 
   const vendedor =
     usuariosMap[venta.vendedor] ??
@@ -173,7 +183,7 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
   return {
     ...venta,
     productos: productosNormalizados,
-    pagos: [...pagosNormalizados, ...pagosExtras],
+    pagos: pagosNormalizados,
     vendedor,
     entrega,
     sucursal,
@@ -504,7 +514,6 @@ Gracias por su compra.`;
     window.open(url, "_blank");
   };
 
-  // 🔴 NUEVA FUNCIÓN: Enviar comprobante al Grupo "Ventas" / Jefe por WhatsApp
   const enviarComprobanteAlJefe = (venta) => {
     const productosTexto = venta.productos
       ?.map((p) => `• ${p.nombre} (x${p.cantidad}, $${Number(p.precio).toLocaleString("es-AR")})`)
@@ -529,7 +538,6 @@ ${productosTexto}
 *Cuotas:* ${venta.cuotas} x $${valorCuota.toLocaleString("es-AR")}
 *Total Crédito:* $${obtenerTotalVenta(venta).toLocaleString("es-AR")}`;
 
-    // Si hay teléfono configurado se usa directo, de lo contrario abre WhatsApp para seleccionar el grupo
     const url = TELEFONO_JEFE_O_GRUPO && TELEFONO_JEFE_O_GRUPO !== "54911XXXXXXXX"
       ? `https://api.whatsapp.com/send?phone=${TELEFONO_JEFE_O_GRUPO}&text=${encodeURIComponent(mensaje)}`
       : `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
@@ -804,7 +812,7 @@ Gracias por su pago.`;
                       {venta.chofer && (
                         <p>
                           <span className={styles.badge}>Chofer</span>
-                          {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
+                          {venta.chofer.nombre} · Patente: {venta.chofer.patente || "—"} · Tel: {venta.chofer.telefono || "—"}
                         </p>
                       )}
 
@@ -922,7 +930,6 @@ Gracias por su pago.`;
                         </div>
                       )}
 
-                    {/* 🟢 BOTONES DE ENVÍO DE COMPROBANTE */}
                     <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                       <button
                         onClick={() => reenviarComprobante(venta)}
@@ -939,7 +946,6 @@ Gracias por su pago.`;
                         📩 Reenviar comprobante al cliente
                       </button>
 
-                      {/* 🟢 NUEVO BOTÓN PARA EL GRUPO VENTAS / JEFE */}
                       <button
                         onClick={() => enviarComprobanteAlJefe(venta)}
                         style={{
@@ -1065,7 +1071,7 @@ Gracias por su pago.`;
                                 {venta.chofer && (
                                   <p>
                                     <span className={styles.badge}>Chofer</span>
-                                    {venta.chofer.nombre} - Patente: {venta.chofer.patente || "—"} - Tel: {venta.chofer.telefono || "—"}
+                                    {venta.chofer.nombre} · Patente: {venta.chofer.patente || "—"} · Tel: {venta.chofer.telefono || "—"}
                                   </p>
                                 )}
 
@@ -1109,7 +1115,6 @@ Gracias por su pago.`;
                                 </div>
                               </div>
 
-                              {/* 🟢 BOTONES DE ENVÍO DE COMPROBANTE DENTRO DEL MODAL */}
                               <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                                 <button
                                   onClick={() => reenviarComprobante(venta)}
