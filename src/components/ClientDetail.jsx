@@ -9,7 +9,7 @@ import { Loader } from "./Loader";
 // ===============================
 // CONFIGURACIÓN DE ENVÍO
 // ===============================
-const TELEFONO_JEFE_O_GRUPO = "54911XXXXXXXX"; 
+const TELEFONO_JEFE_O_GRUPO = "54911XXXXXXXX";
 
 // ===============================
 // FUNCIONES AUXILIARES
@@ -80,7 +80,7 @@ const obtenerTotalVenta = (venta) => {
 
   const valorCuota = Number(venta.valorCuota || 0);
   const cuotas = Number(venta.cuotas || 0);
-  
+
   return valorCuota * cuotas;
 };
 
@@ -105,7 +105,7 @@ const calcularRecargoAtraso = (venta) => {
 
   const bloquesAdicionales = Math.floor((diasAtraso - 30) / 10);
   let porcentajeRecargo = 10 + (bloquesAdicionales * 10);
-  
+
   if (porcentajeRecargo > 200) porcentajeRecargo = 200;
 
   const valorCuota = Number(venta.valorCuota || 0);
@@ -127,45 +127,47 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
 
   const pagosNormalizados = [];
 
-  // 1. Procesamos los pagos regulares del array "pagos"
-  if (Array.isArray(venta.pagos)) {
-    venta.pagos.forEach((pago, index) => {
-      pagosNormalizados.push({
-        numero: pago.numero ?? index + 1,
-        fecha: pago.fecha ?? "—",
-        monto: Number(pago.monto ?? 0),
-        montoBase: Number(pago.montoBase ?? pago.monto ?? 0),
-        montoRecargoAtraso: Number(pago.montoRecargoAtraso ?? 0),
-        montoRecargoMetodo: Number(pago.montoRecargoMetodo ?? 0),
-        metodo: pago.metodo ?? "—",
-        estado: pago.estado ?? "Pagado",
-        firma: pago.firma ?? pago.usuario ?? "—",
-      });
+  // 1. PRIMERA CUOTA / PAGO INICIAL (Desde el mapa antiguo "pago")
+  const montoPagoAntiguo = Number(venta.pago?.montoPagado || 0);
+  if (venta.pago?.primerCuotaPaga || montoPagoAntiguo > 0) {
+    pagosNormalizados.push({
+      numero: 1,
+      fecha: venta.fecha || venta.createdAt || "—",
+      monto: montoPagoAntiguo || Number(venta.valorCuota || 0),
+      montoBase: montoPagoAntiguo || Number(venta.valorCuota || 0),
+      montoRecargoAtraso: 0,
+      montoRecargoMetodo: 0,
+      metodo: "Primera cuota (Pago inicial)",
+      estado: "Pagado",
+      firma: venta.cargadoPor || "Sistema",
     });
   }
 
-  // 2. COMPATIBILIDAD CON DATOS VIEJOS: Si existe el mapa "pago" antiguo y no está contemplado dentro del array, lo incorporamos
-  if (venta.pago?.montoPagado > 0) {
-    const yaExisteEnArray = pagosNormalizados.some(
-      (p) => Math.abs(p.monto - venta.pago.montoPagado) < 1
-    );
-    if (!yaExisteEnArray) {
-      pagosNormalizados.unshift({
-        numero: 1,
-        fecha: venta.fecha || venta.createdAt || "—",
-        monto: venta.pago.montoPagado,
-        montoBase: venta.pago.montoPagado,
-        montoRecargoAtraso: 0,
-        montoRecargoMetodo: 0,
-        metodo: venta.pago.pagoParcial
-          ? "Pago parcial"
-          : venta.pago.primerCuotaPaga
-            ? "Primera cuota"
-            : "Pago inicial",
-        estado: "Pagado",
-        firma: venta.cargadoPor || "Sistema",
-      });
-    }
+  // 2. PAGOS SIGUIENTES (Desde el array "pagos")
+  if (Array.isArray(venta.pagos)) {
+    venta.pagos.forEach((pago, index) => {
+      const montoActual = Number(pago.monto ?? 0);
+      
+      // Si el mapa "pago" antiguo ya cubrió la cuota 1, evitamos duplicar únicamente si el elemento del array es exactamente igual al pago inicial
+      const esElMismoPagoInicial = 
+        pagosNormalizados.length > 0 && 
+        pago.numero === 1 && 
+        Math.abs(pagosNormalizados[0].monto - montoActual) < 1;
+
+      if (!esElMismoPagoInicial) {
+        pagosNormalizados.push({
+          numero: pago.numero ?? pagosNormalizados.length + 1,
+          fecha: pago.fecha ?? "—",
+          monto: montoActual,
+          montoBase: Number(pago.montoBase ?? montoActual),
+          montoRecargoAtraso: Number(pago.montoRecargoAtraso ?? 0),
+          montoRecargoMetodo: Number(pago.montoRecargoMetodo ?? 0),
+          metodo: pago.metodo ?? "—",
+          estado: pago.estado ?? "Pagado",
+          firma: pago.firma ?? pago.usuario ?? "—",
+        });
+      }
+    });
   }
 
   const vendedor =
@@ -299,7 +301,7 @@ export default function ClientDetail() {
     const metodosConRecargo = ["Transferencia", "Tarjeta de Crédito", "Tarjeta de Débito", "QR", "Link de Pago"];
 
     const { montoRecargo: recargoAtrasoMonto } = calcularRecargoAtraso(venta);
-    
+
     let recargoMetodoMonto = 0;
     if (metodosConRecargo.includes(metodoSeleccionado)) {
       recargoMetodoMonto = Math.round((montoBaseInput * 0.05));
@@ -393,7 +395,7 @@ export default function ClientDetail() {
   }, [selectedVentaId]);
 
   const ventasPendientes = ventas.filter((v) => !estaPagado(v));
-  
+
   const ventasPagadas = useMemo(() => {
     return ventas
       .filter((v) => estaPagado(v))
@@ -599,14 +601,14 @@ Gracias por su pago.`;
 
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
       const monto = Number(typeof pago.monto === "string" ? pago.monto.replace(",", ".") : pago.monto || 0);
-      
+
       const cuotaInicio = Math.floor(acumuladoPagos / valorCuotaSeguro) + 1;
       acumuladoPagos += monto;
       let cuotaFin = Math.ceil(acumuladoPagos / valorCuotaSeguro);
       if (cuotaFin < cuotaInicio) cuotaFin = cuotaInicio;
 
-      const labelCuota = cuotaInicio === cuotaFin 
-        ? `Cuota ${cuotaInicio}` 
+      const labelCuota = cuotaInicio === cuotaFin
+        ? `Cuota ${cuotaInicio}`
         : `Cuotas ${cuotaInicio} a ${cuotaFin}`;
 
       return {
@@ -669,9 +671,9 @@ Gracias por su pago.`;
                   <strong style={{ color: "#0f172a" }}>{pago.labelCuota}</strong>
                   <small style={{ color: "#64748b", fontSize: "12px" }}>Pago #{pago.indexReal}</small>
                 </span>
-                
+
                 <span>{formatearFecha(pago.fecha)}</span>
-                
+
                 <span style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                   <strong>${montoTotalVal.toLocaleString("es-AR")}</strong>
                   <small style={{ color: "#475569", fontSize: "11px", lineHeight: "1.3" }}>
@@ -770,7 +772,7 @@ Gracias por su pago.`;
 
               const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
               const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
-              
+
               const totalConRecargoBase = totalCredito + montoRecargo;
               const saldoConRecargo = Math.max(totalConRecargoBase - totalPagado, 0);
 
@@ -884,7 +886,7 @@ Gracias por su pago.`;
                         <div style={{ fontSize: "14px", textTransform: "uppercase", letterSpacing: "1.5px", color: diasAtraso >= 30 ? "#fca5a5" : "#38bdf8", fontWeight: "800", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
                           <span>🚨</span> CONTROL DE CAJA / VENDEDOR — ESTADO DE CUENTA
                         </div>
-                        
+
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginTop: "12px" }}>
                           <div style={{ background: "rgba(0, 0, 0, 0.25)", padding: "10px 14px", borderRadius: "8px" }}>
                             <span style={{ fontSize: "12px", color: "#cbd5e1", display: "block" }}>Días de Atraso</span>
@@ -1086,7 +1088,7 @@ Gracias por su pago.`;
                                     )
                                     .join(", ")}
                                 </p>
-                                
+
                                 {venta.descuento > 0 && (
                                   <div style={{
                                     background: "#dcfce7",
