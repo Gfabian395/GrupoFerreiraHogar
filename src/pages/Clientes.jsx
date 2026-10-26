@@ -387,7 +387,9 @@ export default function Clientes() {
     return clientesConTotales.filter((c) => {
       const nombre = (c.nombre || "").toLowerCase();
       const dni = String(c.dni || "").toLowerCase();
-      const cumpleBusq = !q || nombre.includes(q) || dni.includes(q);
+      const direccion = (c.direccion || "").toLowerCase(); // 👈 Agregado para buscar por dirección
+      
+      const cumpleBusq = !q || nombre.includes(q) || dni.includes(q) || direccion.includes(q);
 
       let cumpleColor = true;
       if (filtroColor === "bloqueado") {
@@ -442,7 +444,7 @@ export default function Clientes() {
       <div className={styles.header}>
         <input
           type="text"
-          placeholder="Buscar por nombre o DNI..."
+          placeholder="Buscar por nombre, DNI o dirección..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className={styles.searchInput}
