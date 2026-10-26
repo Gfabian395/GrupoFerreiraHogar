@@ -10,7 +10,6 @@ import styles from "../styles/Clientes.module.css";
 // CALCULAR SCORE DEL CLIENTE (0 a 100)
 // ===============================
 const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
-  // 🔥 Si el cliente está bloqueado, anulamos el puntaje comercial y mostramos estado de bloqueo
   if (cliente.estado === "Bloqueado") {
     return {
       puntos: 0,
@@ -27,7 +26,6 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
     };
   }
 
-  // 1. Contamos cuántas compras ya pagó por completo
   const terminadas = ventasDelCliente.filter((v) => {
     const pagoInicial = Number(v.pago?.montoPagado || 0);
     const pagosPosteriores = (v.pagos || []).reduce((sum, p) => {
@@ -39,14 +37,13 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
     return Math.round(totalPagado) >= Math.round(totalCredito);
   }).length;
 
-  // 2. 🌟 NUEVOS TECHOS ESTRICTOS DE CONFIANZA POR VOLUMEN COMERCIAL
-  let techoPuntaje = 55; // 0 compras terminadas (está pagando sus primeras cosas) -> Techo Máx: 5.5 (Regular)
+  let techoPuntaje = 55;
 
-  if (terminadas >= 10) techoPuntaje = 100;    // Cliente VIP -> Techo Máx: 10.0 (Excelente)
-  else if (terminadas >= 5) techoPuntaje = 88;   // Cliente Premium -> Techo Máx: 8.8 (Bueno)
-  else if (terminadas >= 3) techoPuntaje = 78;   // Buen cliente recurrente -> Techo Máx: 7.8 (Bueno)
-  else if (terminadas >= 2) techoPuntaje = 68;   // Cumplió más de una vez -> Techo Máx: 6.8 (Bueno raspando)
-  else if (terminadas === 1) techoPuntaje = 62;  // 🌟 CORREGIDO: 1 sola compra terminada -> Techo Máx: 6.2 (Regular). No puede ser "Bueno" todavía.
+  if (terminadas >= 10) techoPuntaje = 100;    
+  else if (terminadas >= 5) techoPuntaje = 88;   
+  else if (terminadas >= 3) techoPuntaje = 78;   
+  else if (terminadas >= 2) techoPuntaje = 68;   
+  else if (terminadas === 1) techoPuntaje = 62;   
 
   let totalCuotasEvaluadas = 0;
   let diasAtrasoAcumulados = 0;
@@ -76,7 +73,6 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
   };
 
   ventasDelCliente.forEach((venta) => {
-    // 🌟 CONTROL DE VENTA TOTALMENTE PAGADA
     const pagoInicial = Number(venta.pago?.montoPagado || 0);
     const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
       const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
@@ -85,9 +81,8 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
     const totalPagado = pagoInicial + pagosPosteriores;
     const totalCredito = venta.totalCredito || (venta.valorCuota || 0) * (venta.cuotas || 0);
 
-    // 🌟 SI YA LA PAGÓ COMPLETA, SE IGNORA PARA EL SCORE (NO RESTA PUNTOS)
     if (Math.round(totalPagado) >= Math.round(totalCredito)) {
-      return; // Saltamos la venta completamente. No evalúa atrasos viejos de acá.
+      return; 
     }
 
     const fechaVentaReal = parsearFechaSegura(venta.fecha);
@@ -96,7 +91,6 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
     const pagos = venta.pagos || [];
     let cuotasPagadasEnVenta = 0;
 
-    // Evaluar pagos históricos (Solo se ejecuta si la venta sigue abierta/activa)
     pagos.forEach((pago, indice) => {
       totalCuotasEvaluadas++;
       cuotasPagadasEnVenta++;
@@ -112,7 +106,6 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
       }
     });
 
-    // Evaluar cuotas colgadas activas
     if (cuotasPagadasEnVenta < (venta.cuotas || 0)) {
       const proxVenc = new Date(fechaVentaReal);
       proxVenc.setMonth(proxVenc.getMonth() + cuotasPagadasEnVenta);
@@ -142,20 +135,17 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
   let scoreFinal = techoPuntaje - restaPorHistorial - penalizacionActivaGrave;
   scoreFinal = Math.max(0, Math.min(100, scoreFinal));
 
-  // Clasificación por puntaje
   let leyenda = "Excelente";
   if (scoreFinal >= 85) leyenda = "Excelente";
   else if (scoreFinal >= 65) leyenda = "Bueno";
   else if (scoreFinal >= 45) leyenda = "Regular";
   else leyenda = "Mal pagador";
 
-  // 🌟 SALVAVIDAS POR FIDELIDAD (Mínimo 3 compras completas para perdonar)
   if (terminadas >= 3 && leyenda === "Mal pagador" && maximoAtrasoActual < 90) {
     leyenda = "Regular";
     scoreFinal = Math.max(50, scoreFinal);
   }
 
-  // Detalles inteligentes según su volumen de compras
   let detalle = "Paga dentro de los términos pactados.";
 
   if (leyenda === "Excelente") {
@@ -191,24 +181,25 @@ export default function Clientes() {
   const [ventas, setVentas] = useState([]);
   const navigate = useNavigate();
   const [filtroVendedor, setFiltroVendedor] = useState("");
+  const [filtroColor, setFiltroColor] = useState(""); 
   
-  // NUEVO ESTADO: Fecha por defecto = HOY
-  const [filtroFecha, setFiltroFecha] = useState(() => {
+  // 📅 ESTADOS DE FECHA POR DEFECTO = HOY
+  const obtenerFechaHoy = () => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
     const mes = String(hoy.getMonth() + 1).padStart(2, '0');
     const dia = String(hoy.getDate()).padStart(2, '0');
     return `${anio}-${mes}-${dia}`;
-  });
+  };
+
+  const [fechaDesde, setFechaDesde] = useState(obtenerFechaHoy);
+  const [fechaHasta, setFechaHasta] = useState(obtenerFechaHoy);
 
   const [clientesReclamadosHoy, setClientesReclamadosHoy] = useState(() => {
     const stored = localStorage.getItem("clientesReclamadosHoy");
     return stored ? JSON.parse(stored) : [];
   });
 
-  // ===============================
-  // LIMPIAR VISITA SI EXPIRÓ
-  // ===============================
   useEffect(() => {
     const expira = localStorage.getItem("expiraVisita");
 
@@ -218,7 +209,6 @@ export default function Clientes() {
       setClientesReclamadosHoy([]);
     }
 
-    // Timer automático hasta medianoche
     const ahora = new Date();
     const proximoReinicio = new Date();
     proximoReinicio.setHours(24, 0, 0, 0);
@@ -233,9 +223,6 @@ export default function Clientes() {
     return () => clearTimeout(timer);
   }, []);
 
-  // ===============================
-  // ORDENAR A–Z
-  // ===============================
   const ordenarClientesAZ = (lista) =>
     [...lista].sort((a, b) =>
       (a.nombre || "").localeCompare(b.nombre || "", "es", {
@@ -243,9 +230,6 @@ export default function Clientes() {
       })
     );
 
-  // ===============================
-  // OBTENER CLIENTES Y VENTAS
-  // ===============================
   const fetchClientes = async () => {
     try {
       const snap = await getDocs(collection(db, "clientes"));
@@ -277,9 +261,6 @@ export default function Clientes() {
     fetchVentas();
   }, []);
 
-  // ===============================
-  // CALCULAR SI ESTÁ PAGADO (CORREGIDA CON REDONDEO)
-  // ===============================
   const estaPagado = (venta) => {
     const pagoInicial = Number(
       venta.pago?.montoPagado || 0
@@ -307,9 +288,6 @@ export default function Clientes() {
     return Math.round(totalPagado) >= Math.round(totalCredito);
   };
 
-  // ===============================
-  // CLIENTES VENCIDOS CON DETALLE
-  // ===============================
   const clientesVencidos = useMemo(() => {
     if (!ventas.length) return [];
 
@@ -341,19 +319,13 @@ export default function Clientes() {
         }
 
         const cuotasPagadas = venta.pagos?.length || 0;
-
-        // 1. Calculamos la fecha teórica de vencimiento de la cuota que DEBE actualmente
         const proximoVenc = new Date(fechaBase);
-        // Le sumamos 1 para que la primera cuota venza al mes siguiente de la compra
         proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas + 1);
 
-        // 2. CORRECCIÓN LÓGICA: Si el cliente ya pagó recientemente (ej. en junio pagó lo de mayo),
-        // evaluamos los días reales de atraso frente a la fecha límite real de la nueva cuota.
         const diferenciaDias = Math.floor(
           (hoy - proximoVenc) / (1000 * 60 * 60 * 24)
         );
 
-        // Solo cuenta como atraso real si la fecha del próximo vencimiento ya pasó (diferencia > 0)
         const atrasoReal = diferenciaDias > 0 ? diferenciaDias : 0;
 
         if (atrasoReal > mayorAtraso) {
@@ -364,8 +336,6 @@ export default function Clientes() {
         }
       });
 
-      // Cambiamos a > 0 o al umbral de días mínimos que consideres para clasificar como "Moroso"
-      // Si el atraso volvió a 0 (porque el próximo vencimiento es a futuro o fin de mes), no entrará aquí
       if (mayorAtraso > 0 && ventaMasAtrasada) {
         const nombresProductos =
           ventaMasAtrasada.productos?.map((p) => p.nombre).join(", ") || "—";
@@ -386,12 +356,9 @@ export default function Clientes() {
 
     return resultado
       .filter(Boolean)
-      .sort((a, b) => b.diasAtraso - a.diasAtraso); // Ordenados de mayor a menor atraso
+      .sort((a, b) => b.diasAtraso - a.diasAtraso);
   }, [clientes, ventas]);
 
-  // ===============================
-  // BUSCADOR + CÁLCULO DE METRICAS DE COMPRA (INCLUYE PUNTUACIÓN)
-  // ===============================
   const clientesFiltrados = useMemo(() => {
     const hoy = new Date();
 
@@ -399,16 +366,9 @@ export default function Clientes() {
       const ventasDelCliente = ventas.filter((v) => v.clienteId === c.id);
 
       const total = ventasDelCliente.length;
-
-      ventasDelCliente.forEach(v => {
-      });
       const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
       const activas = total - terminadas;
-
-      // 🔍 Buscamos la venta activa (la que NO está totalmente pagada)
       const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
-
-      // 🌟 PASAMOS EL CLIENTE ENTERO PARA VALIDAR SI ESTÁ BLOQUEADO EN EL SCORE
       const scorePagos = calcularScoreCliente(c, ventasDelCliente, hoy);
 
       return {
@@ -418,23 +378,32 @@ export default function Clientes() {
         comprasActivas: activas,
         comprasTerminadas: terminadas,
         idVenta: ventaActiva ? ventaActiva.id : null,
-        score: scorePagos, // 👈 Inyectamos la puntuación
+        score: scorePagos,
       };
     });
 
     const q = search.trim().toLowerCase();
-    if (!q) return clientesConTotales;
 
     return clientesConTotales.filter((c) => {
       const nombre = (c.nombre || "").toLowerCase();
       const dni = String(c.dni || "").toLowerCase();
-      return nombre.includes(q) || dni.includes(q);
-    });
-  }, [clientes, ventas, search]);
+      const cumpleBusq = !q || nombre.includes(q) || dni.includes(q);
 
-  // ===============================
-  // DOBLE CLICK → MARCAR + NAVEGAR
-  // ===============================
+      let cumpleColor = true;
+      if (filtroColor === "bloqueado") {
+        cumpleColor = c.estado === "Bloqueado";
+      } else if (filtroColor === "verde") {
+        cumpleColor = c.score.leyenda === "Excelente" || c.score.leyenda === "Bueno";
+      } else if (filtroColor === "amarillo") {
+        cumpleColor = c.score.leyenda === "Regular" || c.score.leyenda === "Sin historial";
+      } else if (filtroColor === "rojo") {
+        cumpleColor = c.score.leyenda === "Mal pagador" || c.estado === "Bloqueado";
+      }
+
+      return cumpleBusq && cumpleColor;
+    });
+  }, [clientes, ventas, search, filtroColor]);
+
   const handleDoubleClickCliente = (clienteId) => {
     const finDelDia = new Date();
     finDelDia.setHours(23, 59, 59, 999);
@@ -451,9 +420,6 @@ export default function Clientes() {
     window.open(`/clientes/${clienteId}`, "_blank");
   };
 
-  // ===============================
-  // GUARDAR CLIENTE
-  // ===============================
   const handleSaveClient = async (data) => {
     try {
       if (data.id) {
@@ -508,17 +474,38 @@ export default function Clientes() {
           ))}
         </select>
 
-        {/* NUEVO FILTRO DE FECHA */}
-        <label style={{ marginLeft: "20px" }}>Fecha de venc. : </label>
+        <label style={{ marginLeft: "20px" }}>Filtrar por color: </label>
+        <select
+          value={filtroColor}
+          onChange={(e) => setFiltroColor(e.target.value)}
+        >
+          <option value="">Todos</option>
+          <option value="verde">Verdes (Buenos/Excelentes)</option>
+          <option value="amarillo">Amarillos (Regulares)</option>
+          <option value="rojo">Rojos (Bloqueados / Mal pagador)</option>
+        </select>
+
+        {/* 📅 RANGO DE FECHAS CON HOY POR DEFECTO */}
+        <label style={{ marginLeft: "20px" }}>Desde: </label>
         <input
           type="date"
-          value={filtroFecha}
-          onChange={(e) => setFiltroFecha(e.target.value)}
+          value={fechaDesde}
+          onChange={(e) => setFechaDesde(e.target.value)}
           className={styles.searchInput}
         />
+
+        <label style={{ marginLeft: "10px" }}>Hasta: </label>
+        <input
+          type="date"
+          value={fechaHasta}
+          onChange={(e) => setFechaHasta(e.target.value)}
+          className={styles.searchInput}
+        />
+
         <button 
-          onClick={() => setFiltroFecha("")} 
+          onClick={() => { setFechaDesde(""); setFechaHasta(""); }} 
           className={styles.btnVerTodos}
+          style={{ marginLeft: "10px" }}
         >
           Ver Todos
         </button>
@@ -549,23 +536,26 @@ export default function Clientes() {
             <tbody>
               {clientesVencidos
                 .filter(c => {
-                  // 1. Validar filtro de vendedor
                   const pasaVendedor = !filtroVendedor || c.vendedor === filtroVendedor;
 
-                  // 2. Validar filtro de fecha (compara con "Próximo Vencimiento")
-                  let pasaFecha = true;
-                  if (filtroFecha && c.proximoVencimiento) {
+                  let pasaRangoFecha = true;
+                  if (c.proximoVencimiento) {
                     const fechaVenc = new Date(c.proximoVencimiento);
-                    const anio = fechaVenc.getFullYear();
-                    const mes = String(fechaVenc.getMonth() + 1).padStart(2, '0');
-                    const dia = String(fechaVenc.getDate()).padStart(2, '0');
-                    const fechaFormateada = `${anio}-${mes}-${dia}`;
-                    
-                    pasaFecha = fechaFormateada === filtroFecha;
+                    fechaVenc.setHours(0, 0, 0, 0);
+
+                    if (fechaDesde) {
+                      const dDesde = new Date(fechaDesde + "T00:00:00");
+                      if (fechaVenc < dDesde) pasaRangoFecha = false;
+                    }
+                    if (fechaHasta) {
+                      const dHasta = new Date(fechaHasta + "T23:59:59");
+                      if (fechaVenc > dHasta) pasaRangoFecha = false;
+                    }
+                  } else if (fechaDesde || fechaHasta) {
+                    pasaRangoFecha = false;
                   }
 
-                  // Retorna true solo si cumple AMBAS condiciones
-                  return pasaVendedor && pasaFecha;
+                  return pasaVendedor && pasaRangoFecha;
                 })
                 .map((c) => (
                   <tr key={c.id} className={styles.vencidosRow}>
