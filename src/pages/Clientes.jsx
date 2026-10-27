@@ -387,7 +387,7 @@ export default function Clientes() {
     return clientesConTotales.filter((c) => {
       const nombre = (c.nombre || "").toLowerCase();
       const dni = String(c.dni || "").toLowerCase();
-      const direccion = (c.direccion || "").toLowerCase(); // 👈 Agregado para buscar por dirección
+      const direccion = (c.direccion || "").toLowerCase();
       
       const cumpleBusq = !q || nombre.includes(q) || dni.includes(q) || direccion.includes(q);
 
@@ -420,6 +420,12 @@ export default function Clientes() {
 
     localStorage.setItem("expiraVisita", finDelDia.getTime());
     window.open(`/clientes/${clienteId}`, "_blank");
+  };
+
+  // 🖱️ MANEJADOR PARA EL CLIC SECUNDARIO (CLIC DERECHO) EN LA CARD
+  const handleContextMenuCliente = (e, clienteId) => {
+    e.preventDefault(); // Previene el menú contextual predeterminado del navegador
+    handleDoubleClickCliente(clienteId); // Abre en nueva pestaña y registra la visita igual que el doble clic
   };
 
   const handleSaveClient = async (data) => {
@@ -585,16 +591,20 @@ export default function Clientes() {
       <div className={styles.grid}>
         {clientesFiltrados.length > 0 ? (
           clientesFiltrados.map((cli) => (
-            <CardClient
-              key={cli.id}
-              cliente={cli}
-              resaltado={clientesReclamadosHoy.includes(cli.id)}
-              onEdit={(c) => {
-                setClientToEdit(c);
-                setIsModalOpen(true);
-              }}
-              onDelete={fetchClientes}
-            />
+            <div 
+              key={cli.id} 
+              onContextMenu={(e) => handleContextMenuCliente(e, cli.id)}
+            >
+              <CardClient
+                cliente={cli}
+                resaltado={clientesReclamadosHoy.includes(cli.id)}
+                onEdit={(c) => {
+                  setClientToEdit(c);
+                  setIsModalOpen(true);
+                }}
+                onDelete={fetchClientes}
+              />
+            </div>
           ))
         ) : (
           <p className={styles.empty}>
