@@ -34,16 +34,27 @@ const Finanzas = () => {
   const [mostrarVentas, setMostrarVentas] = useState({});
   const [mostrarCobros, setMostrarCobros] = useState({});
   const [mostrarGastos, setMostrarGastos] = useState({});
-  
-  const [refreshKey, setRefreshKey] = useState(0); 
-  
+
+  // 🔥 Estados para el desglose y carga de gastos en el historial general
+  const [mesesExpandidosHistorial, setMesesExpandidosHistorial] = useState({});
+  const [formularioGastoHistorialAbierto, setFormularioGastoHistorialAbierto] = useState(null);
+  const [gastoHistorial, setGastoHistorial] = useState({
+    descripcion: "",
+    monto: "",
+    categoria: "General",
+    sucursal: "Jofre 2440",
+    fecha: new Date().toISOString().split("T")[0]
+  });
+
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const [sucursalFormularioAbierto, setSucursalFormularioAbierto] = useState(null);
-  
+
   const [nuevoGasto, setNuevoGasto] = useState({
     descripcion: "",
     monto: "",
-    categoria: "General", 
-    fecha: new Date().toISOString().split("T")[0] 
+    categoria: "General",
+    fecha: new Date().toISOString().split("T")[0]
   });
 
   const ahora = new Date();
@@ -52,7 +63,7 @@ const Finanzas = () => {
   const nombreMes = ahora.toLocaleDateString("es-AR", { month: "long" });
   const nombreMesCapitalizado = nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1);
   const formatearMonto = (monto) => Number(monto || 0).toLocaleString("es-AR");
-  
+
   const formatearFecha = (fecha) => {
     if (!fecha) return "-";
     let date;
@@ -63,7 +74,7 @@ const Finanzas = () => {
     } else date = new Date(fecha);
     return date.toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
   };
-  
+
   const obtenerObjetoFecha = (fecha) => {
     if (!fecha) return null;
     if (fecha?.seconds) return new Date(fecha.seconds * 1000);
@@ -73,13 +84,13 @@ const Finanzas = () => {
     }
     return new Date(fecha);
   };
-  
+
   const ordenarPorFechaDescendente = (a, b) => {
     const fechaA = obtenerObjetoFecha(a.fecha) || new Date(0);
     const fechaB = obtenerObjetoFecha(b.fecha) || new Date(0);
     return fechaB - fechaA;
   };
-  
+
   const aplicarFiltro = () => {
     const desde = fechaDesde ? new Date(fechaDesde + "T00:00:00") : null;
     const hasta = fechaHasta ? new Date(fechaHasta + "T23:59:59") : null;
@@ -88,9 +99,9 @@ const Finanzas = () => {
     setCobrosFiltrados(cobros.filter(c => { const f = obtenerObjetoFecha(c.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
     setGastosFiltrados(gastos.filter(g => { const f = obtenerObjetoFecha(g.fecha); return (!desde || f >= desde) && (!hasta || f <= hasta); }));
   };
-  
+
   const borrarFiltro = () => {
-    setFechaDesde(""); 
+    setFechaDesde("");
     setFechaHasta("");
     // Restablecer vista por defecto al mes actual
     setVentasFiltradas(ventas.filter(v => {
@@ -118,19 +129,48 @@ const Finanzas = () => {
       await addDoc(collection(db, "gastos"), {
         descripcion: nuevoGasto.descripcion,
         monto: Number(nuevoGasto.monto),
-        categoria: nuevoGasto.categoria, 
-        sucursal: sucursalFormularioAbierto, 
+        categoria: nuevoGasto.categoria,
+        sucursal: sucursalFormularioAbierto,
         fecha: nuevoGasto.fecha,
         createdAt: serverTimestamp(),
-        usuario: "Usuario Actual", 
+        usuario: "Usuario Actual",
       });
 
       alert("Gasto cargado exitosamente");
-      
+
       setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
-      setSucursalFormularioAbierto(null); 
+      setSucursalFormularioAbierto(null);
       setRefreshKey(prev => prev + 1);
-      
+
+    } catch (error) {
+      console.error("Error al guardar el gasto:", error);
+      alert("Hubo un error al cargar el gasto.");
+    }
+  };
+
+  // 🔥 Cargar Gasto desde el Historial General (meses anteriores)
+  const handleCargarGastoHistorial = async (e) => {
+    e.preventDefault();
+    if (!gastoHistorial.descripcion || !gastoHistorial.monto || !gastoHistorial.fecha) {
+      alert("Por favor completa la descripción, el monto y la fecha.");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "gastos"), {
+        descripcion: gastoHistorial.descripcion,
+        monto: Number(gastoHistorial.monto),
+        categoria: gastoHistorial.categoria,
+        sucursal: gastoHistorial.sucursal,
+        fecha: gastoHistorial.fecha,
+        createdAt: serverTimestamp(),
+        usuario: "Usuario Actual",
+      });
+
+      alert("Gasto cargado exitosamente");
+      setGastoHistorial({ descripcion: "", monto: "", categoria: "General", sucursal: "Jofre 2440", fecha: new Date().toISOString().split("T")[0] });
+      setFormularioGastoHistorialAbierto(null);
+      setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error("Error al guardar el gasto:", error);
       alert("Hubo un error al cargar el gasto.");
@@ -162,7 +202,7 @@ const Finanzas = () => {
       alert("Hubo un error al intentar eliminar el gasto.");
     }
   };
-  
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -188,7 +228,7 @@ const Finanzas = () => {
           const v = doc.data();
           const sellerEmail = v.vendedorReal || v.vendedor || v.cargadoPor;
           const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
-          
+
           let sucursalNombre = v.productos?.[0]?.branch || v.sucursal || "Jofre 2440";
           if (sucursalNombre === "Mosconi") {
             sucursalNombre = "Jofre 2440";
@@ -196,10 +236,10 @@ const Finanzas = () => {
 
           const esFuturaNoCobrada = v.pago && v.pago.montoPagado === 0 && v.pago.primerCuotaPaga === false;
 
-          return { 
-            id: doc.id, 
-            ...v, 
-            clienteNombre: clientes[v.clienteId] || "Sin Nombre", 
+          return {
+            id: doc.id,
+            ...v,
+            clienteNombre: clientes[v.clienteId] || "Sin Nombre",
             vendedorNombre,
             sucursal: sucursalNombre,
             esFuturaNoCobrada
@@ -211,7 +251,7 @@ const Finanzas = () => {
           if (venta.pago && venta.pago.primerCuotaPaga === true && venta.pago.montoPagado > 0) {
             const sellerEmail = venta.vendedorReal || venta.vendedor || venta.cargadoPor;
             const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
-            
+
             cobrosGenerados.push({
               id: venta.id + "-inicial",
               fecha: venta.fecha,
@@ -229,7 +269,7 @@ const Finanzas = () => {
               if (esCobroReal) {
                 const sellerEmail = pago?.firma?.email || venta.vendedorReal || venta.vendedor || venta.cargadoPor;
                 const vendedorNombre = usuariosEmailMapLocal[sellerEmail] || usuariosIdMap[sellerEmail] || sellerEmail || "Sin Nombre";
-                
+
                 cobrosGenerados.push({
                   id: venta.id + "-" + (pago.numero || Math.random()),
                   fecha: pago.fecha,
@@ -237,7 +277,7 @@ const Finanzas = () => {
                   cuotaNumero: pago.numero || "Extra",
                   monto: Number(pago.monto || pago.montoPagado || 0),
                   vendedorNombre,
-                  sucursal: venta.sucursal 
+                  sucursal: venta.sucursal
                 });
               }
             });
@@ -249,10 +289,10 @@ const Finanzas = () => {
           const gasto = g.data();
           const expenseUser = gasto.vendedor || gasto.usuario;
           const registradoPor = usuariosEmailMapLocal[expenseUser] || usuariosIdMap[expenseUser] || expenseUser || "Sin Nombre";
-          
+
           let sucursalGasto = gasto.sucursal || gasto.branch || "Jofre 2440";
           if (sucursalGasto === "Mosconi") sucursalGasto = "Jofre 2440";
-          
+
           return { id: g.id, ...gasto, registradoPor, sucursal: sucursalGasto };
         });
 
@@ -262,13 +302,13 @@ const Finanzas = () => {
             if (tipo === "ventas" && item.esFuturaNoCobrada) return;
             const f = obtenerObjetoFecha(item.fecha);
             if (!f || isNaN(f.getTime())) return;
-            
+
             const y = f.getFullYear();
-            const m = f.getMonth(); 
-            
+            const m = f.getMonth();
+
             if (!historialTemp[y]) historialTemp[y] = {};
             if (!historialTemp[y][m]) historialTemp[y][m] = { ventas: 0, cobros: 0, gastos: 0 };
-            
+
             historialTemp[y][m][tipo] += (Number(item[montoKey]) || 0);
           });
         };
@@ -276,7 +316,7 @@ const Finanzas = () => {
         procesarParaHistorial(todasLasVentas, "ventas", "total");
         procesarParaHistorial(cobrosGenerados, "cobros", "monto");
         procesarParaHistorial(todosLosGastos, "gastos", "monto");
-        
+
         setHistorialBalances(historialTemp);
 
         // Guardar la TOTALIDAD de los datos recuperados
@@ -289,7 +329,7 @@ const Finanzas = () => {
           const f = obtenerObjetoFecha(v.fecha);
           return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
         });
-        
+
         const cobrosMesActual = cobrosGenerados.filter(c => {
           const f = obtenerObjetoFecha(c.fecha);
           return f && f.getFullYear() === anioActual && f.getMonth() === mesActual;
@@ -310,7 +350,7 @@ const Finanzas = () => {
       setLoading(false);
     };
     fetchData();
-  }, [refreshKey]); 
+  }, [refreshKey]);
 
   const obtenerDatosGraficoPorSucursal = (sucursalNombre) => {
     const diasEnMes = new Date(anioActual, mesActual + 1, 0).getDate();
@@ -324,21 +364,21 @@ const Finanzas = () => {
       const vDia = ventasFiltradas.reduce((acc, v) => {
         const f = obtenerObjetoFecha(v.fecha);
         return f && f.getDate() === diaNum && v.sucursal === sucursalNombre && !v.esFuturaNoCobrada
-          ? acc + (Number(v.total) || 0) 
+          ? acc + (Number(v.total) || 0)
           : acc;
       }, 0);
 
       const cDia = cobrosFiltrados.reduce((acc, c) => {
         const f = obtenerObjetoFecha(c.fecha);
-        return f && f.getDate() === diaNum && c.sucursal === sucursalNombre 
-          ? acc + (c.monto || 0) 
+        return f && f.getDate() === diaNum && c.sucursal === sucursalNombre
+          ? acc + (c.monto || 0)
           : acc;
       }, 0);
 
       const gDia = gastosFiltrados.reduce((acc, g) => {
         const f = obtenerObjetoFecha(g.fecha);
-        return f && f.getDate() === diaNum && g.sucursal === sucursalNombre 
-          ? acc + (g.monto || 0) 
+        return f && f.getDate() === diaNum && g.sucursal === sucursalNombre
+          ? acc + (g.monto || 0)
           : acc;
       }, 0);
 
@@ -377,479 +417,637 @@ const Finanzas = () => {
 
   if (loading) return <Loader />;
 
- return (
-  <div className={styles.container}>
-    <h1>Panel de Finanzas - {nombreMesCapitalizado} {anioActual}</h1>
+  return (
+    <div className={styles.container}>
+      <h1>Panel de Finanzas - {nombreMesCapitalizado} {anioActual}</h1>
 
-    <section className={styles.filtros}>
-      <div className={styles.filtrosFlex}>
-        <label>Desde: <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></label>
-        <label>Hasta: <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} /></label>
-        <div className={styles.botonesFiltro}>
-          <button onClick={aplicarFiltro} className={styles.btnPrimario}>Buscar Rango</button>
-          <button onClick={borrarFiltro} className={styles.btnSecundario}>Resetear</button>
-        </div>
-      </div>
-    </section>
-
-    {listaSucursales.map((sucursalNombre, idx) => {
-      
-      const ventasSucursal = ventasFiltradas
-        .filter(v => v.sucursal === sucursalNombre && !v.esFuturaNoCobrada)
-        .sort(ordenarPorFechaDescendente);
-
-      const cobrosSucursal = cobrosFiltrados
-        .filter(c => c.sucursal === sucursalNombre)
-        .sort(ordenarPorFechaDescendente);
-
-      const gastosSucursal = gastosFiltrados
-        .filter(g => g.sucursal === sucursalNombre)
-        .sort(ordenarPorFechaDescendente);
-
-      const totalVentasSuc = ventasSucursal.reduce((acc, v) => acc + (Number(v.total) || 0), 0);
-      const totalCobrosSuc = cobrosSucursal.reduce((acc, c) => acc + (c.monto || 0), 0);
-      const totalGastosSuc = gastosSucursal.reduce((acc, g) => acc + (g.monto || 0), 0);
-      const balanceSuc = totalCobrosSuc - totalGastosSuc;
-
-      const datosGraficoSucursal = obtenerDatosGraficoPorSucursal(sucursalNombre);
-
-      // --- LÓGICA DE RANKING DE VENDEDORES ---
-      const ventasParaRanking = ventasFiltradas.filter(v => v.sucursal === sucursalNombre);
-      const rankingVendedoresMap = {};
-
-      ventasParaRanking.forEach(venta => {
-        const vendedor = venta.vendedorNombre;
-        if (!rankingVendedoresMap[vendedor]) {
-          rankingVendedoresMap[vendedor] = { 
-            nombre: vendedor, 
-            cantidadVentas: 0, 
-            cantidadCobradas: 0, 
-            totalDinero: 0 
-          };
-        }
-        
-        rankingVendedoresMap[vendedor].cantidadVentas += 1;
-        
-        // Si la venta SÍ tiene la primera cuota paga
-        if (!venta.esFuturaNoCobrada) {
-          rankingVendedoresMap[vendedor].cantidadCobradas += 1;
-          rankingVendedoresMap[vendedor].totalDinero += (Number(venta.total) || 0);
-        }
-      });
-
-      const rankingVendedores = Object.values(rankingVendedoresMap)
-        .sort((a, b) => b.totalDinero - a.totalDinero);
-      // ----------------------------------------
-
-      return (
-        <div key={sucursalNombre} className={styles.sucursalCard}>
-          
-          <div className={styles.sucursalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-              <h2 style={{ margin: 0 }}>🏪 {sucursalNombre}</h2>
-              <span className={styles.sucursalBadge}>Sucursal Activa</span>
-            </div>
-            
-            <button 
-              className={styles.btnPrimario} 
-              style={{ backgroundColor: sucursalFormularioAbierto === sucursalNombre ? "#ef4444" : "" }}
-              onClick={() => {
-                if (sucursalFormularioAbierto === sucursalNombre) {
-                  setSucursalFormularioAbierto(null);
-                } else {
-                  setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
-                  setSucursalFormularioAbierto(sucursalNombre);
-                }
-              }}
-            >
-              {sucursalFormularioAbierto === sucursalNombre ? "❌ Cancelar Carga" : "➕ Cargar Gasto Acá"}
-            </button>
+      <section className={styles.filtros}>
+        <div className={styles.filtrosFlex}>
+          <label>Desde: <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></label>
+          <label>Hasta: <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} /></label>
+          <div className={styles.botonesFiltro}>
+            <button onClick={aplicarFiltro} className={styles.btnPrimario}>Buscar Rango</button>
+            <button onClick={borrarFiltro} className={styles.btnSecundario}>Resetear</button>
           </div>
+        </div>
+      </section>
 
-          {sucursalFormularioAbierto === sucursalNombre && (
-            <form onSubmit={handleCargarGasto} style={{ background: "#f8fafc", padding: "20px", borderRadius: "8px", margin: "15px 0", border: "2px dashed #cbd5e1" }}>
-              <h3 style={{ margin: "0 0 15px 0", color: "#334155" }}>Registrar Gasto en {sucursalNombre}</h3>
-              <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", alignItems: "flex-end" }}>
-                
-                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
-                  Fecha:
-                  <input 
-                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
-                    type="date" 
-                    value={nuevoGasto.fecha} 
-                    onChange={(e) => setNuevoGasto({...nuevoGasto, fecha: e.target.value})} 
-                    required
-                  />
-                </label>
+      {listaSucursales.map((sucursalNombre, idx) => {
 
-                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
-                  Categoría:
-                  <select 
-                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", minWidth: "150px" }}
-                    value={nuevoGasto.categoria} 
-                    onChange={(e) => setNuevoGasto({...nuevoGasto, categoria: e.target.value})}
-                  >
-                    <option value="General">General / Varios</option>
-                    <option value="Sueldos">Sueldos</option>
-                    <option value="Comisiones por Ventas">Comisiones por Ventas</option>
-                    <option value="Insumos">Insumos y Limpieza</option>
-                    <option value="Servicios">Servicios (Luz, Internet, etc)</option>
-                  </select>
-                </label>
+        const ventasSucursal = ventasFiltradas
+          .filter(v => v.sucursal === sucursalNombre && !v.esFuturaNoCobrada)
+          .sort(ordenarPorFechaDescendente);
 
-                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold", flexGrow: 1 }}>
-                  Descripción:
-                  <input 
-                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
-                    type="text" 
-                    placeholder={nuevoGasto.categoria === "Comisiones por Ventas" ? "Ej: Comisión a Juan por venta #123" : "Ej: Detalle del gasto"} 
-                    value={nuevoGasto.descripcion} 
-                    onChange={(e) => setNuevoGasto({...nuevoGasto, descripcion: e.target.value})} 
-                    required
-                  />
-                </label>
+        const cobrosSucursal = cobrosFiltrados
+          .filter(c => c.sucursal === sucursalNombre)
+          .sort(ordenarPorFechaDescendente);
 
-                <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
-                  Monto ($):
-                  <input 
-                    style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
-                    type="number" 
-                    placeholder="Ej: 5000" 
-                    value={nuevoGasto.monto} 
-                    onChange={(e) => setNuevoGasto({...nuevoGasto, monto: e.target.value})} 
-                    required
-                  />
-                </label>
+        const gastosSucursal = gastosFiltrados
+          .filter(g => g.sucursal === sucursalNombre)
+          .sort(ordenarPorFechaDescendente);
 
-                <button type="submit" className={styles.btnPrimario} style={{ padding: "10px 20px", height: "fit-content" }}>
-                  Guardar Gasto
-                </button>
-              </div>
-            </form>
-          )}
+        const totalVentasSuc = ventasSucursal.reduce((acc, v) => acc + (Number(v.total) || 0), 0);
+        const totalCobrosSuc = cobrosSucursal.reduce((acc, c) => acc + (c.monto || 0), 0);
+        const totalGastosSuc = gastosSucursal.reduce((acc, g) => acc + (g.monto || 0), 0);
+        const balanceSuc = totalCobrosSuc - totalGastosSuc;
 
-          {(() => {
-            const obtenerTopDia = (lista, llaveMonto) => {
-              if (!lista || lista.length === 0) return { dia: "Sin datos", monto: 0 };
-              const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-              
-              const acumPorDia = lista.reduce((acc, curr) => {
-                const fechaObj = obtenerObjetoFecha(curr.fecha); 
-                const diaNombre = (!fechaObj || isNaN(fechaObj.getTime())) ? "S/D" : diasSemana[fechaObj.getDay()];
-                const monto = Number(curr[llaveMonto]) || 0;
-                
-                acc[diaNombre] = (acc[diaNombre] || 0) + monto;
-                return acc;
-              }, {});
+        const datosGraficoSucursal = obtenerDatosGraficoPorSucursal(sucursalNombre);
 
-              const topDia = Object.keys(acumPorDia).reduce((a, b) => acumPorDia[a] > acumPorDia[b] ? a : b, "Sin datos");
-              return { dia: topDia, monto: acumPorDia[topDia] || 0 };
+        // --- LÓGICA DE RANKING DE VENDEDORES ---
+        const ventasParaRanking = ventasFiltradas.filter(v => v.sucursal === sucursalNombre);
+        const rankingVendedoresMap = {};
+
+        ventasParaRanking.forEach(venta => {
+          const vendedor = venta.vendedorNombre;
+          if (!rankingVendedoresMap[vendedor]) {
+            rankingVendedoresMap[vendedor] = {
+              nombre: vendedor,
+              cantidadVentas: 0,
+              cantidadCobradas: 0,
+              totalDinero: 0
             };
+          }
 
-            const topVenta = obtenerTopDia(ventasSucursal, 'total');
-            const topCobro = obtenerTopDia(cobrosSucursal, 'monto');
-            const topGasto = obtenerTopDia(gastosSucursal, 'monto');
+          rankingVendedoresMap[vendedor].cantidadVentas += 1;
 
-            return (
-              <div className={styles.sucursalRankings}>
-                <div className={`${styles.rankingItem} ${styles.ventas}`}>
-                  <span className={styles.rankingTitulo}>Top Ventas:</span>
-                  <span className={styles.rankingBadge}>1º {topVenta.dia} (${formatearMonto(topVenta.monto)})</span>
-                </div>
-                <div className={`${styles.rankingItem} ${styles.cobros}`}>
-                  <span className={styles.rankingTitulo}>Top Cobros:</span>
-                  <span className={styles.rankingBadge}>1º {topCobro.dia} (${formatearMonto(topCobro.monto)})</span>
-                </div>
-                <div className={`${styles.rankingItem} ${styles.gastos}`}>
-                  <span className={styles.rankingTitulo}>Top Gastos:</span>
-                  <span className={styles.rankingBadge}>1º {topGasto.dia} (${formatearMonto(topGasto.monto)})</span>
-                </div>
+          // Si la venta SÍ tiene la primera cuota paga
+          if (!venta.esFuturaNoCobrada) {
+            rankingVendedoresMap[vendedor].cantidadCobradas += 1;
+            rankingVendedoresMap[vendedor].totalDinero += (Number(venta.total) || 0);
+          }
+        });
+
+        const rankingVendedores = Object.values(rankingVendedoresMap)
+          .sort((a, b) => b.totalDinero - a.totalDinero);
+        // ----------------------------------------
+
+        return (
+          <div key={sucursalNombre} className={styles.sucursalCard}>
+
+            <div className={styles.sucursalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0 }}>🏪 {sucursalNombre}</h2>
+                <span className={styles.sucursalBadge}>Sucursal Activa</span>
               </div>
-            );
-          })()}
 
-          <div className={styles.cards}>
-            <div className={`${styles.cardInfo} ${styles.cardVentas}`}>Emitido Ventas:<br /><b>${formatearMonto(totalVentasSuc)}</b></div>
-            <div className={`${styles.cardInfo} ${styles.cardCobros}`}>Ingreso Caja:<br /><b>${formatearMonto(totalCobrosSuc)}</b></div>
-            <div className={`${styles.cardInfo} ${styles.cardGastos}`}>Gastos de Caja:<br /><b>${formatearMonto(totalGastosSuc)}</b></div>
-            <div className={`${styles.cardInfo} ${balanceSuc >= 0 ? styles.balancePositivo : styles.balanceNegativo}`}>
-              Balance Neto:<br /><b>${formatearMonto(balanceSuc)}</b>
+              <button
+                className={styles.btnPrimario}
+                style={{ backgroundColor: sucursalFormularioAbierto === sucursalNombre ? "#ef4444" : "" }}
+                onClick={() => {
+                  if (sucursalFormularioAbierto === sucursalNombre) {
+                    setSucursalFormularioAbierto(null);
+                  } else {
+                    setNuevoGasto({ descripcion: "", monto: "", categoria: "General", fecha: new Date().toISOString().split("T")[0] });
+                    setSucursalFormularioAbierto(sucursalNombre);
+                  }
+                }}
+              >
+                {sucursalFormularioAbierto === sucursalNombre ? "❌ Cancelar Carga" : "➕ Cargar Gasto Acá"}
+              </button>
             </div>
-          </div>
 
-          <div className={styles.chartWrapper}>
-            <div className={styles.chartContainer}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={datosGraficoSucursal} margin={{ top: 10, right: 10, left: -5, bottom: 5 }}>
-                  <defs>
-                    <linearGradient id={`colorVentas-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
-                    </linearGradient>
-                    <linearGradient id={`colorCobros-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.01} />
-                    </linearGradient>
-                    <linearGradient id={`colorGastos-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} tickLine={false} dy={10} />
-                  <YAxis tickFormatter={(v) => v === 0 ? "$0" : `$${(v / 1000).toLocaleString("es-AR")}k`} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
-                  <Legend verticalAlign="top" height={35} iconType="circle" iconSize={9} />
+            {sucursalFormularioAbierto === sucursalNombre && (
+              <form onSubmit={handleCargarGasto} style={{ background: "#f8fafc", padding: "20px", borderRadius: "8px", margin: "15px 0", border: "2px dashed #cbd5e1" }}>
+                <h3 style={{ margin: "0 0 15px 0", color: "#334155" }}>Registrar Gasto en {sucursalNombre}</h3>
+                <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", alignItems: "flex-end" }}>
 
-                  <Area type="monotone" dataKey="Ventas" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorVentas-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
-                  <Area type="monotone" dataKey="Cobros" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorCobros-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
-                  <Area type="monotone" dataKey="Gastos" stroke="#ef4444" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorGastos-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
-                </AreaChart>
-              </ResponsiveContainer>
+                  <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
+                    Fecha:
+                    <input
+                      style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                      type="date"
+                      value={nuevoGasto.fecha}
+                      onChange={(e) => setNuevoGasto({ ...nuevoGasto, fecha: e.target.value })}
+                      required
+                    />
+                  </label>
+
+                  <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
+                    Categoría:
+                    <select
+                      style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", minWidth: "150px" }}
+                      value={nuevoGasto.categoria}
+                      onChange={(e) => setNuevoGasto({ ...nuevoGasto, categoria: e.target.value })}
+                    >
+                      <option value="General">General / Varios</option>
+                      <option value="Sueldos">Sueldos</option>
+                      <option value="Comisiones por Ventas">Comisiones por Ventas</option>
+                      <option value="Insumos">Insumos y Limpieza</option>
+                      <option value="Servicios">Servicios (Luz, Internet, etc)</option>
+                    </select>
+                  </label>
+
+                  <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold", flexGrow: 1 }}>
+                    Descripción:
+                    <input
+                      style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                      type="text"
+                      placeholder={nuevoGasto.categoria === "Comisiones por Ventas" ? "Ej: Comisión a Juan por venta #123" : "Ej: Detalle del gasto"}
+                      value={nuevoGasto.descripcion}
+                      onChange={(e) => setNuevoGasto({ ...nuevoGasto, descripcion: e.target.value })}
+                      required
+                    />
+                  </label>
+
+                  <label style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "14px", fontWeight: "bold" }}>
+                    Monto ($):
+                    <input
+                      style={{ padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1" }}
+                      type="number"
+                      placeholder="Ej: 5000"
+                      value={nuevoGasto.monto}
+                      onChange={(e) => setNuevoGasto({ ...nuevoGasto, monto: e.target.value })}
+                      required
+                    />
+                  </label>
+
+                  <button type="submit" className={styles.btnPrimario} style={{ padding: "10px 20px", height: "fit-content" }}>
+                    Guardar Gasto
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {(() => {
+              const obtenerTopDia = (lista, llaveMonto) => {
+                if (!lista || lista.length === 0) return { dia: "Sin datos", monto: 0 };
+                const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+                const acumPorDia = lista.reduce((acc, curr) => {
+                  const fechaObj = obtenerObjetoFecha(curr.fecha);
+                  const diaNombre = (!fechaObj || isNaN(fechaObj.getTime())) ? "S/D" : diasSemana[fechaObj.getDay()];
+                  const monto = Number(curr[llaveMonto]) || 0;
+
+                  acc[diaNombre] = (acc[diaNombre] || 0) + monto;
+                  return acc;
+                }, {});
+
+                const topDia = Object.keys(acumPorDia).reduce((a, b) => acumPorDia[a] > acumPorDia[b] ? a : b, "Sin datos");
+                return { dia: topDia, monto: acumPorDia[topDia] || 0 };
+              };
+
+              const topVenta = obtenerTopDia(ventasSucursal, 'total');
+              const topCobro = obtenerTopDia(cobrosSucursal, 'monto');
+              const topGasto = obtenerTopDia(gastosSucursal, 'monto');
+
+              return (
+                <div className={styles.sucursalRankings}>
+                  <div className={`${styles.rankingItem} ${styles.ventas}`}>
+                    <span className={styles.rankingTitulo}>Top Ventas:</span>
+                    <span className={styles.rankingBadge}>1º {topVenta.dia} (${formatearMonto(topVenta.monto)})</span>
+                  </div>
+                  <div className={`${styles.rankingItem} ${styles.cobros}`}>
+                    <span className={styles.rankingTitulo}>Top Cobros:</span>
+                    <span className={styles.rankingBadge}>1º {topCobro.dia} (${formatearMonto(topCobro.monto)})</span>
+                  </div>
+                  <div className={`${styles.rankingItem} ${styles.gastos}`}>
+                    <span className={styles.rankingTitulo}>Top Gastos:</span>
+                    <span className={styles.rankingBadge}>1º {topGasto.dia} (${formatearMonto(topGasto.monto)})</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className={styles.cards}>
+              <div className={`${styles.cardInfo} ${styles.cardVentas}`}>Emitido Ventas:<br /><b>${formatearMonto(totalVentasSuc)}</b></div>
+              <div className={`${styles.cardInfo} ${styles.cardCobros}`}>Ingreso Caja:<br /><b>${formatearMonto(totalCobrosSuc)}</b></div>
+              <div className={`${styles.cardInfo} ${styles.cardGastos}`}>Gastos de Caja:<br /><b>${formatearMonto(totalGastosSuc)}</b></div>
+              <div className={`${styles.cardInfo} ${balanceSuc >= 0 ? styles.balancePositivo : styles.balanceNegativo}`}>
+                Balance Neto:<br /><b>${formatearMonto(balanceSuc)}</b>
+              </div>
             </div>
-          </div>
 
-          {/* TABLA DE RANKING DE VENDEDORES */}
-          <div className={styles.auditoriaWrapper} style={{ marginTop: "20px", marginBottom: "20px" }}>
-            <h3 style={{ color: "#3b82f6" }}>🏆 Ranking de Vendedores: {sucursalNombre}</h3>
-            <div className={styles["table-wrapper"]}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Puesto</th>
-                    <th>Vendedor</th>
-                    <th>Ventas Totales</th>
-                    <th>Con 1ra Cuota Paga</th>
-                    <th>Efectividad</th>
-                    <th>Dinero Generado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankingVendedores.map((vend, i) => (
-                    <tr key={i}>
-                      <td style={{ fontSize: "1.2rem", textAlign: "center" }}>
-                        {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}º`}
-                      </td>
-                      <td style={{ fontWeight: "bold" }}>{vend.nombre}</td>
-                      <td>{vend.cantidadVentas} prods.</td>
-                      <td>{vend.cantidadCobradas} cobradas</td>
-                      <td>
-                        <span style={{ 
-                          background: (vend.cantidadCobradas / vend.cantidadVentas) >= 0.8 ? '#bbf7d0' : '#fef08a', 
-                          padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' 
-                        }}>
-                          {vend.cantidadVentas > 0 ? Math.round((vend.cantidadCobradas / vend.cantidadVentas) * 100) : 0}%
-                        </span>
-                      </td>
-                      <td className={styles.textoDestacadoVentas}>
-                        ${formatearMonto(vend.totalDinero)}
-                      </td>
+            <div className={styles.chartWrapper}>
+              <div className={styles.chartContainer}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={datosGraficoSucursal} margin={{ top: 10, right: 10, left: -5, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id={`colorVentas-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
+                      </linearGradient>
+                      <linearGradient id={`colorCobros-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.01} />
+                      </linearGradient>
+                      <linearGradient id={`colorGastos-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} tickLine={false} dy={10} />
+                    <YAxis tickFormatter={(v) => v === 0 ? "$0" : `$${(v / 1000).toLocaleString("es-AR")}k`} tick={{ fontSize: 11, fill: '#64748b' }} tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
+                    <Legend verticalAlign="top" height={35} iconType="circle" iconSize={9} />
+
+                    <Area type="monotone" dataKey="Ventas" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorVentas-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="Cobros" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorCobros-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="Gastos" stroke="#ef4444" strokeWidth={2.5} fillOpacity={1} fill={`url(#colorGastos-${idx})`} dot={{ r: 1.5 }} activeDot={{ r: 5 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* TABLA DE RANKING DE VENDEDORES */}
+            <div className={styles.auditoriaWrapper} style={{ marginTop: "20px", marginBottom: "20px" }}>
+              <h3 style={{ color: "#3b82f6" }}>🏆 Ranking de Vendedores: {sucursalNombre}</h3>
+              <div className={styles["table-wrapper"]}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Puesto</th>
+                      <th>Vendedor</th>
+                      <th>Ventas Totales</th>
+                      <th>Con 1ra Cuota Paga</th>
+                      <th>Efectividad</th>
+                      <th>Dinero Generado</th>
                     </tr>
-                  ))}
-                  {rankingVendedores.length === 0 && (
-                    <tr><td colSpan="6" className={styles.tablaVacia}>No hay ventas registradas.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className={styles.auditoriaWrapper}>
-            <h3>📋 Auditoría Detallada (Ordenado por Día): {sucursalNombre}</h3>
-
-            <section className={styles.seccionTablaCollapsible}>
-              <div className={styles.headerTablaFlex}>
-                <h4>Historial Ventas Realizadas ({ventasSucursal.length})</h4>
-                <button onClick={() => toggleVentasLocal(sucursalNombre)} className={styles.btnToggleTabla}>
-                  {mostrarVentas[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
-                </button>
-              </div>
-              {mostrarVentas[sucursalNombre] && (
-                <div className={styles["table-wrapper"]}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr><th>Fecha</th><th>Cliente</th><th>Monto Total</th><th>Plan de Pago</th><th>Vendedor</th></tr>
-                    </thead>
-                    <tbody>
-                      {ventasSucursal.map(venta => {
-                        const cuotas = venta.cuotas || 1;
-                        const valorCuota = venta.valorCuota || venta.total || 0;
-                        return (
-                          <tr key={venta.id}>
-                            <td>{formatearFecha(venta.fecha)}</td>
-                            <td>{venta.clienteNombre}</td>
-                            <td className={styles.textoDestacadoVentas}>${formatearMonto(venta.total)}</td>
-                            <td>{cuotas} cuotas de ${formatearMonto(valorCuota)}</td>
-                            <td>{venta.vendedorNombre}</td>
-                          </tr>
-                        );
-                      })}
-                      {ventasSucursal.length === 0 && <tr><td colSpan="5" className={styles.tablaVacia}>No hay ventas registradas este mes.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            <section className={styles.seccionTablaCollapsible}>
-              <div className={styles.headerTablaFlex}>
-                <h4>Historial Cobros Caja ({cobrosSucursal.length})</h4>
-                <button onClick={() => toggleCobrosLocal(sucursalNombre)} className={styles.btnToggleTabla}>
-                  {mostrarCobros[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
-                </button>
-              </div>
-              {mostrarCobros[sucursalNombre] && (
-                <div className={styles["table-wrapper"]}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr><th>Fecha</th><th>Cliente</th><th>Cuota</th><th>Monto</th><th>Recibido por</th></tr>
-                    </thead>
-                    <tbody>
-                      {cobrosSucursal.map(c => (
-                        <tr key={c.id}>
-                          <td>{formatearFecha(c.fecha)}</td>
-                          <td>{c.clienteNombre}</td>
-                          <td>{typeof c.cuotaNumero === "number" ? `Cuota ${c.cuotaNumero}` : c.cuotaNumero}</td>
-                          <td className={styles.textoDestacadoCobros}>${formatearMonto(c.monto)}</td>
-                          <td>{c.vendedorNombre}</td>
-                        </tr>
-                      ))}
-                      {cobrosSucursal.length === 0 && <tr><td colSpan="5" className={styles.tablaVacia}>No hay cobros registrados este mes.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            <section className={styles.seccionTablaCollapsible}>
-              <div className={styles.headerTablaFlex}>
-                <h4>Historial Gastos Caja ({gastosSucursal.length})</h4>
-                <button onClick={() => toggleGastosLocal(sucursalNombre)} className={styles.btnToggleTabla}>
-                  {mostrarGastos[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
-                </button>
-              </div>
-              {mostrarGastos[sucursalNombre] && (
-                <div className={styles["table-wrapper"]}>
-                  <table className={styles.table}>
-                    <thead>
-                      {/* 🔥 Columna Acciones */}
-                      <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th><th>Acciones</th></tr>
-                    </thead>
-                    <tbody>
-                      {gastosSucursal.map(g => (
-                        <tr key={g.id}>
-                          <td>{formatearFecha(g.fecha)}</td>
-                          <td>
-                            <span style={{ 
-                              background: g.categoria === 'Sueldos' ? '#fef08a' : g.categoria === 'Comisiones por Ventas' ? '#bbf7d0' : '#e2e8f0', 
-                              padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' 
-                            }}>
-                              {g.categoria || 'General'}
-                            </span>
-                          </td>
-                          <td>{g.descripcion}</td>
-                          <td className={styles.textoDestacadoGastos}>${formatearMonto(g.monto)}</td>
-                          <td>{g.registradoPor}</td>
-                          {/* 🔥 Botón de eliminar */}
-                          <td>
-                            <button
-                              onClick={() => handleEliminarGasto(g.id)}
-                              style={{
-                                background: "#fee2e2",
-                                color: "#ef4444",
-                                border: "none",
-                                padding: "6px 10px",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                fontWeight: "bold"
-                              }}
-                              title="Eliminar Gasto"
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {gastosSucursal.length === 0 && <tr><td colSpan="6" className={styles.tablaVacia}>No hay gastos registrados este mes.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </div>
-
-        </div>
-      );
-    })}
-
-    <div className={styles.sucursalCard} style={{ marginTop: "2rem" }}>
-      <div className={styles.sucursalHeader} style={{ marginBottom: "1rem" }}>
-        <h2>📅 Historial General de Balances</h2>
-        <span className={styles.sucursalBadge} style={{ background: "#334155", color: "white" }}>Datos Históricos Globales</span>
-      </div>
-
-      {Object.keys(historialBalances).length === 0 ? (
-        <p style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>No hay datos históricos disponibles.</p>
-      ) : (
-        Object.keys(historialBalances)
-          .sort((a, b) => b - a)
-          .map(year => {
-            const mesesDelAnio = historialBalances[year];
-            return (
-              <div key={year} style={{ marginBottom: "2.5rem" }}>
-                <h3 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", color: "#334155", marginBottom: "15px" }}>
-                  Año {year}
-                </h3>
-                
-                <div className={styles["table-wrapper"]}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Mes</th>
-                        <th>Emitido Ventas</th>
-                        <th>Ingresos (Cobros)</th>
-                        <th>Gastos de Caja</th>
-                        <th>Balance Neto</th>
+                  </thead>
+                  <tbody>
+                    {rankingVendedores.map((vend, i) => (
+                      <tr key={i}>
+                        <td style={{ fontSize: "1.2rem", textAlign: "center" }}>
+                          {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}º`}
+                        </td>
+                        <td style={{ fontWeight: "bold" }}>{vend.nombre}</td>
+                        <td>{vend.cantidadVentas} prods.</td>
+                        <td>{vend.cantidadCobradas} cobradas</td>
+                        <td>
+                          <span style={{
+                            background: (vend.cantidadCobradas / vend.cantidadVentas) >= 0.8 ? '#bbf7d0' : '#fef08a',
+                            padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'
+                          }}>
+                            {vend.cantidadVentas > 0 ? Math.round((vend.cantidadCobradas / vend.cantidadVentas) * 100) : 0}%
+                          </span>
+                        </td>
+                        <td className={styles.textoDestacadoVentas}>
+                          ${formatearMonto(vend.totalDinero)}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {Object.keys(mesesDelAnio)
-                        .sort((a, b) => b - a) 
-                        .map(monthIndex => {
-                          const datosMes = mesesDelAnio[monthIndex];
-                          const balanceMes = datosMes.cobros - datosMes.gastos;
-                          
+                    ))}
+                    {rankingVendedores.length === 0 && (
+                      <tr><td colSpan="6" className={styles.tablaVacia}>No hay ventas registradas.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className={styles.auditoriaWrapper}>
+              <h3>📋 Auditoría Detallada (Ordenado por Día): {sucursalNombre}</h3>
+
+              <section className={styles.seccionTablaCollapsible}>
+                <div className={styles.headerTablaFlex}>
+                  <h4>Historial Ventas Realizadas ({ventasSucursal.length})</h4>
+                  <button onClick={() => toggleVentasLocal(sucursalNombre)} className={styles.btnToggleTabla}>
+                    {mostrarVentas[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
+                  </button>
+                </div>
+                {mostrarVentas[sucursalNombre] && (
+                  <div className={styles["table-wrapper"]}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr><th>Fecha</th><th>Cliente</th><th>Monto Total</th><th>Plan de Pago</th><th>Vendedor</th></tr>
+                      </thead>
+                      <tbody>
+                        {ventasSucursal.map(venta => {
+                          const cuotas = venta.cuotas || 1;
+                          const valorCuota = venta.valorCuota || venta.total || 0;
                           return (
-                            <tr key={`${year}-${monthIndex}`}>
-                              <td style={{ fontWeight: "700", textTransform: "capitalize", color: "#0f172a" }}>
-                                {nombresMesesArray[monthIndex]}
-                              </td>
-                              <td className={styles.textoDestacadoVentas}>
-                                ${formatearMonto(datosMes.ventas)}
-                              </td>
-                              <td className={styles.textoDestacadoCobros}>
-                                ${formatearMonto(datosMes.cobros)}
-                              </td>
-                              <td className={styles.textoDestacadoGastos}>
-                                ${formatearMonto(datosMes.gastos)}
-                              </td>
-                              <td className={balanceMes >= 0 ? styles.balancePositivo : styles.balanceNegativo} style={{ fontWeight: "bold" }}>
-                                ${formatearMonto(balanceMes)}
-                              </td>
+                            <tr key={venta.id}>
+                              <td>{formatearFecha(venta.fecha)}</td>
+                              <td>{venta.clienteNombre}</td>
+                              <td className={styles.textoDestacadoVentas}>${formatearMonto(venta.total)}</td>
+                              <td>{cuotas} cuotas de ${formatearMonto(valorCuota)}</td>
+                              <td>{venta.vendedorNombre}</td>
                             </tr>
                           );
                         })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })
-      )}
-    </div>
+                        {ventasSucursal.length === 0 && <tr><td colSpan="5" className={styles.tablaVacia}>No hay ventas registradas este mes.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
 
-  </div>
- );
+              <section className={styles.seccionTablaCollapsible}>
+                <div className={styles.headerTablaFlex}>
+                  <h4>Historial Cobros Caja ({cobrosSucursal.length})</h4>
+                  <button onClick={() => toggleCobrosLocal(sucursalNombre)} className={styles.btnToggleTabla}>
+                    {mostrarCobros[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
+                  </button>
+                </div>
+                {mostrarCobros[sucursalNombre] && (
+                  <div className={styles["table-wrapper"]}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr><th>Fecha</th><th>Cliente</th><th>Cuota</th><th>Monto</th><th>Recibido por</th></tr>
+                      </thead>
+                      <tbody>
+                        {cobrosSucursal.map(c => (
+                          <tr key={c.id}>
+                            <td>{formatearFecha(c.fecha)}</td>
+                            <td>{c.clienteNombre}</td>
+                            <td>{typeof c.cuotaNumero === "number" ? `Cuota ${c.cuotaNumero}` : c.cuotaNumero}</td>
+                            <td className={styles.textoDestacadoCobros}>${formatearMonto(c.monto)}</td>
+                            <td>{c.vendedorNombre}</td>
+                          </tr>
+                        ))}
+                        {cobrosSucursal.length === 0 && <tr><td colSpan="5" className={styles.tablaVacia}>No hay cobros registrados este mes.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+
+              <section className={styles.seccionTablaCollapsible}>
+                <div className={styles.headerTablaFlex}>
+                  <h4>Historial Gastos Caja ({gastosSucursal.length})</h4>
+                  <button onClick={() => toggleGastosLocal(sucursalNombre)} className={styles.btnToggleTabla}>
+                    {mostrarGastos[sucursalNombre] ? "Ocultar 🔼" : "Ver Detalle 🔽"}
+                  </button>
+                </div>
+                {mostrarGastos[sucursalNombre] && (
+                  <div className={styles["table-wrapper"]}>
+                    <table className={styles.table}>
+                      <thead>
+                        {/* 🔥 Columna Acciones */}
+                        <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th><th>Acciones</th></tr>
+                      </thead>
+                      <tbody>
+                        {gastosSucursal.map(g => (
+                          <tr key={g.id}>
+                            <td>{formatearFecha(g.fecha)}</td>
+                            <td>
+                              <span style={{
+                                background: g.categoria === 'Sueldos' ? '#fef08a' : g.categoria === 'Comisiones por Ventas' ? '#bbf7d0' : '#e2e8f0',
+                                padding: '2px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'
+                              }}>
+                                {g.categoria || 'General'}
+                              </span>
+                            </td>
+                            <td>{g.descripcion}</td>
+                            <td className={styles.textoDestacadoGastos}>${formatearMonto(g.monto)}</td>
+                            <td>{g.registradoPor}</td>
+                            {/* 🔥 Botón de eliminar */}
+                            <td>
+                              <button
+                                onClick={() => handleEliminarGasto(g.id)}
+                                style={{
+                                  background: "#fee2e2",
+                                  color: "#ef4444",
+                                  border: "none",
+                                  padding: "6px 10px",
+                                  borderRadius: "6px",
+                                  cursor: "pointer",
+                                  fontWeight: "bold"
+                                }}
+                                title="Eliminar Gasto"
+                              >
+                                🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {gastosSucursal.length === 0 && <tr><td colSpan="6" className={styles.tablaVacia}>No hay gastos registrados este mes.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </div>
+
+          </div>
+        );
+      })}
+
+      <div className={styles.sucursalCard} style={{ marginTop: "2rem" }}>
+        <div className={styles.sucursalHeader} style={{ marginBottom: "1rem" }}>
+          <h2>📅 Historial General de Balances</h2>
+          <span className={styles.sucursalBadge} style={{ background: "#334155", color: "white" }}>Datos Históricos Globales</span>
+        </div>
+
+        {Object.keys(historialBalances).length === 0 ? (
+          <p style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>No hay datos históricos disponibles.</p>
+        ) : (
+          Object.keys(historialBalances)
+            .sort((a, b) => b - a)
+            .map(year => {
+              const mesesDelAnio = historialBalances[year];
+              return (
+                <div key={year} style={{ marginBottom: "2.5rem" }}>
+                  <h3 style={{ borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", color: "#334155", marginBottom: "15px" }}>
+                    Año {year}
+                  </h3>
+
+                  <div className={styles["table-wrapper"]}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Mes</th>
+                          <th>Emitido Ventas</th>
+                          <th>Ingresos (Cobros)</th>
+                          <th>Gastos de Caja</th>
+                          <th>Balance Neto</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.keys(mesesDelAnio)
+                          .sort((a, b) => b - a)
+                          .map(monthIndex => {
+                            const datosMes = mesesDelAnio[monthIndex];
+                            const balanceMes = datosMes.cobros - datosMes.gastos;
+                            const mesKey = `${year}-${monthIndex}`;
+                            const estaExpandido = mesesExpandidosHistorial[mesKey];
+                            const formAbierto = formularioGastoHistorialAbierto === mesKey;
+
+                            // Gastos filtrados para este mes y año específico
+                            const gastosDelMes = gastos.filter(g => {
+                              const f = obtenerObjetoFecha(g.fecha);
+                              return f && f.getFullYear() === Number(year) && f.getMonth() === Number(monthIndex);
+                            });
+
+                            return (
+                              <React.Fragment key={mesKey}>
+                                <tr
+                                  style={{ cursor: "pointer", background: estaExpandido ? "#f8fafc" : "transparent" }}
+                                  onClick={() => setMesesExpandidosHistorial(prev => ({ ...prev, [mesKey]: !prev[mesKey] }))}
+                                  title="Haz clic para ver/ocultar el detalle de gastos de este mes"
+                                >
+                                  <td style={{ fontWeight: "700", textTransform: "capitalize", color: "#3b82f6", display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span>{estaExpandido ? "📂" : "📁"}</span> {nombresMesesArray[monthIndex]}
+                                  </td>
+                                  <td className={styles.textoDestacadoVentas}>
+                                    ${formatearMonto(datosMes.ventas)}
+                                  </td>
+                                  <td className={styles.textoDestacadoCobros}>
+                                    ${formatearMonto(datosMes.cobros)}
+                                  </td>
+                                  <td className={styles.textoDestacadoGastos}>
+                                    ${formatearMonto(datosMes.gastos)}
+                                  </td>
+                                  <td className={balanceMes >= 0 ? styles.balancePositivo : styles.balanceNegativo} style={{ fontWeight: "bold" }}>
+                                    ${formatearMonto(balanceMes)}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className={styles.btnSecundario}
+                                      style={{ fontSize: "12px", padding: "4px 8px" }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMesesExpandidosHistorial(prev => ({ ...prev, [mesKey]: true }));
+                                        setFormularioGastoHistorialAbierto(formAbierto ? null : mesKey);
+                                        const mesStr = (Number(monthIndex) + 1).toString().padStart(2, '0');
+                                        setGastoHistorial({
+                                          descripcion: "",
+                                          monto: "",
+                                          categoria: "General",
+                                          sucursal: "Jofre 2440",
+                                          fecha: `${year}-${mesStr}-01`
+                                        });
+                                      }}
+                                    >
+                                      {formAbierto ? "❌ Cancelar" : "➕ Cargar Gasto"}
+                                    </button>
+                                  </td>
+                                </tr>
+
+                                {/* Desplegable con detalle de gastos y formulario de carga retroactiva */}
+                                {estaExpandido && (
+                                  <tr>
+                                    <td colSpan="6" style={{ background: "#f8fafc", padding: "20px", borderBottom: "2px solid #cbd5e1" }}>
+                                      <h4 style={{ margin: "0 0 10px 0", color: "#334155" }}>
+                                        📝 Detalle de Gastos de {nombresMesesArray[monthIndex]} {year}
+                                      </h4>
+
+                                      {formAbierto && (
+                                        <form onSubmit={handleCargarGastoHistorial} style={{ background: "#ffffff", padding: "15px", borderRadius: "8px", marginBottom: "15px", border: "1px solid #cbd5e1" }}>
+                                          <h5 style={{ margin: "0 0 10px 0", color: "#0f172a" }}>Agregar Gasto en {nombresMesesArray[monthIndex]} {year}</h5>
+                                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                                            <label style={{ fontSize: "13px", fontWeight: "bold" }}>
+                                              Sucursal:
+                                              <select
+                                                style={{ padding: "6px", display: "block", marginTop: "4px" }}
+                                                value={gastoHistorial.sucursal}
+                                                onChange={(e) => setGastoHistorial({ ...gastoHistorial, sucursal: e.target.value })}
+                                              >
+                                                {listaSucursales.map(s => <option key={s} value={s}>{s}</option>)}
+                                              </select>
+                                            </label>
+
+                                            <label style={{ fontSize: "13px", fontWeight: "bold" }}>
+                                              Fecha exacta:
+                                              <input
+                                                type="date"
+                                                style={{ padding: "6px", display: "block", marginTop: "4px" }}
+                                                value={gastoHistorial.fecha}
+                                                onChange={(e) => setGastoHistorial({ ...gastoHistorial, fecha: e.target.value })}
+                                                required
+                                              />
+                                            </label>
+
+                                            <label style={{ fontSize: "13px", fontWeight: "bold" }}>
+                                              Categoría:
+                                              <select
+                                                style={{ padding: "6px", display: "block", marginTop: "4px" }}
+                                                value={gastoHistorial.categoria}
+                                                onChange={(e) => setGastoHistorial({ ...gastoHistorial, categoria: e.target.value })}
+                                              >
+                                                <option value="General">General / Varios</option>
+                                                <option value="Sueldos">Sueldos</option>
+                                                <option value="Comisiones por Ventas">Comisiones por Ventas</option>
+                                                <option value="Insumos">Insumos y Limpieza</option>
+                                                <option value="Servicios">Servicios</option>
+                                              </select>
+                                            </label>
+
+                                            <label style={{ fontSize: "13px", fontWeight: "bold", flexGrow: 1 }}>
+                                              Descripción:
+                                              <input
+                                                type="text"
+                                                placeholder="Ej: Gasto semanal olvidado"
+                                                style={{ width: "100%", padding: "6px", marginTop: "4px" }}
+                                                value={gastoHistorial.descripcion}
+                                                onChange={(e) => setGastoHistorial({ ...gastoHistorial, descripcion: e.target.value })}
+                                                required
+                                              />
+                                            </label>
+
+                                            <label style={{ fontSize: "13px", fontWeight: "bold" }}>
+                                              Monto ($):
+                                              <input
+                                                type="number"
+                                                placeholder="Ej: 10000"
+                                                style={{ padding: "6px", display: "block", marginTop: "4px" }}
+                                                value={gastoHistorial.monto}
+                                                onChange={(e) => setGastoHistorial({ ...gastoHistorial, monto: e.target.value })}
+                                                required
+                                              />
+                                            </label>
+
+                                            <button type="submit" className={styles.btnPrimario} style={{ padding: "8px 15px" }}>Guardar</button>
+                                          </div>
+                                        </form>
+                                      )}
+
+                                      <div className={styles["table-wrapper"]}>
+                                        <table className={styles.table} style={{ background: "#fff" }}>
+                                          <thead>
+                                            <tr>
+                                              <th>Fecha</th>
+                                              <th>Sucursal</th>
+                                              <th>Categoría</th>
+                                              <th>Descripción</th>
+                                              <th>Monto</th>
+                                              <th>Registrado por</th>
+                                              <th>Acciones</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {gastosDelMes.map(g => (
+                                              <tr key={g.id}>
+                                                <td>{formatearFecha(g.fecha)}</td>
+                                                <td>{g.sucursal}</td>
+                                                <td>{g.categoria}</td>
+                                                <td>{g.descripcion}</td>
+                                                <td className={styles.textoDestacadoGastos}>${formatearMonto(g.monto)}</td>
+                                                <td>{g.registradoPor}</td>
+                                                <td>
+                                                  <button
+                                                    onClick={() => handleEliminarGasto(g.id)}
+                                                    style={{ background: "#fee2e2", color: "#ef4444", border: "none", padding: "4px 8px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+                                                    title="Eliminar Gasto"
+                                                  >
+                                                    🗑️
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                            {gastosDelMes.length === 0 && (
+                                              <tr><td colSpan="7" className={styles.tablaVacia}>No hay gastos registrados en este mes.</td></tr>
+                                            )}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })
+        )}
+      </div>
+
+    </div>
+  );
 };
 
 export default Finanzas;

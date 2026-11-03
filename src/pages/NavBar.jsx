@@ -25,7 +25,7 @@ const NavBar = ({ usuario, onLogout }) => {
       <div className={styles["logo-menu"]}>
         <h2 className={styles.logo}>Grupo Ferreira</h2>
         <img
-          src="/Logo---Invierno.png"
+          src="/Logo---Oficial.png"
           alt="Menú"
           className={styles["toggle-btn"]}
           onClick={toggleSidebar}
