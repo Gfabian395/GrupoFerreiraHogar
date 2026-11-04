@@ -179,6 +179,7 @@ export default function Clientes() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clientToEdit, setClientToEdit] = useState(null);
   const [ventas, setVentas] = useState([]);
+  const [usuarios, setUsuarios] = useState({});
   const navigate = useNavigate();
   const [filtroVendedor, setFiltroVendedor] = useState("");
   const [filtroColor, setFiltroColor] = useState(""); 
@@ -256,9 +257,33 @@ export default function Clientes() {
     }
   };
 
+  const fetchUsuarios = async () => {
+    try {
+      const snap = await getDocs(collection(db, "usuarios"));
+      const mapUsuarios = {};
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        const nombreReal = data.nombre || data.nombreUsuario || data.email || d.id;
+        
+        // Indexamos asociando el ID del documento, el UID, y el email en minúsculas al nombre real del usuario
+        mapUsuarios[d.id] = nombreReal;
+        if (data.uid) {
+          mapUsuarios[data.uid] = nombreReal;
+        }
+        if (data.email) {
+          mapUsuarios[data.email.toLowerCase().trim()] = nombreReal;
+        }
+      });
+      setUsuarios(mapUsuarios);
+    } catch (error) {
+      console.error("Error al obtener usuarios:", error);
+    }
+  };
+
   useEffect(() => {
     fetchClientes();
     fetchVentas();
+    fetchUsuarios();
   }, []);
 
   const estaPagado = (venta) => {
@@ -306,6 +331,7 @@ export default function Clientes() {
       let ventaMasAtrasada = null;
       let cuotasPagadasVenta = 0;
       let proximoVencimientoCalculado = null;
+      let fechaVentaSeleccionada = null;
 
       ventasCliente.forEach((venta) => {
         let fechaBase;
@@ -320,7 +346,7 @@ export default function Clientes() {
 
         const cuotasPagadas = venta.pagos?.length || 0;
         const proximoVenc = new Date(fechaBase);
-        proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas + 1);
+        proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas);
 
         const diferenciaDias = Math.floor(
           (hoy - proximoVenc) / (1000 * 60 * 60 * 24)
@@ -328,17 +354,46 @@ export default function Clientes() {
 
         const atrasoReal = diferenciaDias > 0 ? diferenciaDias : 0;
 
-        if (atrasoReal > mayorAtraso) {
+        if (atrasoReal >= mayorAtraso) {
           mayorAtraso = atrasoReal;
           ventaMasAtrasada = venta;
           cuotasPagadasVenta = cuotasPagadas;
           proximoVencimientoCalculado = proximoVenc;
+          fechaVentaSeleccionada = fechaBase;
         }
       });
 
-      if (mayorAtraso > 0 && ventaMasAtrasada) {
+      if (ventaMasAtrasada && proximoVencimientoCalculado) {
+        // 🛠️ Lectura robusta del nombre del producto (name, nombre, descripcion o titulo)
         const nombresProductos =
-          ventaMasAtrasada.productos?.map((p) => p.nombre).join(", ") || "—";
+          ventaMasAtrasada.productos?.map((p) => p.name || p.nombre || p.descripcion || p.titulo).join(", ") || 
+          ventaMasAtrasada.producto || 
+          "—";
+
+        // 🛠️ Búsqueda ultra-robusta del vendedor mapeando contra el diccionario de usuarios cargados
+        const claveVendedorRaw = (
+          ventaMasAtrasada.vendedorReal || 
+          ventaMasAtrasada.cargadoPor || 
+          ventaMasAtrasada.vendedor || 
+          ""
+        ).toString().trim();
+
+        let nombreVendedor = "—";
+        const claveLower = claveVendedorRaw.toLowerCase();
+
+        if (claveVendedorRaw) {
+          if (usuarios[claveVendedorRaw]) {
+            nombreVendedor = usuarios[claveVendedorRaw];
+          } else if (usuarios[claveLower]) {
+            nombreVendedor = usuarios[claveLower];
+          } else if (claveVendedorRaw.includes("@") && usuarios[claveVendedorRaw.toLowerCase()]) {
+            nombreVendedor = usuarios[claveVendedorRaw.toLowerCase()];
+          } else {
+            // Si no está registrado en la colección de usuarios pero es un correo, extraemos el nombre limpio
+            const parteMail = claveVendedorRaw.split("@")[0];
+            nombreVendedor = parteMail.charAt(0).toUpperCase() + parteMail.slice(1);
+          }
+        }
 
         return {
           ...cliente,
@@ -347,7 +402,8 @@ export default function Clientes() {
           cuotaDebe: cuotasPagadasVenta + 1,
           valorCuota: ventaMasAtrasada.valorCuota || 0,
           proximoVencimiento: proximoVencimientoCalculado,
-          vendedor: ventaMasAtrasada.vendedor || "—",
+          vendedor: nombreVendedor,
+          fechaCompra: fechaVentaSeleccionada,
         };
       }
 
@@ -357,7 +413,7 @@ export default function Clientes() {
     return resultado
       .filter(Boolean)
       .sort((a, b) => b.diasAtraso - a.diasAtraso);
-  }, [clientes, ventas]);
+  }, [clientes, ventas, usuarios]);
 
   const clientesFiltrados = useMemo(() => {
     const hoy = new Date();
@@ -422,10 +478,9 @@ export default function Clientes() {
     window.open(`/clientes/${clienteId}`, "_blank");
   };
 
-  // 🖱️ MANEJADOR PARA EL CLIC SECUNDARIO (CLIC DERECHO) EN LA CARD
   const handleContextMenuCliente = (e, clienteId) => {
-    e.preventDefault(); // Previene el menú contextual predeterminado del navegador
-    handleDoubleClickCliente(clienteId); // Abre en nueva pestaña y registra la visita igual que el doble clic
+    e.preventDefault();
+    handleDoubleClickCliente(clienteId);
   };
 
   const handleSaveClient = async (data) => {
@@ -523,7 +578,7 @@ export default function Clientes() {
       {clientesVencidos.length > 0 && (
         <div className={styles.vencidosContainer}>
           <h3 className={styles.vencidosTitle}>
-            Clientes con atraso
+            Clientes con atraso / cobros en fecha
           </h3>
 
           <table className={styles.vencidosTable}>
