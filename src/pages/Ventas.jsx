@@ -100,7 +100,10 @@ export default function Ventas() {
   const subtotal = items.reduce((acc, i) => acc + i.price * i.qty, 0);
   const descuentoAplicado = Number(descuento) || 0;
   const total = Math.max(0, subtotal - descuentoAplicado);
-  const saldoBase = total;
+  
+  // SALDO BASE: Descuenta el pago parcial si está activo para que las cuotas calculen sobre el remanente real
+  const montoParcialNum = Number(montoPagoParcial) || 0;
+  const saldoBase = Math.max(0, total - (pagoParcial ? montoParcialNum : 0));
 
   /* ===============================
      CUOTAS
@@ -137,7 +140,7 @@ export default function Ventas() {
   const montoPagado = primerCuotaPaga
     ? valorCuota
     : pagoParcial
-      ? Number(montoPagoParcial)
+      ? montoParcialNum
       : 0;
 
   const saldoFinanciado = Math.max(total - montoPagado, 0);
@@ -286,10 +289,6 @@ export default function Ventas() {
         // 3️⃣ WRITES (ACTUALIZACIONES)
         // ===============================
 
-       // ===============================
-        // 3️⃣ WRITES (ACTUALIZACIONES)
-        // ===============================
-
         // 🔻 DESCONTAR STOCK
         for (const { item, ref, data } of productosLeidos) {
           const variantesDB = Array.isArray(data.variantes)
@@ -384,7 +383,7 @@ export default function Ventas() {
           <option value="">-- Seleccionar --</option>
           {clientesFiltrados.map(c => (
             <option key={c.id} value={c.id}>
-              {c.nombre} - DNI {c.dni}
+              {c.nombre} DNI {c.dni}
             </option>
           ))}
         </select>
