@@ -4,7 +4,6 @@ import { useCart } from "../context/CartContext";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   doc,
-  updateDoc,
   addDoc,
   collection,
   serverTimestamp,
@@ -14,9 +13,6 @@ import { db, auth } from "../firebase/firebaseConfig";
 import ImgCarrusel from "./ImgCarrusel";
 import { SiMercadopago } from "react-icons/si";
 
-/**
- * Helper para validar y formatear valores de color (HEX, RGB o listas de números)
- */
 function formatCssColor(color) {
   if (!color) return null;
   const str = String(color).trim();
@@ -35,15 +31,6 @@ export default function ProductCard({
   initialVariant = 0,
   isHighlighted: isHighlightedProp,
 }) {
-  const [selectedVariant, setSelectedVariant] = useState(Number(initialVariant) || 0);
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [formatoCompra, setFormatoCompra] = useState("unidad");
-  const [showCuotas, setShowCuotas] = useState(false);
-  const [showCarrusel, setShowCarrusel] = useState(false);
-  const [showFichaTecnica, setShowFichaTecnica] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
-
-  // Detección automática del resaltado por Query Params o Prop
   const [searchParams] = useSearchParams();
   const highlightedQuery = searchParams.get("highlight") || searchParams.get("search") || searchParams.get("id") || searchParams.get("productoId");
   
@@ -54,7 +41,6 @@ export default function ProductCard({
            String(producto.slug) === String(highlightedQuery);
   }, [isHighlightedProp, highlightedQuery, producto]);
 
-  // Estados para manejar los datos completos del usuario logueado (incluyendo sucursalAsignada)
   const [userData, setUserData] = useState(null);
 
   useEffect(() => {
@@ -89,19 +75,6 @@ export default function ProductCard({
       : []
   );
 
-  const { addToCart, items } = useCart();
-  const { categoriaId } = useParams();
-
-  // Validación robusta de roles y sucursal asignada
-  const esJefe = userRole === "jefe" || userData?.role === "jefe" || userData?.roles?.jefe;
-  const esEncargado = userRole === "encargado" || userData?.role === "encargado" || userData?.roles?.encargado;
-  const sucursalEncargado = userData?.sucursalAsignada || null;
-
-  // Cálculo automático y dinámico del stock total sumando las sucursales de la variante
-  const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
-
-  const variant = variantes[selectedVariant] ?? null;
-
   // AGRUPAMIENTO INTELIGENTE POR MODELO
   const agrupadoPorModelo = useMemo(() => {
     const grupos = {};
@@ -131,30 +104,35 @@ export default function ProductCard({
     return Object.values(grupos);
   }, [variantes, producto]);
 
-  // PROCESAMIENTO INTELIGENTE DE LA FICHA TÉCNICA
-  const fichaTecnicaProcesada = useMemo(() => {
-    const modeloActualGrupo = agrupadoPorModelo.find((m) => m.nombre === selectedModel);
-    const varianteBaseModelo = modeloActualGrupo?.variantes.find(v => (v.tipoVariante || (v.colorHex ? "color" : "modelo")) === 'modelo') || modeloActualGrupo?.variantes[0];
-
-    const fuenteFicha = varianteBaseModelo?.fichaTecnica || variant?.fichaTecnica || producto?.fichaTecnica;
-    if (!fuenteFicha) return [];
-
-    if (Array.isArray(fuenteFicha)) {
-      return fuenteFicha
-        .map((item) => ({
-          label: item.label || item.etiqueta || item.key,
-          value: item.value || item.valor,
-        }))
-        .filter((item) => item.label && item.value);
+  // Asegurar por defecto que se seleccione la primera variante de color real (hija) y no un modelo base vacío
+  const [selectedVariant, setSelectedVariant] = useState(() => {
+    const initialIdx = Number(initialVariant) || 0;
+    const vInit = variantes[initialIdx];
+    // Si la inicial es un modelo base puro sin stock y tiene hijos color, apuntar al primer hijo color
+    if (vInit && (vInit.tipoVariante === "modelo" || !vInit.tipoVariante)) {
+      const primerHijoColor = variantes.findIndex(v => v.tipoVariante === "color" && (v.modelo === vInit.attr || v.modeloPadre === vInit.attr));
+      if (primerHijoColor !== -1) return primerHijoColor;
     }
-    if (typeof fuenteFicha === "object") {
-      return Object.entries(fuenteFicha).map(([label, value]) => ({
-        label,
-        value,
-      }));
-    }
-    return [];
-  }, [variant, producto, agrupadoPorModelo, selectedModel]);
+    // Si hay cualquier variante con color, buscar la primera
+    const primerColor = variantes.findIndex(v => v.tipoVariante === "color");
+    return primerColor !== -1 ? primerColor : initialIdx;
+  });
+
+  const [formatoCompra, setFormatoCompra] = useState("unidad");
+  const [showCuotas, setShowCuotas] = useState(false);
+  const [showCarrusel, setShowCarrusel] = useState(false);
+  const [showFichaTecnica, setShowFichaTecnica] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const { addToCart, items } = useCart();
+  const { categoriaId } = useParams();
+
+  const esJefe = userRole === "jefe" || userData?.role === "jefe" || userData?.roles?.jefe;
+  const esEncargado = userRole === "encargado" || userData?.role === "encargado" || userData?.roles?.encargado;
+
+  const getStockTotalVariante = (v) => Object.values(v?.stock || {}).reduce((a, b) => a + Number(b || 0), 0);
+
+  const variant = variantes[selectedVariant] ?? variantes[0] ?? null;
 
   const handleVariantSelect = (index) => {
     setSelectedVariant(index);
@@ -164,31 +142,13 @@ export default function ProductCard({
     }
   };
 
-  useEffect(() => {
-    if (!esJefe && !esEncargado && variantes.length > 0) {
-      const currentStock = getStockTotalVariante(variantes[selectedVariant]);
-      if (currentStock <= 0) {
-        const indexConStock = variantes.findIndex(v => getStockTotalVariante(v) > 0);
-        if (indexConStock !== -1) {
-          handleVariantSelect(indexConStock);
-        }
-      }
-    }
-  }, [selectedVariant, variantes, esJefe, esEncargado]);
+  const selectedModel = useMemo(() => {
+    if (!variant) return "";
+    const tipo = variant.tipoVariante || (variant.colorHex ? "color" : "modelo");
+    return tipo === 'modelo' ? variant.attr : (variant.modelo || variant.modeloPadre || producto?.name || "");
+  }, [variant, producto]);
 
-  useEffect(() => {
-    if (variantes[selectedVariant]) {
-      const vActiva = variantes[selectedVariant];
-      const tipo = vActiva.tipoVariante || (vActiva.colorHex ? "color" : "modelo");
-      const modeloNombre = tipo === 'modelo' ? vActiva.attr : (vActiva.modelo || producto?.name || "Modelo Principal");
-      setSelectedModel(modeloNombre);
-    } else if (agrupadoPorModelo.length > 0) {
-      setSelectedModel(agrupadoPorModelo[0].nombre);
-    }
-  }, [selectedVariant, variantes, agrupadoPorModelo, producto]);
-
-  const modeloActual = agrupadoPorModelo.find((m) => m.nombre === selectedModel) || agrupadoPorModelo[0];
-  const imagenMostrar = variant?.image || modeloActual?.imagenPrincipal || producto?.image || null;
+  const imagenMostrar = variant?.image || producto?.image || null;
 
   const precioUnidad = Number(variant?.price || 0);
   const precioJuego = Number(variant?.priceJuego || 0);
@@ -250,51 +210,6 @@ export default function ProductCard({
 
   const getItemUnits = (item) => Number(item.qty || 1) * Number(item.unitsToDiscount ?? item.unidadesNecesarias ?? item.unidadesPorJuego ?? 1);
 
-  const updateStock = async (sucursal, delta) => {
-    const puedeModificar = esJefe || (esEncargado && sucursalEncargado === sucursal);
-    if (!puedeModificar) return alert("❌ No tenés permisos para modificar el stock de esta sucursal.");
-
-    const antes = Number(variant.stock?.[sucursal] ?? 0);
-    const despues = Math.max(antes + delta, 0);
-    if (antes === despues) return;
-    
-    const nuevasVariantes = variantes.map((v, i) => i === selectedVariant ? { ...v, stock: { ...v.stock, [sucursal]: despues } } : v);
-    setVariantes(nuevasVariantes);
-    try {
-      await updateDoc(doc(db, "categorias", categoriaId, "productos", producto.id), { variantes: nuevasVariantes });
-      await sendNotification("modificó stock", { tipo: "stock", sucursal, antes, despues });
-    } catch (err) { alert("Error al guardar stock"); }
-  };
-
-  const handleEliminarVariantesSinStock = async () => {
-    if (!esJefe) return alert("❌ Solo el jefe puede realizar esta acción.");
-    if (!window.confirm("¿Estás seguro de eliminar todas las variantes sin stock?")) return;
-
-    const variantesConStock = variantes.filter((v) => getStockTotalVariante(v) > 0);
-    
-    if (variantesConStock.length === 0) {
-      return alert("❌ No podés eliminar todas las variantes; debe quedar al menos una.");
-    }
-
-    if (variantesConStock.length === variantes.length) {
-      return alert("ℹ️ No hay variantes sin stock para eliminar.");
-    }
-
-    setVariantes(variantesConStock);
-    setSelectedVariant(0);
-
-    try {
-      await updateDoc(doc(db, "categorias", categoriaId, "productos", producto.id), {
-        variantes: variantesConStock,
-      });
-      await sendNotification("eliminó variantes sin stock", { producto: producto.name });
-      alert("✅ Variantes sin stock eliminadas correctamente.");
-    } catch (err) {
-      console.error("Error al eliminar variantes sin stock:", err);
-      alert("❌ Error al guardar los cambios en la base de datos.");
-    }
-  };
-
   const handleAddToCart = async (branch) => {
     if (!variant || precioSeleccionado <= 0) return;
     const stockSucursal = Number(variant.stock?.[branch] || 0);
@@ -328,19 +243,23 @@ export default function ProductCard({
     try {
       const response = await fetch("/api/crear-preferencia", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: [{ id: producto.id, title: formatoActual === "juego" ? `${producto.name} - ${variant.attr} - Juego x${unidadesPorJuego}` : `${producto.name} - ${variant.attr}`, price: precioSeleccionado, quantity: 1, variant: variant.attr, type: formatoActual, unidadesPorJuego: formatoActual === "juego" ? unidadesPorJuego : null, unitsToDiscount: unidadesNecesarias, branch: sucursalDisponible, categoriaId }] }),
+        body: JSON.stringify({ items: [{ id: producto.id, title: `${producto.name} - ${variant.attr}`, price: precioSeleccionado, quantity: 1, variant: variant.attr, type: formatoActual, unidadesPorJuego: formatoActual === "juego" ? unidadesPorJuego : null, unitsToDiscount: unidadesNecesarias, branch: sucursalDisponible, categoriaId }] }),
       });
       const data = await response.json();
       if (data.init_point) window.location.href = data.init_point;
     } catch (error) { console.error("Error comprando:", error); }
   };
 
-  // GENERACIÓN DE TARJETA EXCLUSIVAMENTE CON TEXTO (SIN IMAGEN)
+  const handleWhatsApp = () => {
+    const msj = `Hola, quiero consultar por:\n${producto.name} - ${variant.attr}\nFormato: ${formatoActual === "juego" ? `Juego x${unidadesPorJuego}` : "Por unidad"}\nPrecio: ${formatARS(precioSeleccionado)}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msj)}`, "_blank");
+  };
+
   const generateProductCardImage = async () => {
     const width = 450;
     const padding = 20;
 
-    const fichaItems = fichaTecnicaProcesada.length > 0 ? fichaTecnicaProcesada : [
+    const fichaItems = variant?.fichaTecnica?.length > 0 ? variant.fichaTecnica : [
       { label: "Marca", value: producto.marca || "Genérico" },
       { label: "Origen", value: producto.origen || "Nacional / Importado" },
       { label: "Garantía", value: producto.garantia || "6 meses" }
@@ -387,7 +306,7 @@ export default function ProductCard({
 
     ctx.fillStyle = "#334155";
     ctx.font = "bold 13px sans-serif";
-    ctx.fillText("Paso 1: Elegí tu modelo y color", padding, y);
+    ctx.fillText("Opción seleccionada", padding, y);
 
     y += 12;
     ctx.strokeStyle = "#3b82f6";
@@ -396,7 +315,7 @@ export default function ProductCard({
 
     ctx.fillStyle = "#1d4ed8";
     ctx.font = "bold 12px sans-serif";
-    ctx.fillText(variant?.attr || "Blanco", padding + 12, y + 22);
+    ctx.fillText(variant?.attr || "General", padding + 12, y + 22);
 
     y += 50;
 
@@ -464,8 +383,6 @@ export default function ProductCard({
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: `${producto.name} - ${variant?.attr}`,
-          text: `Mirá este producto: ${producto.name} - ${formatARS(precioSeleccionado)}`,
           files: [file],
         });
       } else if (navigator.clipboard && window.ClipboardItem) {
@@ -487,39 +404,6 @@ export default function ProductCard({
     } finally {
       setIsSharing(false);
     }
-  };
-
-  const handleWhatsApp = () => {
-    const msj = `Hola, quiero consultar por:\n${producto.name} - ${variant.attr}\nFormato: ${formatoActual === "juego" ? `Juego x${unidadesPorJuego}` : "Por unidad"}\nPrecio: ${formatARS(precioSeleccionado)}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(msj)}`, "_blank");
-  };
-
-  const handlePrintPresupuesto = () => {
-    const printWindow = window.open("", "_blank", "width=400,height=600");
-    printWindow.document.write(`
-      <html><head><title>Presupuesto</title><style>
-        body { font-family: 'Segoe UI', sans-serif; color: #0f172a; display: flex; flex-direction: column; background: #fff; margin: 15px; }
-        .title { font-size: 24px; font-weight: 800; border-bottom: 2px solid #0f2b48; padding-bottom: 10px; margin-bottom: 10px; }
-        .row { display: flex; gap: 10px; }
-        .info { width: 60%; }
-        .img { width: 40%; }
-        .img img { max-width: 100%; border-radius: 8px; border: 1px solid #ddd; }
-        .validez { margin-top: 15px; font-size: 12px; font-weight: bold; padding: 5px; background: #f0f9ff; border: 1px solid #bae6fd; text-align: center; border-radius: 4px; }
-      </style></head><body>
-      <div class="title">PRESUPUESTO - ${new Date().toLocaleDateString("es-AR")}</div>
-      <div class="row">
-        <div class="info">
-          <h2>${producto.name} ${formatoActual === "juego" ? `(Juego x${unidadesPorJuego})` : ""}</h2>
-          <h3>Variante: ${variant.attr}</h3>
-          <h2 style="color:#0284c7">CONTADO: ${formatARS(precioSeleccionado)}</h2>
-          ${cuotas.map(c => `<div style="margin:5px 0; font-size: 14px;">✔️ ${c}</div>`).join('')}
-        </div>
-        <div class="img">${imagenMostrar ? `<img src="${imagenMostrar}"/>` : ''}</div>
-      </div>
-      <div class="validez">Presupuesto válido por 15 días.</div>
-      <script>window.onload=()=>{window.print();setTimeout(window.close,300)}</script></body></html>
-    `);
-    printWindow.document.close();
   };
 
   return (
@@ -547,60 +431,46 @@ export default function ProductCard({
             </div>
           </div>
 
+          {/* SELECTOR JERÁRQUICO: MODELO BASE INFORMATIVO (NO SELECCIONABLE) + COLORES SELECCIONABLES */}
           <fieldset className={styles.options}>
-            <legend>Paso 1: Elegí tu modelo y color</legend>
+            <legend>Paso 1: Elegí tu color / variante</legend>
 
             <div className={styles.modelsContainer}>
               {agrupadoPorModelo.map((m) => {
                 const baseVariant = m.variantes.find(v => v.tipoVariante === 'modelo') || m.variantes[0];
-                const stockBase = getStockTotalVariante(baseVariant);
                 const colorVariants = m.variantes.filter(v => v.originalIndex !== baseVariant.originalIndex);
 
                 const coloresVisibles = colorVariants.filter(v =>
                   (esJefe || esEncargado) || getStockTotalVariante(v) > 0
                 );
 
-                if (!esJefe && !esEncargado && stockBase <= 0 && coloresVisibles.length === 0) {
+                if (!esJefe && !esEncargado && coloresVisibles.length === 0) {
                   return null;
                 }
 
-                const isActiveModel = selectedModel === m.nombre;
-                const isBaseSelected = selectedVariant === baseVariant.originalIndex;
-                const baseAgotado = stockBase <= 0;
+                // Verificamos si alguno de los colores de este modelo está seleccionado actualmente
+                const isModelActive = coloresVisibles.some(v => v.originalIndex === selectedVariant);
 
                 return (
-                  <div key={m.nombre} className={`${styles.modelRow} ${isActiveModel ? styles.activeModelRow : ""}`}>
+                  <div key={m.nombre} className={`${styles.modelRow} ${isModelActive ? styles.activeModelRow : ""}`}>
+                    
+                    {/* BLOQUE IZQUIERDO: MODELO BASE PURAMENTE INFORMATIVO (SIN CLICK NI SELECCIÓN) */}
                     <div
                       className={styles.modelInfo}
-                      style={{
-                        borderRight: coloresVisibles.length === 0 ? "none" : undefined,
-                        opacity: (!esJefe && !esEncargado && baseAgotado) ? 0.4 : 1,
-                        cursor: (!esJefe && !esEncargado && baseAgotado) ? "not-allowed" : "pointer"
-                      }}
-                      onClick={() => {
-                        if (esJefe || esEncargado || !baseAgotado) {
-                          handleVariantSelect(baseVariant.originalIndex);
-                        }
-                      }}
+                      style={{ borderRight: coloresVisibles.length === 0 ? "none" : undefined, cursor: "default" }}
                     >
                       {m.imagenPrincipal ? (
-                        <img
-                          src={m.imagenPrincipal}
-                          alt={m.nombre}
-                          className={isBaseSelected ? styles.selectedBaseImg : ""}
-                        />
+                        <img src={m.imagenPrincipal} alt={m.nombre} />
                       ) : (
-                        <div className={`${styles.noModelImage} ${isBaseSelected ? styles.selectedBaseImg : ""}`}>📷</div>
+                        <div className={styles.noModelImage}>📷</div>
                       )}
 
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <span className={`${styles.modelName} ${isBaseSelected ? styles.selectedBaseText : ""}`}>
-                          {m.nombre}
-                        </span>
-                        {baseAgotado && <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'bold', marginTop: '2px' }}>Agotado</span>}
+                        <span className={styles.modelName}>{m.nombre}</span>
                       </div>
                     </div>
 
+                    {/* BLOQUE DERECHO: OPCIONES DE COLORES CLICKEABLES (ÚNICAS SELECCIONABLES) */}
                     {coloresVisibles.length > 0 && (
                       <div className={styles.modelVariantsContainer}>
                         {coloresVisibles.map((v) => {
@@ -647,39 +517,24 @@ export default function ProductCard({
 
           {/* FICHA TÉCNICA DINÁMICA */}
           <div className={styles.fichaContainer}>
-            <button 
-              type="button" 
-              className={styles.toggleFicha} 
-              onClick={() => setShowFichaTecnica(!showFichaTecnica)}
-            >
+            <button type="button" className={styles.toggleFicha} onClick={() => setShowFichaTecnica(!showFichaTecnica)}>
               <span>📋 Ficha técnica ({selectedModel || "General"})</span>
               <span>{showFichaTecnica ? "▲" : "▼"}</span>
             </button>
 
             {showFichaTecnica && (
               <div className={styles.fichaContent}>
-                {fichaTecnicaProcesada.length > 0 ? (
-                  fichaTecnicaProcesada.map((item, index) => (
+                {variant?.fichaTecnica?.length > 0 ? (
+                  variant.fichaTecnica.map((item, index) => (
                     <div key={index} className={styles.fichaRow}>
                       <span className={styles.fichaLabel}>{item.label}:</span>
                       <span className={styles.fichaValue}>{item.value}</span>
                     </div>
                   ))
                 ) : (
-                  <>
-                    <div className={styles.fichaRow}>
-                      <span className={styles.fichaLabel}>Marca:</span>
-                      <span className={styles.fichaValue}>{producto.marca || "Genérico"}</span>
-                    </div>
-                    <div className={styles.fichaRow}>
-                      <span className={styles.fichaLabel}>Origen:</span>
-                      <span className={styles.fichaValue}>{producto.origen || "Nacional / Importado"}</span>
-                    </div>
-                    <div className={styles.fichaRow}>
-                      <span className={styles.fichaLabel}>Garantía:</span>
-                      <span className={styles.fichaValue}>{producto.garantia || "6 meses"}</span>
-                    </div>
-                  </>
+                  <div className={styles.fichaRow}>
+                    <span className={styles.fichaValue}>Sin especificaciones cargadas.</span>
+                  </div>
                 )}
               </div>
             )}
@@ -705,30 +560,23 @@ export default function ProductCard({
             </div>
           </fieldset>
 
+          {/* STOCK POR SUCURSAL (SIN BOTONES DE + Y -, SÓLO CANTIDAD Y CARRITO) */}
           <div className={styles.stock}>
             {variant && Object.entries(variant.stock || {}).map(([sucursal, cantidad]) => {
               const cant = Number(cantidad || 0);
-              let clase = styles.ok; if (cant <= 0) clase = styles.out; else if (cant < unidadesNecesarias) clase = styles.low;
-              
-              const esSuSucursal = esJefe || (esEncargado && sucursalEncargado === sucursal);
+              let clase = styles.ok; 
+              if (cant <= 0) clase = styles.out; 
+              else if (cant < unidadesNecesarias) clase = styles.low;
 
               return (
-                <div key={sucursal} className={`${styles.branch} ${clase}`}>
+                <div key={sucursal} className={`${styles.branch} ${clase}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', margin: '4px 0', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                   <div className={styles.branchMeta}>
                     <span>🏬 {sucursal}</span>
-                    <small>{cant} unidades {tieneJuego && `/ ${Math.floor(cant / unidadesPorJuego)} juegos`}</small>
+                    <small style={{ display: 'block', color: '#64748b' }}>{cant} unidades {tieneJuego && `/ ${Math.floor(cant / unidadesPorJuego)} juegos`}</small>
                   </div>
-                  <div className={styles.stockControls}>
-                    {esSuSucursal ? (
-                      <>
-                        <button disabled={cant === 0} onClick={() => updateStock(sucursal, -1)}>-</button>
-                        <strong>{cant}</strong>
-                        <button onClick={() => updateStock(sucursal, 1)}>+</button>
-                      </>
-                    ) : (
-                      <strong>{cant}</strong>
-                    )}
-                    <button className={styles.cartMini} disabled={cant < unidadesNecesarias} onClick={() => handleAddToCart(sucursal)}>🛒</button>
+                  <div className={styles.stockControls} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{cant} unidades</span>
+                    <button className={styles.cartMini} disabled={cant < unidadesNecesarias} onClick={() => handleAddToCart(sucursal)} title="Agregar al carrito">🛒</button>
                   </div>
                 </div>
               );
@@ -743,17 +591,6 @@ export default function ProductCard({
             <button className={styles.mpButton} onClick={handleComprar} disabled={!sucursalDisponible || precioSeleccionado <= 0}>
               <SiMercadopago size={50} style={{ marginRight: "5px" }} /> Pagar
             </button>
-            <button type="button" className={styles.printBudget} onClick={handlePrintPresupuesto}>📄 Imprimir Presupuesto</button>
-            
-            {esJefe && (
-              <button 
-                type="button"
-                className={styles.deleteStockBtn} 
-                onClick={handleEliminarVariantesSinStock}
-              >
-                🗑️ Eliminar variantes sin stock
-              </button>
-            )}
           </div>
         </div>
       </article>

@@ -1,29 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "./firebase/firebaseConfig";
 
 import NavBar from "./pages/NavBar";
-import { Categorias } from "./pages/Categorias";
-import { Productos } from "./pages/Productos";
-import Clientes from "./pages/Clientes";
-import Carrito from "./pages/Carrito";
-import Ventas from "./pages/Ventas";
-import ClientDetail from "./components/ClientDetail";
-import LoginHome from "./pages/LoginHome";
-import Configuracion from "./pages/Configuracion";
-import { Caja } from "./pages/Caja";
-import Finanzas from "./components/Finanzas";
-import MigrarClientes from "./pages/MigrarClientes";
 import { CartProvider } from "./context/CartContext";
 import Notificaciones from "./components/Notificaciones";
 import { Loader } from "./components/Loader";
 import Alerta from "./components/Alerta";
 import "./App.css";
-import ProductoDetalle from "./components/ProductoDetalle";
-import ComboDetalle from "./components/ComboDetalle";
-import Viajes from "./components/Viajes";
+
+// ==========================================
+// 🚀 LAZY LOADING DE LAS PÁGINAS Y VISTAS
+// ==========================================
+const Categorias = lazy(() => import("./pages/Categorias").then(module => ({ default: module.Categorias })));
+const Productos = lazy(() => import("./pages/Productos").then(module => ({ default: module.Productos })));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const Carrito = lazy(() => import("./pages/Carrito"));
+const Ventas = lazy(() => import("./pages/Ventas"));
+const ClientDetail = lazy(() => import("./components/ClientDetail"));
+const LoginHome = lazy(() => import("./pages/LoginHome"));
+const Configuracion = lazy(() => import("./pages/Configuracion"));
+const Caja = lazy(() => import("./pages/Caja").then(module => ({ default: module.Caja })));
+const Finanzas = lazy(() => import("./components/Finanzas"));
+const MigrarClientes = lazy(() => import("./pages/MigrarClientes"));
+const ProductoDetalle = lazy(() => import("./components/ProductoDetalle"));
+const ComboDetalle = lazy(() => import("./components/ComboDetalle"));
+const Viajes = lazy(() => import("./components/Viajes"));
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -147,51 +151,54 @@ function App() {
           {usuario && !bloqueado && <NavBar usuario={usuario} onLogout={handleLogout} />}
 
           <div className="content">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  loading
-                    ? <div className="loading"><Loader /></div>
-                    : usuario && !bloqueado
-                      ? <Navigate to="/categorias" replace />
-                      : <LoginHome onGuestLogin={handleGuestLogin} />
-                }
-              />
+            {/* Suspense maneja la carga visual mientras el chunk de la página descarga */}
+            <Suspense fallback={<div className="loading"><Loader /></div>}>
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    loading
+                      ? <div className="loading"><Loader /></div>
+                      : usuario && !bloqueado
+                        ? <Navigate to="/categorias" replace />
+                        : <LoginHome onGuestLogin={handleGuestLogin} />
+                  }
+                />
 
-              <Route path="/login" element={<PublicRoute><LoginHome onGuestLogin={handleGuestLogin} /></PublicRoute>} />
+                <Route path="/login" element={<PublicRoute><LoginHome onGuestLogin={handleGuestLogin} /></PublicRoute>} />
 
-              {/* 🔓 RUTAS PÚBLICAS PARA QR (Accesibles sin login) */}
-              <Route path="/producto/:categoriaId/:productoId" element={<ProductoDetalle />} />
-              <Route path="/producto/:productoId" element={<ProductoDetalle />} />
-              <Route path="/combo/:comboId" element={<ComboDetalle />} />
-              <Route path="/categoria/:categoriaId/combo/:comboId" element={<ComboDetalle />} />
+                {/* 🔓 RUTAS PÚBLICAS PARA QR (Accesibles sin login) */}
+                <Route path="/producto/:categoriaId/:productoId" element={<ProductoDetalle />} />
+                <Route path="/producto/:productoId" element={<ProductoDetalle />} />
+                <Route path="/combo/:comboId" element={<ComboDetalle />} />
+                <Route path="/categoria/:categoriaId/combo/:comboId" element={<ComboDetalle />} />
 
-              {/* 🔒 RUTAS PRIVADAS CON CONTROL DE SESIÓN Y ROL */}
-              <Route path="/categorias" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Categorias /></PrivateRoute>} />
-              <Route path="/categorias/:categoriaId/productos" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Productos /></PrivateRoute>} />
-              <Route path="/carrito" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Carrito /></PrivateRoute>} />
+                {/* 🔒 RUTAS PRIVADAS CON CONTROL DE SESIÓN Y ROL */}
+                <Route path="/categorias" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Categorias /></PrivateRoute>} />
+                <Route path="/categorias/:categoriaId/productos" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Productos /></PrivateRoute>} />
+                <Route path="/carrito" element={<PrivateRoute role={["jefe", "encargado", "catalogo", "vendedor"]}><Carrito /></PrivateRoute>} />
 
-              {/* Solo usuarios reales */}
-              <Route path="/clientes" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><Clientes /></PrivateRoute>} />
-              <Route path="/clientes/:id" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><ClientDetail /></PrivateRoute>} />
-              <Route path="/ventas" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><Ventas /></PrivateRoute>} />
-              <Route path="/configuracion" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><Configuracion /></PrivateRoute>} />
-              <Route path="/cierre-de-caja" element={<PrivateRoute role="jefe"><Caja /></PrivateRoute>} />
-              <Route path="/finanzas" element={<PrivateRoute role="jefe"><Finanzas /></PrivateRoute>} />
-              <Route path="/admin/migrar-clientes" element={<PrivateRoute role="jefe"><MigrarClientes /></PrivateRoute>} />
+                {/* Solo usuarios reales */}
+                <Route path="/clientes" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><Clientes /></PrivateRoute>} />
+                <Route path="/clientes/:id" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><ClientDetail /></PrivateRoute>} />
+                <Route path="/ventas" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><Ventas /></PrivateRoute>} />
+                <Route path="/configuracion" element={<PrivateRoute role={["jefe", "encargado", "vendedor"]}><Configuracion /></PrivateRoute>} />
+                <Route path="/cierre-de-caja" element={<PrivateRoute role="jefe"><Caja /></PrivateRoute>} />
+                <Route path="/finanzas" element={<PrivateRoute role="jefe"><Finanzas /></PrivateRoute>} />
+                <Route path="/admin/migrar-clientes" element={<PrivateRoute role="jefe"><MigrarClientes /></PrivateRoute>} />
 
-              <Route
-                path="/viajes"
-                element={
-                  <PrivateRoute role={["jefe", "encargado"]}>
-                    <Viajes />
-                  </PrivateRoute>
-                }
-              />
+                <Route
+                  path="/viajes"
+                  element={
+                    <PrivateRoute role={["jefe", "encargado"]}>
+                      <Viajes />
+                    </PrivateRoute>
+                  }
+                />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </div>
         </div>
       </Router>

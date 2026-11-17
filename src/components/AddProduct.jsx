@@ -142,7 +142,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Estados de control de permisos de sucursal
   const [userRole, setUserRole] = useState(null);
   const [sucursalAsignada, setSucursalAsignada] = useState(null);
 
@@ -188,7 +187,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     return [createEmptyVariant(categoriaId)];
   });
 
-  // Cargar rol y sucursal del usuario logueado
   useEffect(() => {
     const fetchUserData = async () => {
       const currentUser = auth.currentUser;
@@ -296,8 +294,8 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           const rgb = hexToRgb(hex);
           if (rgb) {
             const distance = Math.pow(targetRgb.r - rgb.r, 2) +
-                             Math.pow(targetRgb.g - rgb.g, 2) +
-                             Math.pow(targetRgb.b - rgb.b, 2);
+                           Math.pow(targetRgb.g - rgb.g, 2) +
+                           Math.pow(targetRgb.b - rgb.b, 2);
             if (distance < minDistance) {
               minDistance = distance;
               closestName = name;
@@ -356,19 +354,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         imageURL = await getDownloadURL(storageRef);
       }
 
-      // Pre-calcular sumas de stock de variantes hijas para cada modelo base
-      const stockCalculadoPorModelo = {};
-      variantes.forEach(v => {
-        if (v.tipoVariante === "color" && v.modeloPadre) {
-          if (!stockCalculadoPorModelo[v.modeloPadre]) {
-            stockCalculadoPorModelo[v.modeloPadre] = { 4320: 0, 4034: 0, 2440: 0 };
-          }
-          stockCalculadoPorModelo[v.modeloPadre][4320] += Number(v.stock4320 || 0);
-          stockCalculadoPorModelo[v.modeloPadre][4034] += Number(v.stock4034 || 0);
-          stockCalculadoPorModelo[v.modeloPadre][2440] += Number(v.stock2440 || 0);
-        }
-      });
-
       const variantesProcesadas = await Promise.all(
         variantes.map(async (v, i) => {
           let variantImageURL = v.image || "";
@@ -389,30 +374,11 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             : [];
 
           const varianteAnterior = producto?.variantes?.[i];
-          let stockFinal = {};
-
-          if (v.tipoVariante === "modelo") {
-            const tieneHijos = stockCalculadoPorModelo[v.attr] !== undefined;
-            if (tieneHijos) {
-              stockFinal = {
-                "Los Andes 4320": stockCalculadoPorModelo[v.attr][4320],
-                "Los Andes 4034": stockCalculadoPorModelo[v.attr][4034],
-                "Jofre 2440": stockCalculadoPorModelo[v.attr][2440],
-              };
-            } else {
-              stockFinal = {
-                "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
-                "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
-                "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
-              };
-            }
-          } else {
-            stockFinal = {
-              "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
-              "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
-              "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
-            };
-          }
+          let stockFinal = {
+            "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
+            "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
+            "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
+          };
 
           return {
             attr: v.attr,
@@ -535,7 +501,6 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                     <input type="number" min="0" step="1" value={modelo.unidadesPorJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "unidadesPorJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
                   </label>
 
-                  {/* ================= SECCIÓN FICHA TÉCNICA (SOLO EN MODELO BASE) ================= */}
                   <fieldset style={{ marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
                     <legend style={{ fontSize: "0.8rem", fontWeight: "600", color: "#475569" }}>Ficha Técnica del Modelo Base</legend>
                     

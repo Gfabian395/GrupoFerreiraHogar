@@ -1,10 +1,50 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import AddClient from "../components/AddClient";
 import CardClient from "../components/CardClient";
 import styles from "../styles/Clientes.module.css";
+
+// ===============================
+// CONSTANTES GLOBALES (Fuera del render)
+// ===============================
+const MESES_ES = {
+  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+  julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+};
+
+const parsearFechaSegura = (fechaObj) => {
+  if (!fechaObj) return null;
+  if (fechaObj.toDate) return fechaObj.toDate();
+  if (fechaObj instanceof Date) return fechaObj;
+
+  if (typeof fechaObj === "string") {
+    const limpio = fechaObj.toLowerCase().replace(/de\s/g, "").trim();
+    const partes = limpio.split(/\s+/);
+    if (partes.length === 3 && MESES_ES[partes[1]] !== undefined) {
+      return new Date(Number(partes[2]), MESES_ES[partes[1]], Number(partes[0]));
+    }
+    const d = new Date(fechaObj);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
+};
+
+const calcularTotalPagadoVenta = (venta) => {
+  const pagoInicial = Number(venta.pago?.montoPagado || 0);
+  const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
+    const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+    return sum + Number(montoLimpio || 0);
+  }, 0);
+  return pagoInicial + pagosPosteriores;
+};
+
+const estaPagado = (venta) => {
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  const totalCredito = venta.totalCredito || (venta.valorCuota || 0) * (venta.cuotas || 0);
+  return Math.round(totalPagado) >= Math.round(totalCredito);
+};
 
 // ===============================
 // CALCULAR SCORE DEL CLIENTE (0 a 100)
@@ -26,19 +66,9 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
     };
   }
 
-  const terminadas = ventasDelCliente.filter((v) => {
-    const pagoInicial = Number(v.pago?.montoPagado || 0);
-    const pagosPosteriores = (v.pagos || []).reduce((sum, p) => {
-      const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
-      return sum + Number(montoLimpio || 0);
-    }, 0);
-    const totalPagado = pagoInicial + pagosPosteriores;
-    const totalCredito = v.totalCredito || (v.valorCuota || 0) * (v.cuotas || 0);
-    return Math.round(totalPagado) >= Math.round(totalCredito);
-  }).length;
+  const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
 
   let techoPuntaje = 55;
-
   if (terminadas >= 10) techoPuntaje = 100;    
   else if (terminadas >= 5) techoPuntaje = 88;   
   else if (terminadas >= 3) techoPuntaje = 78;   
@@ -50,40 +80,8 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
   let penalizacionActivaGrave = 0;
   let maximoAtrasoActual = 0;
 
-  const mesesEs = {
-    enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-    julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
-  };
-
-  const parsearFechaSegura = (fechaObj) => {
-    if (!fechaObj) return null;
-    if (fechaObj.toDate) return fechaObj.toDate();
-    if (fechaObj instanceof Date) return fechaObj;
-
-    if (typeof fechaObj === "string") {
-      const limpio = fechaObj.toLowerCase().replace(/de\s/g, "").trim();
-      const partes = limpio.split(/\s+/);
-      if (partes.length === 3 && mesesEs[partes[1]] !== undefined) {
-        return new Date(Number(partes[2]), mesesEs[partes[1]], Number(partes[0]));
-      }
-      const d = new Date(fechaObj);
-      if (!isNaN(d.getTime())) return d;
-    }
-    return null;
-  };
-
   ventasDelCliente.forEach((venta) => {
-    const pagoInicial = Number(venta.pago?.montoPagado || 0);
-    const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
-      const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
-      return sum + Number(montoLimpio || 0);
-    }, 0);
-    const totalPagado = pagoInicial + pagosPosteriores;
-    const totalCredito = venta.totalCredito || (venta.valorCuota || 0) * (venta.cuotas || 0);
-
-    if (Math.round(totalPagado) >= Math.round(totalCredito)) {
-      return; 
-    }
+    if (estaPagado(venta)) return; 
 
     const fechaVentaReal = parsearFechaSegura(venta.fecha);
     if (!fechaVentaReal) return;
@@ -147,7 +145,6 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
   }
 
   let detalle = "Paga dentro de los términos pactados.";
-
   if (leyenda === "Excelente") {
     detalle = "Historial impecable. Muy buen comportamiento de pago.";
   } else if (leyenda === "Bueno") {
@@ -184,7 +181,10 @@ export default function Clientes() {
   const [filtroVendedor, setFiltroVendedor] = useState("");
   const [filtroColor, setFiltroColor] = useState(""); 
   
-  // 📅 ESTADOS DE FECHA POR DEFECTO = HOY
+  // 🚀 Límite inicial de clientes visibles para carga incremental
+  const [limiteVisibles, setLimiteVisibles] = useState(12);
+  const loaderRef = useRef(null);
+
   const obtenerFechaHoy = () => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
@@ -203,7 +203,6 @@ export default function Clientes() {
 
   useEffect(() => {
     const expira = localStorage.getItem("expiraVisita");
-
     if (expira && Date.now() > Number(expira)) {
       localStorage.removeItem("clientesReclamadosHoy");
       localStorage.removeItem("expiraVisita");
@@ -231,100 +230,80 @@ export default function Clientes() {
       })
     );
 
-  const fetchClientes = async () => {
+  const fetchData = async () => {
     try {
-      const snap = await getDocs(collection(db, "clientes"));
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
-      setClientes(ordenarClientesAZ(data));
-    } catch (error) {
-      console.error("Error al obtener clientes:", error);
-    }
-  };
+      const [snapClientes, snapVentas, snapUsuarios] = await Promise.all([
+        getDocs(collection(db, "clientes")),
+        getDocs(collection(db, "ventas")),
+        getDocs(collection(db, "usuarios"))
+      ]);
 
-  const fetchVentas = async () => {
-    try {
-      const snap = await getDocs(collection(db, "ventas"));
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
-      setVentas(data);
-    } catch (error) {
-      console.error("Error al obtener ventas:", error);
-    }
-  };
+      const dataClientes = snapClientes.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const dataVentas = snapVentas.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  const fetchUsuarios = async () => {
-    try {
-      const snap = await getDocs(collection(db, "usuarios"));
       const mapUsuarios = {};
-      snap.docs.forEach((d) => {
+      snapUsuarios.docs.forEach((d) => {
         const data = d.data();
         const nombreReal = data.nombre || data.nombreUsuario || data.email || d.id;
-        
-        // Indexamos asociando el ID del documento, el UID, y el email en minúsculas al nombre real del usuario
         mapUsuarios[d.id] = nombreReal;
-        if (data.uid) {
-          mapUsuarios[data.uid] = nombreReal;
-        }
-        if (data.email) {
-          mapUsuarios[data.email.toLowerCase().trim()] = nombreReal;
-        }
+        if (data.uid) mapUsuarios[data.uid] = nombreReal;
+        if (data.email) mapUsuarios[data.email.toLowerCase().trim()] = nombreReal;
       });
+
+      setClientes(ordenarClientesAZ(dataClientes));
+      setVentas(dataVentas);
       setUsuarios(mapUsuarios);
     } catch (error) {
-      console.error("Error al obtener usuarios:", error);
+      console.error("Error al obtener datos:", error);
     }
   };
 
   useEffect(() => {
-    fetchClientes();
-    fetchVentas();
-    fetchUsuarios();
+    fetchData();
   }, []);
 
-  const estaPagado = (venta) => {
-    const pagoInicial = Number(
-      venta.pago?.montoPagado || 0
-    );
+  // 🚀 Indexación de ventas por cliente para rendimiento óptimo
+  const ventasPorClienteMap = useMemo(() => {
+    const mapa = {};
+    ventas.forEach((v) => {
+      if (!v.clienteId) return;
+      if (!mapa[v.clienteId]) mapa[v.clienteId] = [];
+      mapa[v.clienteId].push(v);
+    });
+    return mapa;
+  }, [ventas]);
 
-    const pagosPosteriores = (venta.pagos || []).reduce(
-      (sum, p) => {
-        const montoLimpio =
-          typeof p.monto === "string"
-            ? p.monto.replace(",", ".")
-            : p.monto;
+  const clientesConCalculos = useMemo(() => {
+    const hoy = new Date();
+    return clientes.map((c) => {
+      const ventasDelCliente = ventasPorClienteMap[c.id] || [];
+      const total = ventasDelCliente.length;
+      const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
+      const activas = total - terminadas;
+      const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
+      const scorePagos = calcularScoreCliente(c, ventasDelCliente, hoy);
 
-        return sum + Number(montoLimpio || 0);
-      },
-      0
-    );
-
-    const totalPagado =
-      pagoInicial + pagosPosteriores;
-
-    const totalCredito =
-      venta.totalCredito ||
-      (venta.valorCuota || 0) * (venta.cuotas || 0);
-
-    return Math.round(totalPagado) >= Math.round(totalCredito);
-  };
+      return {
+        ...c,
+        ventasDelCliente,
+        comprasPagadas: terminadas,
+        comprasTotales: total,
+        comprasActivas: activas,
+        comprasTerminadas: terminadas,
+        idVenta: ventaActiva ? ventaActiva.id : null,
+        score: scorePagos,
+      };
+    });
+  }, [clientes, ventasPorClienteMap]);
 
   const clientesVencidos = useMemo(() => {
     if (!ventas.length) return [];
-
     const hoy = new Date();
 
-    const resultado = clientes.map((cliente) => {
+    const resultado = clientesConCalculos.map((cliente) => {
       if (cliente.estado === "Bloqueado") return null;
 
-      const ventasCliente = ventas.filter(
-        (v) => v.clienteId === cliente.id && !estaPagado(v)
-      );
-
+      const ventasCliente = cliente.ventasDelCliente.filter((v) => !estaPagado(v));
       if (!ventasCliente.length) return null;
 
       let mayorAtraso = 0;
@@ -334,24 +313,14 @@ export default function Clientes() {
       let fechaVentaSeleccionada = null;
 
       ventasCliente.forEach((venta) => {
-        let fechaBase;
-
-        if (venta.fecha?.toDate) {
-          fechaBase = venta.fecha.toDate();
-        } else if (venta.fecha) {
-          fechaBase = new Date(venta.fecha);
-        } else {
-          return;
-        }
+        let fechaBase = parsearFechaSegura(venta.fecha);
+        if (!fechaBase) return;
 
         const cuotasPagadas = venta.pagos?.length || 0;
         const proximoVenc = new Date(fechaBase);
         proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas);
 
-        const diferenciaDias = Math.floor(
-          (hoy - proximoVenc) / (1000 * 60 * 60 * 24)
-        );
-
+        const diferenciaDias = Math.floor((hoy - proximoVenc) / (1000 * 60 * 60 * 24));
         const atrasoReal = diferenciaDias > 0 ? diferenciaDias : 0;
 
         if (atrasoReal >= mayorAtraso) {
@@ -364,13 +333,11 @@ export default function Clientes() {
       });
 
       if (ventaMasAtrasada && proximoVencimientoCalculado) {
-        // 🛠️ Lectura robusta del nombre del producto (name, nombre, descripcion o titulo)
         const nombresProductos =
           ventaMasAtrasada.productos?.map((p) => p.name || p.nombre || p.descripcion || p.titulo).join(", ") || 
           ventaMasAtrasada.producto || 
           "—";
 
-        // 🛠️ Búsqueda ultra-robusta del vendedor mapeando contra el diccionario de usuarios cargados
         const claveVendedorRaw = (
           ventaMasAtrasada.vendedorReal || 
           ventaMasAtrasada.cargadoPor || 
@@ -389,7 +356,6 @@ export default function Clientes() {
           } else if (claveVendedorRaw.includes("@") && usuarios[claveVendedorRaw.toLowerCase()]) {
             nombreVendedor = usuarios[claveVendedorRaw.toLowerCase()];
           } else {
-            // Si no está registrado en la colección de usuarios pero es un correo, extraemos el nombre limpio
             const parteMail = claveVendedorRaw.split("@")[0];
             nombreVendedor = parteMail.charAt(0).toUpperCase() + parteMail.slice(1);
           }
@@ -410,37 +376,13 @@ export default function Clientes() {
       return null;
     });
 
-    return resultado
-      .filter(Boolean)
-      .sort((a, b) => b.diasAtraso - a.diasAtraso);
-  }, [clientes, ventas, usuarios]);
+    return resultado.filter(Boolean).sort((a, b) => b.diasAtraso - a.diasAtraso);
+  }, [clientesConCalculos, ventas, usuarios]);
 
   const clientesFiltrados = useMemo(() => {
-    const hoy = new Date();
-
-    const clientesConTotales = clientes.map((c) => {
-      const ventasDelCliente = ventas.filter((v) => v.clienteId === c.id);
-
-      const total = ventasDelCliente.length;
-      const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
-      const activas = total - terminadas;
-      const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
-      const scorePagos = calcularScoreCliente(c, ventasDelCliente, hoy);
-
-      return {
-        ...c,
-        comprasPagadas: terminadas,
-        comprasTotales: total,
-        comprasActivas: activas,
-        comprasTerminadas: terminadas,
-        idVenta: ventaActiva ? ventaActiva.id : null,
-        score: scorePagos,
-      };
-    });
-
     const q = search.trim().toLowerCase();
 
-    return clientesConTotales.filter((c) => {
+    return clientesConCalculos.filter((c) => {
       const nombre = (c.nombre || "").toLowerCase();
       const dni = String(c.dni || "").toLowerCase();
       const direccion = (c.direccion || "").toLowerCase();
@@ -460,14 +402,37 @@ export default function Clientes() {
 
       return cumpleBusq && cumpleColor;
     });
-  }, [clientes, ventas, search, filtroColor]);
+  }, [clientesConCalculos, search, filtroColor]);
 
-  const handleDoubleClickCliente = (clienteId) => {
+  // 🚀 Cortamos el array filtrado para renderizar únicamente los clientes del lote actual
+  const clientesPaginados = useMemo(() => {
+    return clientesFiltrados.slice(0, limiteVisibles);
+  }, [clientesFiltrados, limiteVisibles]);
+
+  // 🚀 IntersectionObserver para detectar el scroll automáticamente y cargar más
+  useEffect(() => {
+    const currentLoader = loaderRef.current;
+    if (!currentLoader) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const target = entries[0];
+      if (target.isIntersecting) {
+        setLimiteVisibles((prev) => prev + 12);
+      }
+    }, { threshold: 0.1 });
+
+    observer.observe(currentLoader);
+
+    return () => {
+      if (currentLoader) observer.unobserve(currentLoader);
+    };
+  }, [clientesFiltrados.length]);
+
+  const handleDoubleClickCliente = useCallback((clienteId) => {
     const finDelDia = new Date();
     finDelDia.setHours(23, 59, 59, 999);
 
     const current = [...clientesReclamadosHoy];
-
     if (!current.includes(clienteId)) {
       current.push(clienteId);
       localStorage.setItem("clientesReclamadosHoy", JSON.stringify(current));
@@ -476,12 +441,12 @@ export default function Clientes() {
 
     localStorage.setItem("expiraVisita", finDelDia.getTime());
     window.open(`/clientes/${clienteId}`, "_blank");
-  };
+  }, [clientesReclamadosHoy]);
 
-  const handleContextMenuCliente = (e, clienteId) => {
+  const handleContextMenuCliente = useCallback((e, clienteId) => {
     e.preventDefault();
     handleDoubleClickCliente(clienteId);
-  };
+  }, [handleDoubleClickCliente]);
 
   const handleSaveClient = async (data) => {
     try {
@@ -493,7 +458,7 @@ export default function Clientes() {
 
       setIsModalOpen(false);
       setClientToEdit(null);
-      fetchClientes();
+      fetchData();
     } catch (error) {
       console.error("Error al guardar cliente:", error);
     }
@@ -507,7 +472,10 @@ export default function Clientes() {
           type="text"
           placeholder="Buscar por nombre, DNI o dirección..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setLimiteVisibles(12);
+          }}
           className={styles.searchInput}
         />
 
@@ -526,10 +494,12 @@ export default function Clientes() {
         <label>Filtrar por vendedor: </label>
         <select
           value={filtroVendedor}
-          onChange={(e) => setFiltroVendedor(e.target.value)}
+          onChange={(e) => {
+            setFiltroVendedor(e.target.value);
+            setLimiteVisibles(12);
+          }}
         >
           <option value="">Todos</option>
-
           {Array.from(new Set(clientesVencidos.map(c => c.vendedor))).map((v, i) => (
             <option key={i} value={v}>
               {v}
@@ -540,7 +510,10 @@ export default function Clientes() {
         <label style={{ marginLeft: "20px" }}>Filtrar por color: </label>
         <select
           value={filtroColor}
-          onChange={(e) => setFiltroColor(e.target.value)}
+          onChange={(e) => {
+            setFiltroColor(e.target.value);
+            setLimiteVisibles(12);
+          }}
         >
           <option value="">Todos</option>
           <option value="verde">Verdes (Buenos/Excelentes)</option>
@@ -548,7 +521,6 @@ export default function Clientes() {
           <option value="rojo">Rojos (Bloqueados / Mal pagador)</option>
         </select>
 
-        {/* 📅 RANGO DE FECHAS CON HOY POR DEFECTO */}
         <label style={{ marginLeft: "20px" }}>Desde: </label>
         <input
           type="date"
@@ -644,8 +616,8 @@ export default function Clientes() {
 
       {/* GRID DE CLIENTES */}
       <div className={styles.grid}>
-        {clientesFiltrados.length > 0 ? (
-          clientesFiltrados.map((cli) => (
+        {clientesPaginados.length > 0 ? (
+          clientesPaginados.map((cli) => (
             <div 
               key={cli.id} 
               onContextMenu={(e) => handleContextMenuCliente(e, cli.id)}
@@ -657,7 +629,7 @@ export default function Clientes() {
                   setClientToEdit(c);
                   setIsModalOpen(true);
                 }}
-                onDelete={fetchClientes}
+                onDelete={fetchData}
               />
             </div>
           ))
@@ -665,6 +637,13 @@ export default function Clientes() {
           <p className={styles.empty}>
             No se encontraron clientes
           </p>
+        )}
+      </div>
+
+      {/* ELEMENTO OBSERVADOR INVISIBLE PARA EL INFINITE SCROLL */}
+      <div ref={loaderRef} style={{ height: "40px", margin: "20px 0", textAlign: "center" }}>
+        {limiteVisibles < clientesFiltrados.length && (
+          <span style={{ color: "#666", fontSize: "14px" }}>Cargando más clientes...</span>
         )}
       </div>
 
