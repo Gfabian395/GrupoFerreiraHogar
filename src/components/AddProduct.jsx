@@ -171,15 +171,16 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           priceJuego: v.priceJuego ?? "",
           unidadesPorJuego: v.unidadesPorJuego ?? "",
           tipoVariante: v.tipoVariante || (v.colorHex ? "color" : "modelo"),
-          modeloPadre: v.modelo || "", 
+          modeloPadre: v.modelo || v.modeloPadre || "", 
           image: v.image || "",
           colorHex: v.colorHex || "#000000",
-          stock4320: v.stock?.["Los Andes 4320"] ?? 0,
-          stock4034: v.stock?.["Los Andes 4034"] ?? 0,
-          stock2440:
+          stock4320: Number(v.stock?.["Los Andes 4320"] ?? 0),
+          stock4034: Number(v.stock?.["Los Andes 4034"] ?? 0),
+          stock2440: Number(
             v.stock?.["Jofre 2440"] ??
             v.stock?.["Mosconi"] ??
-            0,
+            0
+          ),
           fichaTecnica: fichaParsed,
         };
       });
@@ -242,8 +243,20 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   };
 
   const handleRemoveVariant = (index) => {
-    if (variantes.length === 1) return;
-    setVariantes(variantes.filter((_, i) => i !== index));
+    if (variantes.length === 1) {
+      alert("El producto debe tener al menos una variante.");
+      return;
+    }
+    const varianteAEliminar = variantes[index];
+    
+    // Si es un modelo base, eliminamos también sus colores hijos asociados para que no queden huérfanos
+    if (varianteAEliminar.tipoVariante === "modelo" && varianteAEliminar.attr) {
+      const nombreModelo = varianteAEliminar.attr;
+      const filtradas = variantes.filter((v, i) => i !== index && v.modeloPadre !== nombreModelo);
+      setVariantes(filtradas);
+    } else {
+      setVariantes(variantes.filter((_, i) => i !== index));
+    }
   };
 
   const handleAddFichaRow = (variantIndex) => {
@@ -373,20 +386,24 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                 }))
             : [];
 
-          const varianteAnterior = producto?.variantes?.[i];
+          // Guardado correcto de stock independiente de restricciones estrictas de rol en edición
           let stockFinal = {
-            "Los Andes 4320": (esJefe || sucursalAsignada === "Los Andes 4320") ? Number(v.stock4320) : (varianteAnterior?.stock?.["Los Andes 4320"] ?? 0),
-            "Los Andes 4034": (esJefe || sucursalAsignada === "Los Andes 4034") ? Number(v.stock4034) : (varianteAnterior?.stock?.["Los Andes 4034"] ?? 0),
-            "Jofre 2440": (esJefe || sucursalAsignada === "Jofre 2440") ? Number(v.stock2440) : (varianteAnterior?.stock?.["Jofre 2440"] ?? varianteAnterior?.stock?.["Mosconi"] ?? 0),
+            "Los Andes 4320": Number(v.stock4320) || 0,
+            "Los Andes 4034": Number(v.stock4034) || 0,
+            "Jofre 2440": Number(v.stock2440) || 0,
           };
+
+          const modeloNombreAsociado = v.tipoVariante === "color" 
+            ? (v.modeloPadre || variantes.find(m => m.tipoVariante === "modelo")?.attr || "") 
+            : v.attr;
 
           return {
             attr: v.attr,
             tipoVariante: v.tipoVariante,
-            modelo: v.tipoVariante === "color" ? (v.modeloPadre || "") : v.attr,
+            modelo: modeloNombreAsociado,
             price: Number(v.price),
-            priceJuego: v.priceJuego !== "" ? Number(v.priceJuego) : null,
-            unidadesPorJuego: v.unidadesPorJuego !== "" ? Number(v.unidadesPorJuego) : null,
+            priceJuego: v.priceJuego !== "" && v.priceJuego !== null ? Number(v.priceJuego) : null,
+            unidadesPorJuego: v.unidadesPorJuego !== "" && v.unidadesPorJuego !== null ? Number(v.unidadesPorJuego) : null,
             image: variantImageURL,
             colorHex: v.tipoVariante === "color" ? v.colorHex : "",
             stock: stockFinal,
@@ -413,7 +430,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       onClose?.();
     } catch (error) {
       console.error(error);
-      alert("Ocurrió un error. Revisá la consola.");
+      alert("Ocurrió un error al guardar. Revisá la consola.");
     } finally {
       setLoading(false);
     }
@@ -607,15 +624,9 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                           </div>
 
                           <div className={styles.grid3Cols}>
-                            {(esJefe || sucursalAsignada === "Los Andes 4320") && (
-                              <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            )}
-                            {(esJefe || sucursalAsignada === "Los Andes 4034") && (
-                              <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            )}
-                            {(esJefe || sucursalAsignada === "Jofre 2440") && (
-                              <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            )}
+                            <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
                           </div>
 
                           <button type="button" onClick={() => handleRemoveVariant(color._originalIndex)} className={styles.btnRemoveVariantMini}>
