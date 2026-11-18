@@ -108,12 +108,10 @@ export default function ProductCard({
   const [selectedVariant, setSelectedVariant] = useState(() => {
     const initialIdx = Number(initialVariant) || 0;
     const vInit = variantes[initialIdx];
-    // Si la inicial es un modelo base puro sin stock y tiene hijos color, apuntar al primer hijo color
     if (vInit && (vInit.tipoVariante === "modelo" || !vInit.tipoVariante)) {
       const primerHijoColor = variantes.findIndex(v => v.tipoVariante === "color" && (v.modelo === vInit.attr || v.modeloPadre === vInit.attr));
       if (primerHijoColor !== -1) return primerHijoColor;
     }
-    // Si hay cualquier variante con color, buscar la primera
     const primerColor = variantes.findIndex(v => v.tipoVariante === "color");
     return primerColor !== -1 ? primerColor : initialIdx;
   });
@@ -148,7 +146,27 @@ export default function ProductCard({
     return tipo === 'modelo' ? variant.attr : (variant.modelo || variant.modeloPadre || producto?.name || "");
   }, [variant, producto]);
 
-  const imagenMostrar = variant?.image || producto?.image || null;
+  // Identificamos el grupo del modelo actual para extraer su imagen base fija
+  const grupoModeloActual = useMemo(() => {
+    return agrupadoPorModelo.find(m => m.nombre === selectedModel) || agrupadoPorModelo[0];
+  }, [agrupadoPorModelo, selectedModel]);
+
+  // IMAGEN FIJA BASE DEL PRODUCTO/MODELO (NO CAMBIA AL ELEGIR EL TAPIZADO)
+  const imagenBaseFija = grupoModeloActual?.imagenPrincipal || producto?.image || null;
+
+  // ARRAY PARA EL CARRUSEL: La primera imagen es la base fija, seguida de las imágenes de las variantes de color de ese modelo
+  const imagenesCarrusel = useMemo(() => {
+    const imgs = [imagenBaseFija];
+    if (grupoModeloActual?.variantes) {
+      grupoModeloActual.variantes.forEach(v => {
+        if (v.image && v.image !== imagenBaseFija) {
+          imgs.push(v.image);
+        }
+      });
+    }
+    // Filtrar duplicados por si acaso
+    return [...new Set(imgs.filter(Boolean))];
+  }, [imagenBaseFija, grupoModeloActual]);
 
   const precioUnidad = Number(variant?.price || 0);
   const precioJuego = Number(variant?.priceJuego || 0);
@@ -222,7 +240,7 @@ export default function ProductCard({
       categoriaId,
       name: producto.name,
       price: precioSeleccionado,
-      image: variant.image || imagenMostrar,
+      image: variant.image || imagenBaseFija,
       qty: 1,
       variant: variant.attr,
       type: formatoActual === "juego" ? "juego" : "simple",
@@ -417,7 +435,8 @@ export default function ProductCard({
         )}
 
         <figure className={styles.productFigure}>
-          <img src={imagenMostrar} alt={producto.name} onClick={() => setShowCarrusel(true)} style={{ cursor: "zoom-in" }} />
+          {/* AQUÍ CAMBIÓ: Ahora muestra siempre la imagen base fija del producto/modelo en vez de la variante de color */}
+          <img src={imagenBaseFija} alt={producto.name} onClick={() => setShowCarrusel(true)} style={{ cursor: "zoom-in" }} />
           {producto.tag && <span className={styles.badge}>{producto.tag}</span>}
           {fromCombo && <span className={styles.badge}>De combo</span>}
         </figure>
@@ -448,13 +467,11 @@ export default function ProductCard({
                   return null;
                 }
 
-                // Verificamos si alguno de los colores de este modelo está seleccionado actualmente
                 const isModelActive = coloresVisibles.some(v => v.originalIndex === selectedVariant);
 
                 return (
                   <div key={m.nombre} className={`${styles.modelRow} ${isModelActive ? styles.activeModelRow : ""}`}>
                     
-                    {/* BLOQUE IZQUIERDO: MODELO BASE PURAMENTE INFORMATIVO (SIN CLICK NI SELECCIÓN) */}
                     <div
                       className={styles.modelInfo}
                       style={{ borderRight: coloresVisibles.length === 0 ? "none" : undefined, cursor: "default" }}
@@ -470,7 +487,6 @@ export default function ProductCard({
                       </div>
                     </div>
 
-                    {/* BLOQUE DERECHO: OPCIONES DE COLORES CLICKEABLES (ÚNICAS SELECCIONABLES) */}
                     {coloresVisibles.length > 0 && (
                       <div className={styles.modelVariantsContainer}>
                         {coloresVisibles.map((v) => {
@@ -560,7 +576,6 @@ export default function ProductCard({
             </div>
           </fieldset>
 
-          {/* STOCK POR SUCURSAL (SIN BOTONES DE + Y -, SÓLO CANTIDAD Y CARRITO) */}
           <div className={styles.stock}>
             {variant && Object.entries(variant.stock || {}).map(([sucursal, cantidad]) => {
               const cant = Number(cantidad || 0);
@@ -595,7 +610,8 @@ export default function ProductCard({
         </div>
       </article>
 
-      {showCarrusel && <ImgCarrusel imagenes={[imagenMostrar].filter(Boolean)} indexInicial={0} onClose={() => setShowCarrusel(false)} />}
+      {/* AQUÍ CAMBIÓ: Se pasa el array con la imagen base primero y luego las de los tapizados de ese modelo */}
+      {showCarrusel && <ImgCarrusel imagenes={imagenesCarrusel} indexInicial={0} onClose={() => setShowCarrusel(false)} />}
     </div>
   );
 }
