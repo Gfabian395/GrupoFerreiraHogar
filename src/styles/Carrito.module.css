@@ -41,6 +41,10 @@
   animation: slideUp 0.25s ease;
 }
 
+.title{
+  color: black; /* Título principal en slate oscuro */
+}
+
 /* ==========================================================================
    ❌ CLOSE BUTTON (Botón de cerrar limpio)
    ========================================================================== */
