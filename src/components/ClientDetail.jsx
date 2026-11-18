@@ -85,13 +85,31 @@ const obtenerTotalVenta = (venta) => {
 };
 
 // ===============================
+// 🔢 CÁLCULO UNIFICADO DE PAGOS Y CUOTAS
+// ===============================
+const calcularTotalPagadoVenta = (venta) => {
+  const pagoInicial = Number(venta.pago?.montoPagado || 0);
+  const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
+    const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+    return sum + Number(montoLimpio || 0);
+  }, 0);
+  return pagoInicial + pagosPosteriores;
+};
+
+const obtenerCuotasPagadas = (venta) => {
+  const valorCuota = Number(venta.valorCuota) || 1;
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  return Math.min(Math.floor(totalPagado / valorCuota), Number(venta.cuotas) || 0);
+};
+
+// ===============================
 // 📈 CÁLCULO DE RECARGO POR ATRASO
 // ===============================
 const calcularRecargoAtraso = (venta) => {
   const fechaInicio = venta.fecha?.toDate ? venta.fecha.toDate() : new Date(venta.fecha);
   if (isNaN(fechaInicio.getTime())) return { diasAtraso: 0, porcentajeRecargo: 0, montoRecargo: 0 };
 
-  const cuotasPagadas = venta.pagos?.length || 0;
+  const cuotasPagadas = obtenerCuotasPagadas(venta);
   const proximoVencimiento = new Date(fechaInicio);
   proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
 
@@ -127,7 +145,6 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
 
   const pagosNormalizados = [];
 
-  // 1. PRIMERA CUOTA / PAGO INICIAL (Desde el mapa antiguo "pago")
   const montoPagoAntiguo = Number(venta.pago?.montoPagado || 0);
   if (venta.pago?.primerCuotaPaga || montoPagoAntiguo > 0) {
     pagosNormalizados.push({
@@ -143,12 +160,10 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
     });
   }
 
-  // 2. PAGOS SIGUIENTES (Desde el array "pagos")
   if (Array.isArray(venta.pagos)) {
-    venta.pagos.forEach((pago, index) => {
+    venta.pagos.forEach((pago) => {
       const montoActual = Number(pago.monto ?? 0);
       
-      // Si el mapa "pago" antiguo ya cubrió la cuota 1, evitamos duplicar únicamente si el elemento del array es exactamente igual al pago inicial
       const esElMismoPagoInicial = 
         pagosNormalizados.length > 0 && 
         pago.numero === 1 && 
@@ -350,14 +365,7 @@ export default function ClientDetail() {
   };
 
   const estaPagado = (venta) => {
-    const totalPagado = (venta.pagos || []).reduce(
-      (sum, p) => {
-        const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
-        return sum + Number(montoLimpio || 0);
-      },
-      0
-    );
-
+    const totalPagado = calcularTotalPagadoVenta(venta);
     const totalCredito = obtenerTotalVenta(venta);
     return Math.round(totalPagado) >= Math.round(totalCredito);
   };
@@ -367,15 +375,12 @@ export default function ClientDetail() {
     return ventas
       .filter((v) => {
         const totalCredito = obtenerTotalVenta(v);
-        const totalPagado = (v.pagos || []).reduce((sum, p) => {
-          const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
-          return sum + Number(montoLimpio || 0);
-        }, 0);
+        const totalPagado = calcularTotalPagadoVenta(v);
 
         if (Math.round(totalPagado) >= Math.round(totalCredito)) return false;
 
         const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
-        const cuotasPagadas = v.pagos?.length || 0;
+        const cuotasPagadas = obtenerCuotasPagadas(v);
         const proximoVencimiento = new Date(fechaInicio);
         proximoVencimiento.setMonth(proximoVencimiento.getMonth() + cuotasPagadas);
 
@@ -419,7 +424,7 @@ export default function ClientDetail() {
       ? telefonoRaw
       : `54${telefonoRaw}`;
 
-    const cuotasPagadas = venta.pagos?.length || 0;
+    const cuotasPagadas = obtenerCuotasPagadas(venta);
     const numeroCuota = cuotasPagadas + 1;
     const valorCuota = Number(venta.valorCuota || 0);
     const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
@@ -469,9 +474,9 @@ Este es un mensaje automático generado por nuestro sistema.`;
     const valorCuota = Number(venta.valorCuota || 0);
     const todosLosPagos = venta.pagos || [];
 
-    const totalPagadoHistorico = todosLosPagos.reduce((sum, p) => sum + Number(p.monto || 0), 0);
+    const totalPagadoHistorico = calcularTotalPagadoVenta(venta);
     const ultimoPago = todosLosPagos.length > 0 ? todosLosPagos[todosLosPagos.length - 1] : null;
-    const montoUltimoPago = ultimoPago ? Number(ultimoPago.monto || 0) : 0;
+    const montoUltimoPago = ultimoPago ? Number(ultimoPago.monto || 0) : Number(venta.pago?.montoPagado || 0);
     const valorPagadoTexto = montoUltimoPago.toLocaleString("es-AR");
 
     const totalAntesDeEstePago = totalPagadoHistorico - montoUltimoPago;
@@ -597,7 +602,7 @@ Gracias por su pago.`;
 
   const renderTablePagos = (venta, permitirAgregar) => {
     const valorCuotaSeguro = Number(venta.valorCuota) || 1;
-    let acumuladoPagos = 0;
+    let acumuladoPagos = Number(venta.pago?.montoPagado || 0);
 
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
       const monto = Number(typeof pago.monto === "string" ? pago.monto.replace(",", ".") : pago.monto || 0);
@@ -618,7 +623,7 @@ Gracias por su pago.`;
       };
     });
 
-    const totalPagado = acumuladoPagos;
+    const totalPagado = calcularTotalPagadoVenta(venta);
     const cuotasPagas = Math.floor(totalPagado / valorCuotaSeguro);
     const totalCuotas = Number(venta.cuotas) || 0;
     const cuotasRestantes = Math.max(totalCuotas - cuotasPagas, 0);
@@ -658,6 +663,22 @@ Gracias por su pago.`;
             <span>Estado</span>
             <span>Firma</span>
           </div>
+
+          {(venta.pago?.primerCuotaPaga || Number(venta.pago?.montoPagado || 0) > 0) && (
+            <div className={`${styles.row} ${styles.paid}`} style={{ alignItems: "flex-start", paddingBottom: "12px", paddingTop: "12px" }}>
+              <span style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
+                <strong style={{ color: "#0f172a" }}>Cuota 1</strong>
+                <small style={{ color: "#64748b", fontSize: "12px" }}>Pago inicial</small>
+              </span>
+              <span>{formatearFecha(venta.fecha)}</span>
+              <span style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <strong>${Number(venta.pago.montoPagado || venta.valorCuota || 0).toLocaleString("es-AR")}</strong>
+              </span>
+              <span>Primera cuota</span>
+              <span>Pagado</span>
+              <span>{getFirmaTexto(venta.cargadoPor, usuariosMap)}</span>
+            </div>
+          )}
 
           {pagosConCuota.map((pago, i) => {
             const montoBaseVal = Number(pago.montoBase || pago.monto || 0);
@@ -761,15 +782,7 @@ Gracias por su pago.`;
           <>
             {ventasPendientes.map((venta) => {
               const totalCredito = obtenerTotalVenta(venta);
-
-              const totalPagado = (venta.pagos || []).reduce((sum, p) => {
-                const montoLimpio =
-                  typeof p.monto === "string"
-                    ? p.monto.replace(",", ".")
-                    : p.monto;
-                return sum + Number(montoLimpio || 0);
-              }, 0);
-
+              const totalPagado = calcularTotalPagadoVenta(venta);
               const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
               const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
 
@@ -1166,14 +1179,7 @@ Gracias por su pago.`;
             Deuda Total: $
             {ventasPendientes
               .reduce((total, venta) => {
-                const totalPagado = (venta.pagos || []).reduce((a, p) => {
-                  const montoLimpio =
-                    typeof p.monto === "string"
-                      ? p.monto.replace(",", ".")
-                      : p.monto;
-                  return a + Number(montoLimpio || 0);
-                }, 0);
-
+                const totalPagado = calcularTotalPagadoVenta(venta);
                 const totalVenta = obtenerTotalVenta(venta);
                 const { montoRecargo } = calcularRecargoAtraso(venta);
                 const saldoConRecargo = Math.max((totalVenta + montoRecargo) - totalPagado, 0);

@@ -31,6 +31,36 @@ const parsearFechaSegura = (fechaObj) => {
   return null;
 };
 
+// ===============================
+// 🔍 VERIFICAR SI PAGÓ EN EL MES ACTUAL
+// ===============================
+const pagoEnMesActual = (venta, hoy) => {
+  const mesActual = hoy.getMonth();
+  const anioActual = hoy.getFullYear();
+
+  // 1. Revisar si el pago inicial fue este mismo mes
+  if (venta.pago?.primerCuotaPaga || Number(venta.pago?.montoPagado || 0) > 0) {
+    const fechaInicial = parsearFechaSegura(venta.fecha);
+    if (
+      fechaInicial &&
+      fechaInicial.getMonth() === mesActual &&
+      fechaInicial.getFullYear() === anioActual
+    ) {
+      return true;
+    }
+  }
+
+  // 2. Revisar si alguno de los pagos en el array cayó en este mes
+  return (venta.pagos || []).some((p) => {
+    const fechaPago = parsearFechaSegura(p.fecha);
+    return (
+      fechaPago &&
+      fechaPago.getMonth() === mesActual &&
+      fechaPago.getFullYear() === anioActual
+    );
+  });
+};
+
 const calcularTotalPagadoVenta = (venta) => {
   const pagoInicial = Number(venta.pago?.montoPagado || 0);
   const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
@@ -333,6 +363,8 @@ export default function Clientes() {
       });
 
       if (ventaMasAtrasada && proximoVencimientoCalculado) {
+        const yaPagoEsteMes = pagoEnMesActual(ventaMasAtrasada, hoy);
+
         const nombresProductos =
           ventaMasAtrasada.productos?.map((p) => p.name || p.nombre || p.descripcion || p.titulo).join(", ") || 
           ventaMasAtrasada.producto || 
@@ -370,6 +402,7 @@ export default function Clientes() {
           proximoVencimiento: proximoVencimientoCalculado,
           vendedor: nombreVendedor,
           fechaCompra: fechaVentaSeleccionada,
+          pagoEsteMes: yaPagoEsteMes, // ✅ Propiedad añadida para el badge
         };
       }
 
@@ -599,7 +632,24 @@ export default function Clientes() {
                         <span className={styles.checked}>✅</span>
                       ) : null}
                     </td>
-                    <td className={styles.clickableCell} onDoubleClick={() => handleDoubleClickCliente(c.id)}>{c.nombre}</td>
+                    <td className={styles.clickableCell} onDoubleClick={() => handleDoubleClickCliente(c.id)}>
+                      {c.nombre}
+                      {c.pagoEsteMes && (
+                        <span style={{
+                          marginLeft: "8px",
+                          backgroundColor: "#dcfce7",
+                          color: "#166534",
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          display: "inline-block",
+                          border: "1px solid #bbf7d0"
+                        }}>
+                          ✅ Mes pagado
+                        </span>
+                      )}
+                    </td>
                     <td className={styles.clickableCell} onDoubleClick={() => handleDoubleClickCliente(c.id)}>{c.dni}</td>
                     <td className={styles.productColumn}>{c.producto}</td>
                     <td>{c.vendedor}</td>
