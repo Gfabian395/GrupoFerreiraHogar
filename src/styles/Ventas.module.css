@@ -1,3 +1,7 @@
+
+h1{
+  color: black;
+}
 /* ==========================================================================
    🌌 OVERLAY (Fondo difuminado de pantalla)
    ========================================================================== */
@@ -77,6 +81,7 @@
   padding: 1.25rem;
   border: 1px solid #e2e8f0; /* Estructura limpia libre de rejillas pesadas */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  color: black;
 }
 
 .card h2 {

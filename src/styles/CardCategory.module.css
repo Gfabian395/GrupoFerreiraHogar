@@ -33,6 +33,7 @@
   transition:
     transform 0.4s ease,
     box-shadow 0.4s ease;
+    color: black;
 }
 
 /* ================================
@@ -40,8 +41,8 @@
 ================================ */
 .cardActions {
   position: absolute;
-      top: 0.1rem;
-    right: 0.2rem;
+  top: 0.1rem;
+  right: 0.2rem;
   display: flex;
   gap: 0.45rem;
   z-index: 2;

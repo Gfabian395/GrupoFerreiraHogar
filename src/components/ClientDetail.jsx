@@ -146,28 +146,39 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
   const pagosNormalizados = [];
 
   const montoPagoAntiguo = Number(venta.pago?.montoPagado || 0);
-  if (venta.pago?.primerCuotaPaga || montoPagoAntiguo > 0) {
+  const tienePagoInicial = Boolean(venta.pago?.primerCuotaPaga || montoPagoAntiguo > 0);
+  const montoInicialNormalizado = montoPagoAntiguo || Number(venta.valorCuota || 0);
+
+  if (tienePagoInicial) {
     pagosNormalizados.push({
       numero: 1,
       fecha: venta.fecha || venta.createdAt || "—",
-      monto: montoPagoAntiguo || Number(venta.valorCuota || 0),
-      montoBase: montoPagoAntiguo || Number(venta.valorCuota || 0),
+      monto: montoInicialNormalizado,
+      montoBase: montoInicialNormalizado,
       montoRecargoAtraso: 0,
       montoRecargoMetodo: 0,
       metodo: "Primera cuota (Pago inicial)",
       estado: "Pagado",
       firma: venta.cargadoPor || "Sistema",
+      esPagoInicial: true,
     });
   }
 
   if (Array.isArray(venta.pagos)) {
     venta.pagos.forEach((pago) => {
-      const montoActual = Number(pago.monto ?? 0);
-      
-      const esElMismoPagoInicial = 
-        pagosNormalizados.length > 0 && 
-        pago.numero === 1 && 
-        Math.abs(pagosNormalizados[0].monto - montoActual) < 1;
+      const montoActual = Number(
+        typeof pago.monto === "string" ? pago.monto.replace(",", ".") : (pago.monto ?? 0)
+      );
+      const metodoLower = String(pago.metodo || "").toLowerCase();
+
+      const esElMismoPagoInicial =
+        tienePagoInicial &&
+        (
+          pago.esPagoInicial === true ||
+          metodoLower.includes("pago inicial") ||
+          metodoLower.includes("primera cuota") ||
+          (pago.numero === 1 && Math.abs(montoInicialNormalizado - montoActual) < 1)
+        );
 
       if (!esElMismoPagoInicial) {
         pagosNormalizados.push({
@@ -180,6 +191,7 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
           metodo: pago.metodo ?? "—",
           estado: pago.estado ?? "Pagado",
           firma: pago.firma ?? pago.usuario ?? "—",
+          esPagoInicial: false,
         });
       }
     });
@@ -204,7 +216,7 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
     vendedor,
     entrega,
     sucursal,
-    descuento: venta.descuento || 0 
+    descuento: venta.descuento || 0,
   };
 };
 
@@ -602,7 +614,7 @@ Gracias por su pago.`;
 
   const renderTablePagos = (venta, permitirAgregar) => {
     const valorCuotaSeguro = Number(venta.valorCuota) || 1;
-    let acumuladoPagos = Number(venta.pago?.montoPagado || 0);
+    let acumuladoPagos = 0;
 
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
       const monto = Number(typeof pago.monto === "string" ? pago.monto.replace(",", ".") : pago.monto || 0);
@@ -619,7 +631,7 @@ Gracias por su pago.`;
       return {
         ...pago,
         indexReal: pago.numero || i + 1,
-        labelCuota
+        labelCuota,
       };
     });
 
@@ -664,22 +676,6 @@ Gracias por su pago.`;
             <span>Firma</span>
           </div>
 
-          {(venta.pago?.primerCuotaPaga || Number(venta.pago?.montoPagado || 0) > 0) && (
-            <div className={`${styles.row} ${styles.paid}`} style={{ alignItems: "flex-start", paddingBottom: "12px", paddingTop: "12px" }}>
-              <span style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
-                <strong style={{ color: "#0f172a" }}>Cuota 1</strong>
-                <small style={{ color: "#64748b", fontSize: "12px" }}>Pago inicial</small>
-              </span>
-              <span>{formatearFecha(venta.fecha)}</span>
-              <span style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                <strong>${Number(venta.pago.montoPagado || venta.valorCuota || 0).toLocaleString("es-AR")}</strong>
-              </span>
-              <span>Primera cuota</span>
-              <span>Pagado</span>
-              <span>{getFirmaTexto(venta.cargadoPor, usuariosMap)}</span>
-            </div>
-          )}
-
           {pagosConCuota.map((pago, i) => {
             const montoBaseVal = Number(pago.montoBase || pago.monto || 0);
             const recargoAtrasoVal = Number(pago.montoRecargoAtraso || 0);
@@ -690,18 +686,22 @@ Gracias por su pago.`;
               <div key={i} className={`${styles.row} ${styles.paid}`} style={{ alignItems: "flex-start", paddingBottom: "12px", paddingTop: "12px" }}>
                 <span style={{ display: "flex", flexDirection: "column", gap: "2px", lineHeight: "1.2" }}>
                   <strong style={{ color: "#0f172a" }}>{pago.labelCuota}</strong>
-                  <small style={{ color: "#64748b", fontSize: "12px" }}>Pago #{pago.indexReal}</small>
+                  <small style={{ color: "#64748b", fontSize: "12px" }}>
+                    {pago.esPagoInicial ? "Pago inicial" : `Pago #${pago.indexReal}`}
+                  </small>
                 </span>
 
-                <span>{formatearFecha(pago.fecha)}</span>
+                <span>{formatearFecha(pago.esPagoInicial ? venta.fecha : pago.fecha)}</span>
 
                 <span style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                   <strong>${montoTotalVal.toLocaleString("es-AR")}</strong>
-                  <small style={{ color: "#475569", fontSize: "11px", lineHeight: "1.3" }}>
-                    Base: ${montoBaseVal.toLocaleString("es-AR")}
-                    {recargoAtrasoVal > 0 && <><br />Recargo Atraso: +${recargoAtrasoVal.toLocaleString("es-AR")}</>}
-                    {recargoMetodoVal > 0 && <><br />Recargo {pago.metodo} (+5%): +${recargoMetodoVal.toLocaleString("es-AR")}</>}
-                  </small>
+                  {!pago.esPagoInicial && (
+                    <small style={{ color: "#475569", fontSize: "11px", lineHeight: "1.3" }}>
+                      Base: ${montoBaseVal.toLocaleString("es-AR")}
+                      {recargoAtrasoVal > 0 && <><br />Recargo Atraso: +${recargoAtrasoVal.toLocaleString("es-AR")}</>}
+                      {recargoMetodoVal > 0 && <><br />Recargo {pago.metodo} (+5%): +${recargoMetodoVal.toLocaleString("es-AR")}</>}
+                    </small>
+                  )}
                 </span>
 
                 <span>{pago.metodo || "—"}</span>
