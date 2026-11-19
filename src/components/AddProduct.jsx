@@ -43,7 +43,7 @@ const diccionarioColores = {
   "cromado": "#d8d8d8",
   "rosa": "#ffc0cb",
   "fucsia": "#ff00ff",
-  "magenta": "#ff00ff", 
+  "magenta": "#ff00ff",
   "violeta": "#8a2be2",
   "lila": "#c8a2c8",
   "purpura": "#800080",
@@ -100,6 +100,8 @@ const fichasPorCategoria = {
   "default": ["Marca", "Modelo", "Material", "Garantía", "Origen"]
 };
 
+const CAMPOS_PRECIO = ["price", "priceJuego", "unidadesPorJuego"];
+
 /* ================= UTILS ================= */
 const formatText = (value) => {
   if (!value) return "";
@@ -126,8 +128,8 @@ const createEmptyVariant = (categoriaId) => ({
   price: "",
   priceJuego: "",
   unidadesPorJuego: "",
-  tipoVariante: "modelo", 
-  modeloPadre: "", 
+  tipoVariante: "modelo",
+  modeloPadre: "",
   image: "",
   colorHex: "#000000",
   stock4320: 0,
@@ -141,15 +143,11 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   const [tag, setTag] = useState(producto?.tag || "");
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const [userRole, setUserRole] = useState(null);
-  const [sucursalAsignada, setSucursalAsignada] = useState(null);
-
   const [variantImages, setVariantImages] = useState({});
 
   const [variantes, setVariantes] = useState(() => {
     if (producto?.variantes && producto.variantes.length > 0) {
-      return producto.variantes.map((v) => {
+      const mapeadas = producto.variantes.map((v) => {
         let fichaParsed = [];
         if (v.fichaTecnica) {
           if (Array.isArray(v.fichaTecnica)) {
@@ -171,7 +169,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           priceJuego: v.priceJuego ?? "",
           unidadesPorJuego: v.unidadesPorJuego ?? "",
           tipoVariante: v.tipoVariante || (v.colorHex ? "color" : "modelo"),
-          modeloPadre: v.modelo || v.modeloPadre || "", 
+          modeloPadre: v.modelo || v.modeloPadre || "",
           image: v.image || "",
           colorHex: v.colorHex || "#000000",
           stock4320: Number(v.stock?.["Los Andes 4320"] ?? 0),
@@ -184,28 +182,28 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
           fichaTecnica: fichaParsed,
         };
       });
+
+      // Sincroniza el precio desde el modelo base hacia los colores hijos al cargar edición
+      return mapeadas.map((v) => {
+        if (v.tipoVariante === "color") {
+          const padre = mapeadas.find(
+            (m) => m.tipoVariante === "modelo" && m.attr && m.attr === v.modeloPadre
+          );
+          if (padre) {
+            return {
+              ...v,
+              price: padre.price !== "" ? padre.price : v.price,
+              priceJuego: padre.priceJuego !== "" ? padre.priceJuego : v.priceJuego,
+              unidadesPorJuego:
+                padre.unidadesPorJuego !== "" ? padre.unidadesPorJuego : v.unidadesPorJuego,
+            };
+          }
+        }
+        return v;
+      });
     }
     return [createEmptyVariant(categoriaId)];
   });
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        try {
-          const userDoc = await getDoc(doc(db, "usuarios", currentUser.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserRole(data.role);
-            setSucursalAsignada(data.sucursalAsignada);
-          }
-        } catch (err) {
-          console.error("Error al obtener datos del usuario:", err);
-        }
-      }
-    };
-    fetchUserData();
-  }, []);
 
   useEffect(() => {
     const handleEsc = (e) => e.key === "Escape" && onClose?.();
@@ -213,15 +211,13 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     return () => window.removeEventListener("keydown", handleEsc);
   }, [onClose]);
 
-  const esJefe = userRole === "jefe";
-
   const handleAddVariant = () => {
     setVariantes([...variantes, createEmptyVariant(categoriaId)]);
   };
 
   const handleAddColorToModel = (index) => {
     const modeloSeleccionado = variantes[index];
-    
+
     if (!modeloSeleccionado.attr.trim()) {
       alert("Primero ingresá el nombre de este modelo antes de agregarle un color.");
       return;
@@ -230,8 +226,8 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     const nuevaVarianteColor = {
       ...createEmptyVariant(categoriaId),
       tipoVariante: "color",
-      modeloPadre: modeloSeleccionado.attr, 
-      price: modeloSeleccionado.price, 
+      modeloPadre: modeloSeleccionado.attr,
+      price: modeloSeleccionado.price,
       priceJuego: modeloSeleccionado.priceJuego,
       unidadesPorJuego: modeloSeleccionado.unidadesPorJuego,
       fichaTecnica: [],
@@ -248,7 +244,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       return;
     }
     const varianteAEliminar = variantes[index];
-    
+
     // Si es un modelo base, eliminamos también sus colores hijos asociados para que no queden huérfanos
     if (varianteAEliminar.tipoVariante === "modelo" && varianteAEliminar.attr) {
       const nombreModelo = varianteAEliminar.attr;
@@ -283,9 +279,19 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
     newVariantes[index][field] = value;
 
     if (field === "attr" && newVariantes[index].tipoVariante === "modelo" && oldAttr) {
-      newVariantes.forEach(v => {
+      newVariantes.forEach((v) => {
         if (v.tipoVariante === "color" && v.modeloPadre === oldAttr) {
           v.modeloPadre = value;
+        }
+      });
+    }
+
+    // Propaga precio, combo y unidades por combo desde el Modelo Base a sus colores hijos
+    if (newVariantes[index].tipoVariante === "modelo" && CAMPOS_PRECIO.includes(field)) {
+      const nombreModelo = newVariantes[index].attr;
+      newVariantes.forEach((v) => {
+        if (v.tipoVariante === "color" && v.modeloPadre === nombreModelo) {
+          v[field] = value;
         }
       });
     }
@@ -301,7 +307,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
       const targetRgb = hexToRgb(value);
       if (targetRgb) {
         let minDistance = Infinity;
-        let closestName = newVariantes[index].attr; 
+        let closestName = newVariantes[index].attr;
 
         for (const [hex, name] of Object.entries(diccionarioHexANombre)) {
           const rgb = hexToRgb(hex);
@@ -351,8 +357,16 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || variantes.some((v) => v.attr.trim() === "" || v.price === "")) {
-      alert("Completa todos los campos obligatorios de las variantes.");
+    const modelosList = variantes.filter((v) => v.tipoVariante === "modelo");
+    const hayModeloSinDatos = modelosList.some(
+      (m) => m.attr.trim() === "" || m.price === "" || m.price === null
+    );
+    const hayColorSinNombre = variantes.some(
+      (v) => v.tipoVariante === "color" && v.attr.trim() === ""
+    );
+
+    if (!name.trim() || hayModeloSinDatos || hayColorSinNombre) {
+      alert("Completá el nombre del producto, el nombre y precio de cada modelo base, y el nombre de cada color.");
       return;
     }
 
@@ -377,7 +391,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
             variantImageURL = await getDownloadURL(storageRef);
           }
 
-          const fichaTecnicaLimpia = v.tipoVariante === "modelo" 
+          const fichaTecnicaLimpia = v.tipoVariante === "modelo"
             ? (v.fichaTecnica || [])
                 .filter(item => item.label.trim() !== "")
                 .map(item => ({
@@ -386,24 +400,43 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                 }))
             : [];
 
-          // Guardado correcto de stock independiente de restricciones estrictas de rol en edición
-          let stockFinal = {
+          const stockFinal = {
             "Los Andes 4320": Number(v.stock4320) || 0,
             "Los Andes 4034": Number(v.stock4034) || 0,
             "Jofre 2440": Number(v.stock2440) || 0,
           };
 
-          const modeloNombreAsociado = v.tipoVariante === "color" 
-            ? (v.modeloPadre || variantes.find(m => m.tipoVariante === "modelo")?.attr || "") 
+          const modeloPadreObj = v.tipoVariante === "color"
+            ? variantes.find((m) => m.tipoVariante === "modelo" && m.attr === v.modeloPadre) ||
+              variantes.find((m) => m.tipoVariante === "modelo")
+            : null;
+
+          const modeloNombreAsociado = v.tipoVariante === "color"
+            ? (v.modeloPadre || modeloPadreObj?.attr || "")
             : v.attr;
+
+          const precioOrigen = v.tipoVariante === "color" && modeloPadreObj
+            ? modeloPadreObj.price
+            : v.price;
+
+          const comboOrigen = v.tipoVariante === "color" && modeloPadreObj
+            ? modeloPadreObj.priceJuego
+            : v.priceJuego;
+
+          const unidadesComboOrigen = v.tipoVariante === "color" && modeloPadreObj
+            ? modeloPadreObj.unidadesPorJuego
+            : v.unidadesPorJuego;
 
           return {
             attr: v.attr,
             tipoVariante: v.tipoVariante,
             modelo: modeloNombreAsociado,
-            price: Number(v.price),
-            priceJuego: v.priceJuego !== "" && v.priceJuego !== null ? Number(v.priceJuego) : null,
-            unidadesPorJuego: v.unidadesPorJuego !== "" && v.unidadesPorJuego !== null ? Number(v.unidadesPorJuego) : null,
+            price: Number(precioOrigen),
+            priceJuego: comboOrigen !== "" && comboOrigen !== null ? Number(comboOrigen) : null,
+            unidadesPorJuego:
+              unidadesComboOrigen !== "" && unidadesComboOrigen !== null
+                ? Number(unidadesComboOrigen)
+                : null,
             image: variantImageURL,
             colorHex: v.tipoVariante === "color" ? v.colorHex : "",
             stock: stockFinal,
@@ -412,16 +445,16 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
         })
       );
 
-      const nuevoProducto = { 
-        name, 
-        tag, 
-        image: imageURL, 
+      const nuevoProducto = {
+        name,
+        tag,
+        image: imageURL,
         variantes: variantesProcesadas
       };
       if (!producto) nuevoProducto.createdAt = serverTimestamp();
 
       await onSave(nuevoProducto);
-      
+
       if (producto && producto.name !== name) {
         await sendNotification({ tipo: "nombre", producto: producto.name, antes: producto.name, despues: name });
       } else if (!producto) {
@@ -477,15 +510,15 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
           {modelos.map((modelo) => {
             const hijos = colores.filter(c => c.modeloPadre === modelo.attr && modelo.attr !== "");
-            
+
             return (
               <div key={modelo._originalIndex} className={styles.variantRow}>
-                
+
                 <div className={styles.variantModelo}>
                   <div className={styles.cardHeader}>
                     <h4>Modelo Base</h4>
                   </div>
-                  
+
                   <label>
                     Nombre del Modelo
                     <input
@@ -512,7 +545,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                       <input type="number" min="0" step="0.01" value={modelo.priceJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "priceJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
                     </label>
                   </div>
-                  
+
                   <label>
                     Unidades por combo
                     <input type="number" min="0" step="1" value={modelo.unidadesPorJuego} onChange={(e) => handleVariantChange(modelo._originalIndex, "unidadesPorJuego", e.target.value)} onWheel={(e) => e.target.blur()} />
@@ -520,7 +553,7 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
                   <fieldset style={{ marginTop: "15px", padding: "10px", borderRadius: "6px", border: "1px dashed #cbd5e1", background: "#f8fafc" }}>
                     <legend style={{ fontSize: "0.8rem", fontWeight: "600", color: "#475569" }}>Ficha Técnica del Modelo Base</legend>
-                    
+
                     {modelo.fichaTecnica?.map((item, fIndex) => (
                       <div key={fIndex} style={{ display: "flex", gap: "6px", marginBottom: "6px", alignItems: "center" }}>
                         <input
@@ -570,13 +603,13 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                   <div className={styles.coloresScroll}>
                     {hijos.map((color) => {
                       const hasImage = !!variantImages[color._originalIndex] || !!color.image;
-                      
+
                       return (
                         <div key={color._originalIndex} className={styles.variantColorMini}>
                           <div className={styles.cardHeaderColor}>
                             <h4>Variante Color</h4>
                           </div>
-                          
+
                           <label>
                             Nombre Color (Ej: Azul)
                             <input type="text" value={color.attr} onChange={(e) => handleVariantChange(color._originalIndex, "attr", formatText(e.target.value))} placeholder="Ej: Azul" />
@@ -584,24 +617,24 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
 
                           <label>
                             Subir imagen del tapizado/color
-                            <input 
-                              type="file" 
-                              accept="image/*" 
-                              onChange={(e) => setVariantImages({ ...variantImages, [color._originalIndex]: e.target.files[0] })} 
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => setVariantImages({ ...variantImages, [color._originalIndex]: e.target.files[0] })}
                             />
                           </label>
 
                           {hasImage ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', margin: '10px 0' }}>
                               {color.image && !variantImages[color._originalIndex] && (
-                                <img src={color.image} alt={color.attr} className={styles.previewImg} style={{width: '60px', borderRadius: '4px', border: '1px solid #ddd'}} />
+                                <img src={color.image} alt={color.attr} className={styles.previewImg} style={{ width: '60px', borderRadius: '4px', border: '1px solid #ddd' }} />
                               )}
                               {variantImages[color._originalIndex] && (
                                 <span style={{ fontSize: "0.85rem", color: "#16a34a", fontWeight: "bold" }}>✅ Imagen nueva lista para subir</span>
                               )}
-                              <button 
-                                type="button" 
-                                onClick={() => handleRemoveVariantImage(color._originalIndex)} 
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveVariantImage(color._originalIndex)}
                                 style={{ marginTop: '5px', fontSize: '0.75rem', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ef4444', color: '#ef4444', background: '#fef2f2' }}
                               >
                                 🗑️ Quitar imagen y usar color
@@ -614,19 +647,14 @@ export default function AddProduct({ onClose, onSave, categoriaId, producto }) {
                             </label>
                           )}
 
-                          <div className={styles.grid2Cols}>
-                            <label>Precio <input type="number" min="0" value={color.price} onChange={(e) => handleVariantChange(color._originalIndex, "price", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            <label>Combo <input type="number" min="0" value={color.priceJuego} onChange={(e) => handleVariantChange(color._originalIndex, "priceJuego", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                          </div>
-
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '15px 0 5px 0' }}>
                             <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#475569' }}>Stock sucursales</span>
                           </div>
 
                           <div className={styles.grid3Cols}>
-                            <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
-                            <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()}/></label>
+                            <label>Stk 4320 <input type="number" min="0" value={color.stock4320} onChange={(e) => handleVariantChange(color._originalIndex, "stock4320", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                            <label>Stk 4034 <input type="number" min="0" value={color.stock4034} onChange={(e) => handleVariantChange(color._originalIndex, "stock4034", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
+                            <label>Stk 2440 <input type="number" min="0" value={color.stock2440} onChange={(e) => handleVariantChange(color._originalIndex, "stock2440", e.target.value)} onWheel={(e) => e.target.blur()} /></label>
                           </div>
 
                           <button type="button" onClick={() => handleRemoveVariant(color._originalIndex)} className={styles.btnRemoveVariantMini}>
