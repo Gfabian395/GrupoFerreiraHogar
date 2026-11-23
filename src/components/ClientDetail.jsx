@@ -75,13 +75,18 @@ const obtenerFechaHoyInput = () => {
 };
 
 const obtenerTotalVenta = (venta) => {
-  const totalCredito = Number(venta.totalCredito || 0);
-  if (totalCredito > 0) return totalCredito;
-
+  const descuento = Number(venta.descuento || 0);
   const valorCuota = Number(venta.valorCuota || 0);
   const cuotas = Number(venta.cuotas || 0);
 
-  return valorCuota * cuotas;
+  if (cuotas > 0 && valorCuota > 0) {
+    return Math.max(valorCuota * cuotas - descuento, 0);
+  }
+
+  const totalDirecto = Number(venta.total || venta.totalCredito || 0);
+  if (totalDirecto > 0) return Math.max(totalDirecto - descuento, 0);
+
+  return Math.max(valorCuota * cuotas - descuento, 0);
 };
 
 // ===============================
@@ -379,6 +384,17 @@ export default function ClientDetail() {
   const estaPagado = (venta) => {
     const totalPagado = calcularTotalPagadoVenta(venta);
     const totalCredito = obtenerTotalVenta(venta);
+    const saldoFinanciado = venta.pago?.saldoFinanciado;
+    if (typeof saldoFinanciado === "number" && saldoFinanciado > 0) {
+      return false;
+    }
+    if (venta.pago?.pagoParcial === true && Math.round(totalPagado) < Math.round(totalCredito)) {
+      return false;
+    }
+    const totalCuotas = Number(venta.cuotas || 0);
+    if (totalCuotas > 0 && obtenerCuotasPagadas(venta) < totalCuotas) {
+      return false;
+    }
     return Math.round(totalPagado) >= Math.round(totalCredito);
   };
 
@@ -614,6 +630,7 @@ Gracias por su pago.`;
 
   const renderTablePagos = (venta, permitirAgregar) => {
     const valorCuotaSeguro = Number(venta.valorCuota) || 1;
+    const totalCuotas = Number(venta.cuotas) || 0;
     let acumuladoPagos = 0;
 
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
@@ -635,9 +652,7 @@ Gracias por su pago.`;
       };
     });
 
-    const totalPagado = calcularTotalPagadoVenta(venta);
-    const cuotasPagas = Math.floor(totalPagado / valorCuotaSeguro);
-    const totalCuotas = Number(venta.cuotas) || 0;
+    const cuotasPagas = obtenerCuotasPagadas(venta);
     const cuotasRestantes = Math.max(totalCuotas - cuotasPagas, 0);
 
     return (
@@ -784,7 +799,7 @@ Gracias por su pago.`;
               const totalCredito = obtenerTotalVenta(venta);
               const totalPagado = calcularTotalPagadoVenta(venta);
               const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
-              const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
+              const { diasAtraso, montoRecargo } = calcularRecargoAtraso(venta);
 
               const totalConRecargoBase = totalCredito + montoRecargo;
               const saldoConRecargo = Math.max(totalConRecargoBase - totalPagado, 0);
@@ -1058,13 +1073,15 @@ Gracias por su pago.`;
                     .filter((v) => v.id === selectedVentaId)
                     .map((venta) => {
                       const totalCredito = obtenerTotalVenta(venta);
+                      const totalPagado = calcularTotalPagadoVenta(venta);
+                      const saldoReal = Math.max(totalCredito - totalPagado, 0);
 
                       return (
                         <div key={venta.id}>
                           <section className={styles.saleWrapper} style={{ margin: 0, boxShadow: "none" }}>
                             <section className={styles.saleInfoCard} style={{ border: "none", padding: 0 }}>
                               <div className={styles.saleSection}>
-                                <h4>Datos de la venta (Completada)</h4>
+                                <h4>Datos de la venta ({saldoReal <= 0 ? "Completada" : "Pendiente"})</h4>
 
                                 <p>
                                   <span className={styles.badge}>ID de Venta</span>
@@ -1124,9 +1141,9 @@ Gracias por su pago.`;
                                 <p><span className={styles.badge}>Valor por cuota</span>{venta.valorCuota?.toLocaleString("es-AR")}</p>
                                 <p><span className={styles.badge}>Cantidad de cuotas</span>{venta.cuotas}</p>
 
-                                <div className={styles.saleDebtPaid}>
+                                <div className={saldoReal <= 0 ? styles.saleDebtPaid : styles.saleDebtPending}>
                                   <span>Deuda de esta compra:</span>
-                                  <strong>$0 (Pagada)</strong>
+                                  <strong>{saldoReal <= 0 ? "$0 (Pagada)" : `$${saldoReal.toLocaleString("es-AR")}`}</strong>
                                 </div>
                               </div>
 
@@ -1163,7 +1180,7 @@ Gracias por su pago.`;
                               </div>
                             </section>
 
-                            {renderTablePagos(venta, false)}
+                            {renderTablePagos(venta, saldoReal > 0)}
                           </section>
                         </div>
                       );

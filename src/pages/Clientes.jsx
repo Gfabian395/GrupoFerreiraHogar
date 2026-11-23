@@ -38,7 +38,6 @@ const pagoEnMesActual = (venta, hoy) => {
   const mesActual = hoy.getMonth();
   const anioActual = hoy.getFullYear();
 
-  // 1. Revisar si el pago inicial fue este mismo mes
   if (venta.pago?.primerCuotaPaga || Number(venta.pago?.montoPagado || 0) > 0) {
     const fechaInicial = parsearFechaSegura(venta.fecha);
     if (
@@ -50,7 +49,6 @@ const pagoEnMesActual = (venta, hoy) => {
     }
   }
 
-  // 2. Revisar si alguno de los pagos en el array cayó en este mes
   return (venta.pagos || []).some((p) => {
     const fechaPago = parsearFechaSegura(p.fecha);
     return (
@@ -59,6 +57,16 @@ const pagoEnMesActual = (venta, hoy) => {
       fechaPago.getFullYear() === anioActual
     );
   });
+};
+
+const obtenerTotalVenta = (venta) => {
+  const descuento = Number(venta.descuento || 0);
+  const totalDirecto = Number(venta.total || venta.totalCredito || 0);
+  if (totalDirecto > 0) return Math.max(totalDirecto - descuento, 0);
+
+  const valorCuota = Number(venta.valorCuota || 0);
+  const cuotas = Number(venta.cuotas || 0);
+  return Math.max(valorCuota * cuotas - descuento, 0);
 };
 
 const calcularTotalPagadoVenta = (venta) => {
@@ -72,8 +80,22 @@ const calcularTotalPagadoVenta = (venta) => {
 
 const estaPagado = (venta) => {
   const totalPagado = calcularTotalPagadoVenta(venta);
-  const totalCredito = venta.totalCredito || (venta.valorCuota || 0) * (venta.cuotas || 0);
+  const totalCredito = obtenerTotalVenta(venta);
+  const saldoFinanciado = venta.pago?.saldoFinanciado;
+  if (typeof saldoFinanciado === "number" && saldoFinanciado > 0) {
+    return false;
+  }
+  if (venta.pago?.pagoParcial === true && Math.round(totalPagado) < Math.round(totalCredito)) {
+    return false;
+  }
   return Math.round(totalPagado) >= Math.round(totalCredito);
+};
+
+const calcularSaldoVenta = (venta) => {
+  if (estaPagado(venta)) return 0;
+  const totalVenta = obtenerTotalVenta(venta);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  return Math.max(totalVenta - totalPagado, 0);
 };
 
 // ===============================
@@ -99,11 +121,11 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
   const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
 
   let techoPuntaje = 55;
-  if (terminadas >= 10) techoPuntaje = 100;    
-  else if (terminadas >= 5) techoPuntaje = 88;   
-  else if (terminadas >= 3) techoPuntaje = 78;   
-  else if (terminadas >= 2) techoPuntaje = 68;   
-  else if (terminadas === 1) techoPuntaje = 62;   
+  if (terminadas >= 10) techoPuntaje = 100;
+  else if (terminadas >= 5) techoPuntaje = 88;
+  else if (terminadas >= 3) techoPuntaje = 78;
+  else if (terminadas >= 2) techoPuntaje = 68;
+  else if (terminadas === 1) techoPuntaje = 62;
 
   let totalCuotasEvaluadas = 0;
   let diasAtrasoAcumulados = 0;
@@ -111,7 +133,7 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
   let maximoAtrasoActual = 0;
 
   ventasDelCliente.forEach((venta) => {
-    if (estaPagado(venta)) return; 
+    if (estaPagado(venta)) return;
 
     const fechaVentaReal = parsearFechaSegura(venta.fecha);
     if (!fechaVentaReal) return;
@@ -157,8 +179,8 @@ const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
     }
   });
 
-  let promedioAtraso = totalCuotasEvaluadas > 0 ? diasAtrasoAcumulados / totalCuotasEvaluadas : 0;
-  let restaPorHistorial = promedioAtraso * 0.8;
+  const promedioAtraso = totalCuotasEvaluadas > 0 ? diasAtrasoAcumulados / totalCuotasEvaluadas : 0;
+  const restaPorHistorial = promedioAtraso * 0.8;
 
   let scoreFinal = techoPuntaje - restaPorHistorial - penalizacionActivaGrave;
   scoreFinal = Math.max(0, Math.min(100, scoreFinal));
@@ -209,17 +231,16 @@ export default function Clientes() {
   const [usuarios, setUsuarios] = useState({});
   const navigate = useNavigate();
   const [filtroVendedor, setFiltroVendedor] = useState("");
-  const [filtroColor, setFiltroColor] = useState(""); 
-  
-  // 🚀 Límite inicial de clientes visibles para carga incremental
+  const [filtroColor, setFiltroColor] = useState("");
+
   const [limiteVisibles, setLimiteVisibles] = useState(12);
   const loaderRef = useRef(null);
 
   const obtenerFechaHoy = () => {
     const hoy = new Date();
     const anio = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const dia = String(hoy.getDate()).padStart(2, '0');
+    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+    const dia = String(hoy.getDate()).padStart(2, "0");
     return `${anio}-${mes}-${dia}`;
   };
 
@@ -292,7 +313,6 @@ export default function Clientes() {
     fetchData();
   }, []);
 
-  // 🚀 Indexación de ventas por cliente para rendimiento óptimo
   const ventasPorClienteMap = useMemo(() => {
     const mapa = {};
     ventas.forEach((v) => {
@@ -312,6 +332,10 @@ export default function Clientes() {
       const activas = total - terminadas;
       const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
       const scorePagos = calcularScoreCliente(c, ventasDelCliente, hoy);
+      const deudaTotal = ventasDelCliente.reduce(
+        (acc, v) => acc + calcularSaldoVenta(v),
+        0
+      );
 
       return {
         ...c,
@@ -321,6 +345,7 @@ export default function Clientes() {
         comprasActivas: activas,
         comprasTerminadas: terminadas,
         idVenta: ventaActiva ? ventaActiva.id : null,
+        deudaTotal,
         score: scorePagos,
       };
     });
@@ -343,7 +368,7 @@ export default function Clientes() {
       let fechaVentaSeleccionada = null;
 
       ventasCliente.forEach((venta) => {
-        let fechaBase = parsearFechaSegura(venta.fecha);
+        const fechaBase = parsearFechaSegura(venta.fecha);
         if (!fechaBase) return;
 
         const cuotasPagadas = venta.pagos?.length || 0;
@@ -366,14 +391,14 @@ export default function Clientes() {
         const yaPagoEsteMes = pagoEnMesActual(ventaMasAtrasada, hoy);
 
         const nombresProductos =
-          ventaMasAtrasada.productos?.map((p) => p.name || p.nombre || p.descripcion || p.titulo).join(", ") || 
-          ventaMasAtrasada.producto || 
+          ventaMasAtrasada.productos?.map((p) => p.name || p.nombre || p.descripcion || p.titulo).join(", ") ||
+          ventaMasAtrasada.producto ||
           "—";
 
         const claveVendedorRaw = (
-          ventaMasAtrasada.vendedorReal || 
-          ventaMasAtrasada.cargadoPor || 
-          ventaMasAtrasada.vendedor || 
+          ventaMasAtrasada.vendedorReal ||
+          ventaMasAtrasada.cargadoPor ||
+          ventaMasAtrasada.vendedor ||
           ""
         ).toString().trim();
 
@@ -402,7 +427,7 @@ export default function Clientes() {
           proximoVencimiento: proximoVencimientoCalculado,
           vendedor: nombreVendedor,
           fechaCompra: fechaVentaSeleccionada,
-          pagoEsteMes: yaPagoEsteMes, // ✅ Propiedad añadida para el badge
+          pagoEsteMes: yaPagoEsteMes,
         };
       }
 
@@ -419,7 +444,7 @@ export default function Clientes() {
       const nombre = (c.nombre || "").toLowerCase();
       const dni = String(c.dni || "").toLowerCase();
       const direccion = (c.direccion || "").toLowerCase();
-      
+
       const cumpleBusq = !q || nombre.includes(q) || dni.includes(q) || direccion.includes(q);
 
       let cumpleColor = true;
@@ -437,12 +462,10 @@ export default function Clientes() {
     });
   }, [clientesConCalculos, search, filtroColor]);
 
-  // 🚀 Cortamos el array filtrado para renderizar únicamente los clientes del lote actual
   const clientesPaginados = useMemo(() => {
     return clientesFiltrados.slice(0, limiteVisibles);
   }, [clientesFiltrados, limiteVisibles]);
 
-  // 🚀 IntersectionObserver para detectar el scroll automáticamente y cargar más
   useEffect(() => {
     const currentLoader = loaderRef.current;
     if (!currentLoader) return;
@@ -473,8 +496,8 @@ export default function Clientes() {
     }
 
     localStorage.setItem("expiraVisita", finDelDia.getTime());
-    window.open(`/clientes/${clienteId}`, "_blank");
-  }, [clientesReclamadosHoy]);
+    navigate(`/clientes/${clienteId}`);
+  }, [clientesReclamadosHoy, navigate]);
 
   const handleContextMenuCliente = useCallback((e, clienteId) => {
     e.preventDefault();
@@ -499,7 +522,6 @@ export default function Clientes() {
 
   return (
     <>
-      {/* HEADER */}
       <div className={styles.header}>
         <input
           type="text"
@@ -570,8 +592,8 @@ export default function Clientes() {
           className={styles.searchInput}
         />
 
-        <button 
-          onClick={() => { setFechaDesde(""); setFechaHasta(""); }} 
+        <button
+          onClick={() => { setFechaDesde(""); setFechaHasta(""); }}
           className={styles.btnVerTodos}
           style={{ marginLeft: "10px" }}
         >
@@ -579,7 +601,6 @@ export default function Clientes() {
         </button>
       </div>
 
-      {/* CLIENTES VENCIDOS */}
       {clientesVencidos.length > 0 && (
         <div className={styles.vencidosContainer}>
           <h3 className={styles.vencidosTitle}>
@@ -664,12 +685,11 @@ export default function Clientes() {
         </div>
       )}
 
-      {/* GRID DE CLIENTES */}
       <div className={styles.grid}>
         {clientesPaginados.length > 0 ? (
           clientesPaginados.map((cli) => (
-            <div 
-              key={cli.id} 
+            <div
+              key={cli.id}
               onContextMenu={(e) => handleContextMenuCliente(e, cli.id)}
             >
               <CardClient
@@ -690,14 +710,12 @@ export default function Clientes() {
         )}
       </div>
 
-      {/* ELEMENTO OBSERVADOR INVISIBLE PARA EL INFINITE SCROLL */}
       <div ref={loaderRef} style={{ height: "40px", margin: "20px 0", textAlign: "center" }}>
         {limiteVisibles < clientesFiltrados.length && (
           <span style={{ color: "#666", fontSize: "14px" }}>Cargando más clientes...</span>
         )}
       </div>
 
-      {/* MODAL */}
       {isModalOpen && (
         <AddClient
           onClose={() => {

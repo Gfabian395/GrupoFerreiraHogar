@@ -147,6 +147,7 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
   }
 
   const idDeVenta = cliente.idVenta || cliente.id_venta || cliente.idVentaActiva;
+  const deudaTotal = Number(cliente.deudaTotal || 0);
 
   // Verificamos si realmente tiene historial o compras para mostrar puntuación
   const tieneHistorial = cliente.score && cliente.score.leyenda !== "Sin historial";
@@ -305,6 +306,15 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
                 >
                   {telefono2}
                 </a>
+              </span>
+            </div>
+          )}
+
+          {deudaTotal > 0 && (
+            <div className={styles.row} style={{ marginTop: "6px" }}>
+              <span className={styles.label}>💰 Saldo pendiente</span>
+              <span className={styles.value} style={{ fontWeight: "700" }}>
+                ${deudaTotal.toLocaleString("es-AR")}
               </span>
             </div>
           )}
