@@ -484,7 +484,7 @@ export default function Clientes() {
     };
   }, [clientesFiltrados.length]);
 
-  const handleDoubleClickCliente = useCallback((clienteId) => {
+  const abrirClienteEnNuevaPestana = useCallback((clienteId) => {
     const finDelDia = new Date();
     finDelDia.setHours(23, 59, 59, 999);
 
@@ -496,13 +496,30 @@ export default function Clientes() {
     }
 
     localStorage.setItem("expiraVisita", finDelDia.getTime());
-    navigate(`/clientes/${clienteId}`);
-  }, [clientesReclamadosHoy, navigate]);
+
+    const url = `${window.location.origin}/clientes/${clienteId}`;
+    const nuevaVentana = window.open(url, "_blank", "noopener,noreferrer");
+
+    if (!nuevaVentana || nuevaVentana.closed || typeof nuevaVentana.closed === "undefined") {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }, [clientesReclamadosHoy]);
+
+  const handleDoubleClickCliente = useCallback((clienteId) => {
+    abrirClienteEnNuevaPestana(clienteId);
+  }, [abrirClienteEnNuevaPestana]);
 
   const handleContextMenuCliente = useCallback((e, clienteId) => {
     e.preventDefault();
-    handleDoubleClickCliente(clienteId);
-  }, [handleDoubleClickCliente]);
+    e.stopPropagation();
+    abrirClienteEnNuevaPestana(clienteId);
+  }, [abrirClienteEnNuevaPestana]);
 
   const handleSaveClient = async (data) => {
     try {
@@ -691,6 +708,12 @@ export default function Clientes() {
             <div
               key={cli.id}
               onContextMenu={(e) => handleContextMenuCliente(e, cli.id)}
+              onAuxClick={(e) => {
+                if (e.button === 1) {
+                  e.preventDefault();
+                  abrirClienteEnNuevaPestana(cli.id);
+                }
+              }}
             >
               <CardClient
                 cliente={cli}

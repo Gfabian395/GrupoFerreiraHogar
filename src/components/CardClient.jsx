@@ -51,7 +51,11 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
   // ===============================
   // NAVEGACIÓN A DETALLE DE CLIENTE
   // ===============================
-  const handleCardClick = () => {
+  const handleCardClick = (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      window.open(`${window.location.origin}/clientes/${id}`, "_blank", "noopener,noreferrer");
+      return;
+    }
     navigate(`/clientes/${id}`);
   };
 
