@@ -102,9 +102,25 @@ const calcularTotalPagadoVenta = (venta) => {
 };
 
 const obtenerCuotasPagadas = (venta) => {
+  const totalCuotas = Number(venta.cuotas) || 0;
+  if (totalCuotas <= 0) return 0;
+
   const valorCuota = Number(venta.valorCuota) || 1;
   const totalPagado = calcularTotalPagadoVenta(venta);
-  return Math.min(Math.floor(totalPagado / valorCuota), Number(venta.cuotas) || 0);
+  return Math.min(Math.floor(totalPagado / valorCuota), totalCuotas);
+};
+
+const obtenerSaldoPendienteBase = (venta) => {
+  const totalVenta = obtenerTotalVenta(venta);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  const saldoCalculado = Math.max(totalVenta - totalPagado, 0);
+
+  const saldoFinanciado = Number(venta.pago?.saldoFinanciado);
+  if (!Number.isNaN(saldoFinanciado) && saldoFinanciado > 0 && (!venta.pagos || venta.pagos.length === 0)) {
+    return saldoFinanciado;
+  }
+
+  return saldoCalculado;
 };
 
 // ===============================
@@ -382,30 +398,22 @@ export default function ClientDetail() {
   };
 
   const estaPagado = (venta) => {
-    const totalPagado = calcularTotalPagadoVenta(venta);
-    const totalCredito = obtenerTotalVenta(venta);
-    const saldoFinanciado = venta.pago?.saldoFinanciado;
-    if (typeof saldoFinanciado === "number" && saldoFinanciado > 0) {
-      return false;
-    }
-    if (venta.pago?.pagoParcial === true && Math.round(totalPagado) < Math.round(totalCredito)) {
+    const saldoPendiente = obtenerSaldoPendienteBase(venta);
+    if (saldoPendiente > 0) {
       return false;
     }
     const totalCuotas = Number(venta.cuotas || 0);
     if (totalCuotas > 0 && obtenerCuotasPagadas(venta) < totalCuotas) {
       return false;
     }
-    return Math.round(totalPagado) >= Math.round(totalCredito);
+    return true;
   };
 
   const ventasAtrasadasIds = useMemo(() => {
     const hoy = new Date();
     return ventas
       .filter((v) => {
-        const totalCredito = obtenerTotalVenta(v);
-        const totalPagado = calcularTotalPagadoVenta(v);
-
-        if (Math.round(totalPagado) >= Math.round(totalCredito)) return false;
+        if (estaPagado(v)) return false;
 
         const fechaInicio = v.fecha?.toDate ? v.fecha.toDate() : new Date(v.fecha);
         const cuotasPagadas = obtenerCuotasPagadas(v);
@@ -438,48 +446,60 @@ export default function ClientDetail() {
   if (loadingCliente || loadingVentas) return <Loader />;
   if (!cliente) return null;
 
-  const enviarRecordatorio = (venta) => {
-    const telefonoRaw =
-      cliente.telefono1?.replace(/\D/g, "") ||
-      cliente.telefono2?.replace(/\D/g, "");
+const enviarRecordatorio = (venta) => {
+  const telefonoRaw =
+    cliente.telefono1?.replace(/\D/g, "") ||
+    cliente.telefono2?.replace(/\D/g, "");
 
-    if (!telefonoRaw) {
-      alert("El cliente no tiene teléfono cargado");
-      return;
-    }
+  if (!telefonoRaw) {
+    alert("El cliente no tiene teléfono cargado");
+    return;
+  }
 
-    const telefono = telefonoRaw.startsWith("54")
-      ? telefonoRaw
-      : `54${telefonoRaw}`;
+  const telefono = telefonoRaw.startsWith("54")
+    ? telefonoRaw
+    : `54${telefonoRaw}`;
 
-    const cuotasPagadas = obtenerCuotasPagadas(venta);
-    const numeroCuota = cuotasPagadas + 1;
-    const valorCuota = Number(venta.valorCuota || 0);
-    const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
+  const totalCuotas = Math.max(Number(venta.cuotas || 0), 1);
+  const cuotasPagadas = obtenerCuotasPagadas(venta);
+  const numeroCuota = Math.min(cuotasPagadas + 1, totalCuotas);
+  const valorCuota = Number(venta.valorCuota || 0);
+  const { diasAtraso, porcentajeRecargo, montoRecargo } = calcularRecargoAtraso(venta);
 
-    let mensajeRecargo = "";
-    if (diasAtraso >= 30) {
-      mensajeRecargo = `\n⚠️ Su cuota registra ${diasAtraso} días de atraso, aplicándose un recargo del ${porcentajeRecargo}% ($${montoRecargo.toLocaleString("es-AR")}).`;
-    }
+  const productosDetalle =
+    venta.productos && venta.productos.length > 0
+      ? venta.productos
+          .map((p) => `${p.nombre} (x${p.cantidad})`)
+          .join(", ")
+      : "tu compra";
 
-    const mensajeTransferencia = `\n💳 Recuerde que abonando por Transferencia, Tarjeta, QR o Link de Pago cuenta con un recargo adicional del +5%.`;
+  const montoConTransferencia = Math.round((valorCuota + montoRecargo) * 1.05);
 
-    const mensaje = `Estimado/a ${cliente.nombre},
+  const detalleAtraso =
+    diasAtraso >= 30
+      ? `\n- Recargo por atraso (${diasAtraso} días, ${porcentajeRecargo}%): +$${montoRecargo.toLocaleString("es-AR")}`
+      : "";
 
-Le informamos que se encuentra pendiente el pago de su cuota N° ${numeroCuota}.
+  const mensaje = [
+    `¡Hola ${cliente.nombre}!`,
+    "",
+    `Esperamos que tu día vaya de maravilla. Te escribimos de Grupo Ferreira Hogar para recordarte el pago pendiente de tu cuota por la compra de ${productosDetalle}.`,
+    "",
+    `Detalle de la cuota:`,
+    `- Cuota: ${numeroCuota}/${totalCuotas}`,
+    `- Monto en efectivo: $${valorCuota.toLocaleString("es-AR")}${detalleAtraso}`,
+    `- Con Transferencia, Tarjeta, QR o Link de Pago (+5% de recargo): $${montoConTransferencia.toLocaleString("es-AR")}`,
+    "",
+    `Por favor, avisanos cuando realices el pago o, si ya lo abonaste, desestimá este mensaje.`,
+    "",
+    `¡Gracias por mantenerte al día!`,
+    `Este es un mensaje automático generado por nuestro sistema.`,
+  ].join("\n");
 
-Monto de la cuota: $${valorCuota.toLocaleString("es-AR")}${mensajeRecargo}${mensajeTransferencia}
+  const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
 
-Le solicitamos regularizar la misma a la brevedad.
-
-Si usted ya realizó el pago, por favor desestime este mensaje.
-
-Este es un mensaje automático generado por nuestro sistema.`;
-
-    const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
-
-    window.open(url, "_blank");
-  };
+  window.open(url, "_blank");
+};
 
   const reenviarComprobante = (venta) => {
     const telefonoRaw =
@@ -636,9 +656,9 @@ Gracias por su pago.`;
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
       const monto = Number(typeof pago.monto === "string" ? pago.monto.replace(",", ".") : pago.monto || 0);
 
-      const cuotaInicio = Math.floor(acumuladoPagos / valorCuotaSeguro) + 1;
+      const cuotaInicio = Math.min(Math.floor(acumuladoPagos / valorCuotaSeguro) + 1, Math.max(totalCuotas, 1));
       acumuladoPagos += monto;
-      let cuotaFin = Math.ceil(acumuladoPagos / valorCuotaSeguro);
+      let cuotaFin = Math.min(Math.ceil(acumuladoPagos / valorCuotaSeguro), Math.max(totalCuotas, 1));
       if (cuotaFin < cuotaInicio) cuotaFin = cuotaInicio;
 
       const labelCuota = cuotaInicio === cuotaFin
@@ -797,12 +817,10 @@ Gracias por su pago.`;
           <>
             {ventasPendientes.map((venta) => {
               const totalCredito = obtenerTotalVenta(venta);
-              const totalPagado = calcularTotalPagadoVenta(venta);
-              const saldoPendiente = Math.max(totalCredito - totalPagado, 0);
+              const saldoPendiente = obtenerSaldoPendienteBase(venta);
               const { diasAtraso, montoRecargo } = calcularRecargoAtraso(venta);
 
-              const totalConRecargoBase = totalCredito + montoRecargo;
-              const saldoConRecargo = Math.max(totalConRecargoBase - totalPagado, 0);
+              const saldoConRecargo = saldoPendiente > 0 ? saldoPendiente + montoRecargo : 0;
 
               const recargoTransferencia = Math.round((saldoConRecargo * 1.05) / 100) * 100;
 
@@ -1073,8 +1091,7 @@ Gracias por su pago.`;
                     .filter((v) => v.id === selectedVentaId)
                     .map((venta) => {
                       const totalCredito = obtenerTotalVenta(venta);
-                      const totalPagado = calcularTotalPagadoVenta(venta);
-                      const saldoReal = Math.max(totalCredito - totalPagado, 0);
+                      const saldoReal = obtenerSaldoPendienteBase(venta);
 
                       return (
                         <div key={venta.id}>
@@ -1196,10 +1213,9 @@ Gracias por su pago.`;
             Deuda Total: $
             {ventasPendientes
               .reduce((total, venta) => {
-                const totalPagado = calcularTotalPagadoVenta(venta);
-                const totalVenta = obtenerTotalVenta(venta);
+                const saldoPendiente = obtenerSaldoPendienteBase(venta);
                 const { montoRecargo } = calcularRecargoAtraso(venta);
-                const saldoConRecargo = Math.max((totalVenta + montoRecargo) - totalPagado, 0);
+                const saldoConRecargo = saldoPendiente > 0 ? saldoPendiente + montoRecargo : 0;
 
                 return total + saldoConRecargo;
               }, 0)
