@@ -93,19 +93,22 @@ const obtenerTotalVenta = (venta) => {
 // 🔢 CÁLCULO UNIFICADO DE PAGOS Y CUOTAS
 // ===============================
 const calcularTotalPagadoVenta = (venta) => {
-  const pagoInicial = Number(venta.pago?.montoPagado || 0);
-  const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
-    const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
+  const pagosCuotas = (venta.pagos || []).reduce((sum, p) => {
+    if (p.esPagoInicial) return sum;
+    const rawMonto = p.montoBase ?? p.monto ?? 0;
+    const montoLimpio = typeof rawMonto === "string" ? rawMonto.replace(",", ".") : rawMonto;
     return sum + Number(montoLimpio || 0);
   }, 0);
-  return pagoInicial + pagosPosteriores;
+  return pagosCuotas;
 };
 
 const obtenerCuotasPagadas = (venta) => {
   const totalCuotas = Number(venta.cuotas) || 0;
   if (totalCuotas <= 0) return 0;
 
-  const valorCuota = Number(venta.valorCuota) || 1;
+  const valorCuota = Number(venta.valorCuota) || 0;
+  if (valorCuota <= 0) return 0;
+
   const totalPagado = calcularTotalPagadoVenta(venta);
   return Math.min(Math.floor(totalPagado / valorCuota), totalCuotas);
 };
@@ -113,14 +116,7 @@ const obtenerCuotasPagadas = (venta) => {
 const obtenerSaldoPendienteBase = (venta) => {
   const totalVenta = obtenerTotalVenta(venta);
   const totalPagado = calcularTotalPagadoVenta(venta);
-  const saldoCalculado = Math.max(totalVenta - totalPagado, 0);
-
-  const saldoFinanciado = Number(venta.pago?.saldoFinanciado);
-  if (!Number.isNaN(saldoFinanciado) && saldoFinanciado > 0 && (!venta.pagos || venta.pagos.length === 0)) {
-    return saldoFinanciado;
-  }
-
-  return saldoCalculado;
+  return Math.max(totalVenta - totalPagado, 0);
 };
 
 // ===============================
@@ -167,18 +163,17 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
   const pagosNormalizados = [];
 
   const montoPagoAntiguo = Number(venta.pago?.montoPagado || 0);
-  const tienePagoInicial = Boolean(venta.pago?.primerCuotaPaga || montoPagoAntiguo > 0);
-  const montoInicialNormalizado = montoPagoAntiguo || Number(venta.valorCuota || 0);
+  const tienePagoInicial = Boolean(montoPagoAntiguo > 0);
 
   if (tienePagoInicial) {
     pagosNormalizados.push({
-      numero: 1,
+      numero: 0,
       fecha: venta.fecha || venta.createdAt || "—",
-      monto: montoInicialNormalizado,
-      montoBase: montoInicialNormalizado,
+      monto: montoPagoAntiguo,
+      montoBase: montoPagoAntiguo,
       montoRecargoAtraso: 0,
       montoRecargoMetodo: 0,
-      metodo: "Primera cuota (Pago inicial)",
+      metodo: "Anticipo (Pago inicial)",
       estado: "Pagado",
       firma: venta.cargadoPor || "Sistema",
       esPagoInicial: true,
@@ -197,13 +192,13 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
         (
           pago.esPagoInicial === true ||
           metodoLower.includes("pago inicial") ||
-          metodoLower.includes("primera cuota") ||
-          (pago.numero === 1 && Math.abs(montoInicialNormalizado - montoActual) < 1)
+          metodoLower.includes("anticipo") ||
+          (pago.numero === 0 && Math.abs(montoPagoAntiguo - montoActual) < 1)
         );
 
       if (!esElMismoPagoInicial) {
         pagosNormalizados.push({
-          numero: pago.numero ?? pagosNormalizados.length + 1,
+          numero: pago.numero ?? pagosNormalizados.filter((x) => !x.esPagoInicial).length + 1,
           fecha: pago.fecha ?? "—",
           monto: montoActual,
           montoBase: Number(pago.montoBase ?? montoActual),
@@ -356,9 +351,10 @@ export default function ClientDetail() {
     }
 
     const montoFinalPago = montoBaseInput + recargoMetodoMonto;
+    const cantidadPagosCuotas = (venta.pagos || []).filter((p) => !p.esPagoInicial).length;
 
     const pagoAGuardar = {
-      numero: (venta.pagos?.length || 0) + 1,
+      numero: cantidadPagosCuotas + 1,
       fecha: nuevoPago.fecha,
       monto: montoFinalPago,
       montoBase: montoBaseInput,
@@ -520,7 +516,7 @@ const enviarRecordatorio = (venta) => {
       .join("\n");
 
     const valorCuota = Number(venta.valorCuota || 0);
-    const todosLosPagos = venta.pagos || [];
+    const todosLosPagos = (venta.pagos || []).filter((p) => !p.esPagoInicial);
 
     const totalPagadoHistorico = calcularTotalPagadoVenta(venta);
     const ultimoPago = todosLosPagos.length > 0 ? todosLosPagos[todosLosPagos.length - 1] : null;
@@ -528,14 +524,14 @@ const enviarRecordatorio = (venta) => {
     const valorPagadoTexto = montoUltimoPago.toLocaleString("es-AR");
 
     const totalAntesDeEstePago = totalPagadoHistorico - montoUltimoPago;
-    const cuotasCompletasAntes = Math.floor(totalAntesDeEstePago / valorCuota);
-    const cuotasCompletasAhora = Math.floor(totalPagadoHistorico / valorCuota);
+    const cuotasCompletasAntes = valorCuota > 0 ? Math.floor(totalAntesDeEstePago / valorCuota) : 0;
+    const cuotasCompletasAhora = valorCuota > 0 ? Math.floor(totalPagadoHistorico / valorCuota) : 0;
 
     let detalleCuota = "";
 
     if (cuotasCompletasAhora > cuotasCompletasAntes) {
       detalleCuota = `cuota n°${cuotasCompletasAhora} (completa)`;
-      const saldoSobrante = totalPagadoHistorico % valorCuota;
+      const saldoSobrante = valorCuota > 0 ? totalPagadoHistorico % valorCuota : 0;
       if (saldoSobrante > 0 && cuotasCompletasAhora < Number(venta.cuotas)) {
         detalleCuota += ` y saldo a cuenta de cuota n°${cuotasCompletasAhora + 1}`;
       }
@@ -652,12 +648,26 @@ Gracias por su pago.`;
     const valorCuotaSeguro = Number(venta.valorCuota) || 1;
     const totalCuotas = Number(venta.cuotas) || 0;
     let acumuladoPagos = 0;
+    let contadorCuotasReal = 0;
 
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
-      const monto = Number(typeof pago.monto === "string" ? pago.monto.replace(",", ".") : pago.monto || 0);
+      if (pago.esPagoInicial) {
+        return {
+          ...pago,
+          indexReal: 0,
+          labelCuota: "Anticipo",
+        };
+      }
+
+      contadorCuotasReal += 1;
+      const montoBase = Number(
+        typeof (pago.montoBase ?? pago.monto) === "string"
+          ? (pago.montoBase ?? pago.monto).replace(",", ".")
+          : (pago.montoBase ?? pago.monto ?? 0)
+      );
 
       const cuotaInicio = Math.min(Math.floor(acumuladoPagos / valorCuotaSeguro) + 1, Math.max(totalCuotas, 1));
-      acumuladoPagos += monto;
+      acumuladoPagos += montoBase;
       let cuotaFin = Math.min(Math.ceil(acumuladoPagos / valorCuotaSeguro), Math.max(totalCuotas, 1));
       if (cuotaFin < cuotaInicio) cuotaFin = cuotaInicio;
 
@@ -667,7 +677,7 @@ Gracias por su pago.`;
 
       return {
         ...pago,
-        indexReal: pago.numero || i + 1,
+        indexReal: pago.numero || contadorCuotasReal || i + 1,
         labelCuota,
       };
     });
