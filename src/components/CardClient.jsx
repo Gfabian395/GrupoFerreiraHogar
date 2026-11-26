@@ -3,8 +3,18 @@ import { useNavigate } from "react-router-dom";
 import styles from "../styles/CardClient.module.css";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import {
+  CLASES_MANUALES,
+  normalizarClasificacion,
+} from "../pages/Clientes";
 
-export default function CardClient({ cliente, onEdit, onDelete }) {
+export default function CardClient({
+  cliente,
+  resaltado = false,
+  onCambiarClasificacion,
+  onEdit,
+  onDelete,
+}) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
@@ -20,14 +30,12 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     telefono1,
     telefono2,
     estado,
-    fotoUrl,
     motivoBloqueo,
-    observaciones, // 👈 Capturamos las observaciones del cliente
+    observaciones,
   } = cliente;
 
-  // ===============================
-  // CERRAR MENU (CLICK FUERA / ESC)
-  // ===============================
+  const clasificacionActual = normalizarClasificacion(cliente.clasificacion);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -48,12 +56,13 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
     };
   }, []);
 
-  // ===============================
-  // NAVEGACIÓN A DETALLE DE CLIENTE
-  // ===============================
   const handleCardClick = (e) => {
     if (e.ctrlKey || e.metaKey) {
-      window.open(`${window.location.origin}/clientes/${id}`, "_blank", "noopener,noreferrer");
+      window.open(
+        `${window.location.origin}/clientes/${id}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
       return;
     }
     navigate(`/clientes/${id}`);
@@ -61,36 +70,49 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
 
   const limpiarNumero = (numero) => {
     if (!numero) return "";
-    return numero.replace(/\D/g, ""); // elimina todo lo que no sea número
+    return numero.replace(/\D/g, "");
   };
 
-  // ===============================
-  // EDITAR OBSERVACIONES
-  // ===============================
-  const editarObservaciones = async () => {
-    const nuevaNota = prompt("Ingrese las observaciones para este cliente:", observaciones || "");
+  const handleSelectClasificacion = async (e) => {
+    e.stopPropagation();
+    const nuevaClase = normalizarClasificacion(e.target.value);
 
-    if (nuevaNota === null) return; // Si cancela, no hace nada
+    if (onCambiarClasificacion) {
+      await onCambiarClasificacion(id, nuevaClase);
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, "clientes", id), {
+        clasificacion: nuevaClase,
+      });
+    } catch (error) {
+      console.error("Error actualizando clasificación:", error);
+      alert("No se pudo actualizar la clasificación.");
+    }
+  };
+
+  const editarObservaciones = async () => {
+    const nuevaNota = prompt(
+      "Ingrese las observaciones para este cliente:",
+      observaciones || ""
+    );
+    if (nuevaNota === null) return;
 
     try {
       await updateDoc(doc(db, "clientes", id), {
         observaciones: nuevaNota.trim(),
       });
-
-      window.location.reload();
+      if (onEdit) onEdit({ ...cliente, observaciones: nuevaNota.trim() });
     } catch (error) {
       console.error("Error guardando observaciones:", error);
       alert("No se pudieron guardar las observaciones.");
     }
   };
 
-  // ===============================
-  // BLOQUEAR CLIENTE CON MOTIVO (<= 50 palabras)
-  // ===============================
   const bloquearCliente = async () => {
     const motivo = prompt("Ingrese el motivo del bloqueo (máximo 50 palabras):");
-
-    if (motivo === null) return; // Si cancela, no hace nada
+    if (motivo === null) return;
 
     const palabras = motivo.trim().split(/\s+/);
     if (palabras.length > 50) {
@@ -103,78 +125,70 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
         estado: "Bloqueado",
         motivoBloqueo: motivo.trim() || "Sin motivo especificado",
       });
-
-      window.location.reload();
+      if (onDelete) onDelete();
     } catch (error) {
       console.error("Error bloqueando cliente:", error);
     }
   };
 
-  // ===============================
-  // DESBLOQUEAR CLIENTE
-  // ===============================
   const desbloquearCliente = async () => {
     try {
       await updateDoc(doc(db, "clientes", id), {
         estado: "Activo",
-        motivoBloqueo: "", // Limpiamos el motivo al desbloquear
+        motivoBloqueo: "",
       });
-
-      window.location.reload();
+      if (onDelete) onDelete();
     } catch (error) {
       console.error("Error desbloqueando cliente:", error);
     }
   };
 
-  // Variable para manejar la clase de fondo dinámicamente según su estado o puntuación
+  // Estilo según clasificación manual o estado bloqueado
   let cardStatusClass = "";
-
   if (estado === "Bloqueado") {
-    cardStatusClass = styles.cardBlocked; // Color gris/bloqueado
-  } else if (cliente.score && cliente.score.leyenda !== "Sin historial") {
-    switch (cliente.score.leyenda) {
-      case "Excelente":
+    cardStatusClass = styles.cardBlocked;
+  } else {
+    switch (clasificacionActual) {
+      case "excelente":
         cardStatusClass = styles.cardVip;
         break;
-      case "Bueno":
+      case "pagador":
         cardStatusClass = styles.cardPremium;
         break;
-      case "Regular":
+      case "nuevo":
+        cardStatusClass = styles.cardNuevo;
+        break;
+      case "duro":
         cardStatusClass = styles.cardRegular;
         break;
-      case "Mal pagador":
+      case "clavo":
         cardStatusClass = styles.cardBadPay;
         break;
       default:
-        cardStatusClass = "";
+        cardStatusClass = styles.cardSinClasificar || "";
     }
   }
 
-  const idDeVenta = cliente.idVenta || cliente.id_venta || cliente.idVentaActiva;
+  const idDeVenta =
+    cliente.idVenta || cliente.id_venta || cliente.idVentaActiva;
   const deudaTotal = Number(cliente.deudaTotal || 0);
-
-  // Verificamos si realmente tiene historial o compras para mostrar puntuación
-  const tieneHistorial = cliente.score && cliente.score.leyenda !== "Sin historial";
-  const notaDecimal = tieneHistorial ? (cliente.score.puntos / 10).toFixed(1) : null;
 
   return (
     <div className={styles.clientWrapper}>
-      <article className={`${styles.clientCard} ${cardStatusClass}`} onClick={handleCardClick}>
-        {/* HEADER */}
+      <article
+        className={`${styles.clientCard} ${cardStatusClass} ${
+          resaltado ? styles.resaltado : ""
+        }`}
+        onClick={handleCardClick}
+      >
         <header className={styles.clientHeader}>
-          {/* <div className={styles.avatar}>
-            <img
-              src={
-                fotoUrl ||
-                "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-              }
-              alt={nombre}
-            />
-          </div> */}
-
-          {/* MENU */}
-          <div className={styles.clientMenu} ref={menuRef} onClick={(e) => e.stopPropagation()} >
+          <div
+            className={styles.clientMenu}
+            ref={menuRef}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
+              type="button"
               className={styles.menuBtn}
               onClick={(e) => {
                 e.stopPropagation();
@@ -186,10 +200,18 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
 
             {open && (
               <div className={styles.menuDropdown}>
-                <button onClick={() => onEdit(cliente)}>✏️ Editar cliente</button>
-
-                {/* 📝 BOTÓN DE OBSERVACIONES ACTIVO */}
                 <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    onEdit && onEdit(cliente);
+                  }}
+                >
+                  ✏️ Editar cliente
+                </button>
+
+                <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setOpen(false);
@@ -201,9 +223,11 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
 
                 {estado === "Bloqueado" ? (
                   <button
+                    type="button"
                     style={{ color: "#16a34a", fontWeight: "bold" }}
                     onClick={(e) => {
                       e.stopPropagation();
+                      setOpen(false);
                       desbloquearCliente();
                     }}
                   >
@@ -211,9 +235,11 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
                   </button>
                 ) : (
                   <button
+                    type="button"
                     className={styles.danger}
                     onClick={(e) => {
                       e.stopPropagation();
+                      setOpen(false);
                       bloquearCliente();
                     }}
                   >
@@ -221,67 +247,67 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
                   </button>
                 )}
 
-                <button className={styles.danger} onClick={() => onDelete(cliente)}>
+                <button
+                  type="button"
+                  className={styles.danger}
+                  onClick={() => {
+                    setOpen(false);
+                    onDelete && onDelete(cliente);
+                  }}
+                >
                   🗑 Eliminar
                 </button>
               </div>
             )}
 
-            {/* ESTADO */}
             <span
-              className={`${styles.status} ${estado === "Activo" ? styles.ok : styles.blocked
-                }`}
+              className={`${styles.status} ${
+                estado === "Activo" ? styles.ok : styles.blocked
+              }`}
             >
-              {estado}
+              {estado || "Activo"}
             </span>
           </div>
 
           <div className={styles.identity}>
             <h3>{nombre}</h3>
+            {dni && <small className={styles.dniSub}>DNI {dni}</small>}
           </div>
-
-
         </header>
 
-        
-          {/* 🌟 INDICADOR DE PUNTUACIÓN (SOLO SI TIENE HISTORIAL REAL Y NO ESTÁ BLOQUEADO) */}
-          {estado !== "Bloqueado" && tieneHistorial && (
-            <div className={styles.rowPuntuacion}>
-              <div className={styles.puntuacionPrincipal}>
-                <span className={styles.label}>⭐ Puntuación</span>
-                <span className={styles.valuePuntuacion}>
-                  {notaDecimal}{" "}
-                  <span className={styles.leyendaPuntuacion}>
-                    ({cliente.score.leyenda})
-                  </span>
-                </span>
-              </div>
+        {/* SELECTOR MANUAL DE CLASIFICACIÓN */}
+        <div
+          className={styles.clasificacionBox}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <label htmlFor={`clase-${id}`} className={styles.label}>
+            🏷️ Clasificación
+          </label>
+          <select
+            id={`clase-${id}`}
+            value={clasificacionActual}
+            onChange={handleSelectClasificacion}
+            className={styles.clasificacionSelect}
+          >
+            {CLASES_MANUALES.map((clase) => (
+              <option key={clase} value={clase}>
+                {clase.toUpperCase()}
+              </option>
+            ))}
+          </select>
+        </div>
 
-              {cliente.score.detalle && (
-                <div className={styles.detallePuntuacion}>
-                  {cliente.score.detalle}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ℹ️ SI ES NUEVO SIN HISTORIAL Y ACTIVO */}
-          {estado !== "Bloqueado" && !tieneHistorial && (
-            <div className={styles.rowPuntuacion}>
-              <div className={styles.puntuacionPrincipal}>
-                <span className={styles.label}>⭐ Puntuación</span>
-                <span className={styles.valuePuntuacion} style={{ fontSize: "13px", color: "#64748b" }}>
-                  Sin calificar (Cliente nuevo)
-                </span>
-              </div>
-              <div className={styles.detallePuntuacion}>
-                Cliente nuevo sin compras registradas.
-              </div>
-            </div>
-          )}
-
-        {/* INFO */}
+        {/* INFO DEL CLIENTE */}
         <div className={styles.clientInfo}>
+          {(direccion || entreCalles) && (
+            <div className={styles.row}>
+              <span className={styles.label}>📍 Dirección</span>
+              <span className={styles.value}>
+                {direccion || "—"} {entreCalles ? `· ${entreCalles}` : ""}
+              </span>
+            </div>
+          )}
+
           {telefono1 && limpiarNumero(telefono1).length > 9 && (
             <div className={styles.row}>
               <span className={styles.label}>📱 WhatsApp</span>
@@ -323,8 +349,6 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
             </div>
           )}
 
-
-          {/* 🚫 AVISO VISUAL DE ALERTA LLAMATIVA SI ESTÁ BLOQUEADO */}
           {estado === "Bloqueado" && (
             <div className={styles.alertaBloqueo}>
               <div className={styles.alertaBloqueoHeader}>
@@ -337,44 +361,73 @@ export default function CardClient({ cliente, onEdit, onDelete }) {
             </div>
           )}
 
-          {/* 📝 OBSERVACIONES DEL CLIENTE (VISIBLES EN LA TARJETA) */}
           {observaciones && (
-            <div className={styles.row} style={{ marginTop: "8px", background: "#f8fafc", padding: "6px 8px", borderRadius: "6px", display: "flex", flexDirection: "column", gap: "2px" }}>
-              <span className={styles.label} style={{ fontWeight: "600", fontSize: "12px" }}>📝 Observaciones:</span>
-              <span className={styles.value} style={{ fontSize: "12px", color: "#334155", wordBreak: "break-word" }}>
+            <div
+              className={styles.row}
+              style={{
+                marginTop: "8px",
+                background: "#f8fafc",
+                padding: "6px 8px",
+                borderRadius: "6px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+              }}
+            >
+              <span
+                className={styles.label}
+                style={{ fontWeight: "600", fontSize: "12px" }}
+              >
+                📝 Observaciones:
+              </span>
+              <span
+                className={styles.value}
+                style={{
+                  fontSize: "12px",
+                  color: "#334155",
+                  wordBreak: "break-word",
+                }}
+              >
                 {observaciones}
               </span>
             </div>
           )}
 
-          {/* 📊 BLOQUE DE MÉTRICAS */}
+          {/* MÉTRICAS DE COMPRAS */}
           <div className={styles.metricsContainer}>
-            {/* Total */}
             <div className={`${styles.metricBox} ${styles.boxTotal}`}>
-              <span className={styles.metricLabel}>Total de compras</span>
-              <strong className={styles.metricValue}>{cliente.comprasTotales || 0}</strong>
+              <span className={styles.metricLabel}>Total compras</span>
+              <strong className={styles.metricValue}>
+                {cliente.comprasTotales || 0}
+              </strong>
             </div>
 
-            {/* Activas */}
             <div className={`${styles.metricBox} ${styles.boxActive}`}>
-              <span className={styles.metricLabel}>Esta pagando</span>
+              <span className={styles.metricLabel}>Pagando</span>
               <strong className={styles.metricValue}>
                 {cliente.comprasActivas || 0}
                 {idDeVenta && (
-                  <span style={{ fontSize: "12px", fontWeight: "normal", opacity: 0.6, marginLeft: "6px" }}>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: "normal",
+                      opacity: 0.65,
+                      marginLeft: "4px",
+                    }}
+                  >
                     (#{String(idDeVenta).slice(-4)})
                   </span>
                 )}
               </strong>
             </div>
 
-            {/* Terminadas */}
             <div className={`${styles.metricBox} ${styles.boxCompleted}`}>
-              <span className={styles.metricLabel}>Termino</span>
-              <strong className={styles.metricValue}>{cliente.comprasTerminadas || 0}</strong>
+              <span className={styles.metricLabel}>Terminadas</span>
+              <strong className={styles.metricValue}>
+                {cliente.comprasTerminadas || 0}
+              </strong>
             </div>
           </div>
-
         </div>
       </article>
     </div>

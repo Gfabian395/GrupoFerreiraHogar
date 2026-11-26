@@ -1,15 +1,51 @@
-
-h1{
+h1 {
   color: black;
 }
+
 /* ==========================================================================
-   🌌 OVERLAY (Fondo difuminado de pantalla)
+   CONTENEDOR PRINCIPAL DE VENTAS (PANTALLA COMPLETA)
+   ========================================================================== */
+.wrapper {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #334155;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.header .input {
+  width: auto;
+  min-width: 170px;
+}
+
+/* ==========================================================================
+   OVERLAY (Fondo difuminado si se usa en modal)
    ========================================================================== */
 .cartOverlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background-color: rgba(15, 23, 42, 0.3); /* Capa oscura traslúcida muy suave */
+  background-color: rgba(15, 23, 42, 0.3);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
@@ -21,32 +57,32 @@ h1{
 }
 
 /* ==========================================================================
-   📝 CART FORM / WRAPPER (Contenedor principal en Blanco Puro)
+   CART FORM / WRAPPER
    ========================================================================== */
 .cartForm {
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
-  background: #ffffff; /* Fondo blanco impecable */
-  padding: 24px; /* Un toque más de aire interior */
+  background: #ffffff;
+  padding: 24px;
   border-radius: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   position: relative;
-  border: 1px solid #e2e8f0; /* Borde sutil gris */
-  /* Sombra natural drop-shadow multicapa premium */
-  box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.05), 
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.05),
     0 10px 10px -5px rgba(0, 0, 0, 0.03);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #334155; /* Texto general gris oscuro (relaja la vista) */
+  color: #334155;
   animation: slideUp 0.25s ease;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
-   ❌ CLOSE BUTTON (Botón de cerrar refinado)
+   CLOSE BUTTON
    ========================================================================== */
 .cartClose {
   position: absolute;
@@ -55,8 +91,8 @@ h1{
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: none; /* Adiós al borde negro grueso */
-  background-color: #f1f5f9; /* Círculo gris pastel */
+  border: none;
+  background-color: #f1f5f9;
   color: #64748b;
   font-size: 16px;
   cursor: pointer;
@@ -73,27 +109,31 @@ h1{
 }
 
 /* ==========================================================================
-   🃏 SECTIONS / CARDS (Subcontenedores internos)
+   SECTIONS / CARDS
    ========================================================================== */
 .card {
   background-color: #ffffff;
   border-radius: 14px;
   padding: 1.25rem;
-  border: 1px solid #e2e8f0; /* Estructura limpia libre de rejillas pesadas */
+  border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  color: black;
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
 }
 
 .card h2 {
   font-size: 1.05rem;
-  font-weight: 600;
-  color: #0f172a; /* Título bien marcado */
-  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
   letter-spacing: -0.01em;
 }
 
 /* ==========================================================================
-   🗂️ GRID LAYOUT
+   GRID LAYOUT
    ========================================================================== */
 .grid {
   display: grid;
@@ -102,34 +142,41 @@ h1{
 }
 
 /* ==========================================================================
-   ⌨️ FORM INPUTS & SELECTS
+   FORM INPUTS & SELECTS
    ========================================================================== */
 .input,
 .select {
   width: 100%;
   padding: 0.75rem 0.9rem;
-  border: 1px solid #cbd5e1; /* Gris medio para el campo en reposo */
+  border: 1px solid #cbd5e1;
   background-color: #ffffff;
   border-radius: 10px;
   font-size: 0.9rem;
   color: #1e293b;
   outline: none;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .input::placeholder {
-  color: #94a3b8; /* Placeholder suave para que no compita con lo digitado */
+  color: #94a3b8;
 }
 
 .input:focus,
 .select:focus {
-  border-color: #2563eb; /* Color de foco azul dinámico */
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); /* Anillo de enfoque estético */
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* ==========================================================================
-   🔘 CHECKBOX
+   CHECKBOXES Y RADIOS
    ========================================================================== */
+.checkboxGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .checkbox {
   display: flex;
   align-items: center;
@@ -140,14 +187,14 @@ h1{
 }
 
 /* ==========================================================================
-   🏷️ PRODUCT LIST (Filas de resumen de productos)
+   PRODUCT LIST
    ========================================================================== */
 .product {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0;
-  border-bottom: 1px dashed #e2e8f0; /* Punteado gris estético */
+  border-bottom: 1px dashed #e2e8f0;
   font-size: 0.9rem;
   color: #475569;
 }
@@ -158,11 +205,11 @@ h1{
 
 .product span:last-child {
   font-weight: 600;
-  color: #0f172a; /* El precio se destaca más oscuro */
+  color: #0f172a;
 }
 
 /* ==========================================================================
-   💰 TOTAL DISPLAY
+   TOTAL DISPLAY
    ========================================================================== */
 .total {
   margin-top: 1.2rem;
@@ -180,25 +227,26 @@ h1{
 }
 
 /* ==========================================================================
-   🚀 CONFIRM BUTTON (Acción principal)
+   CONFIRM BUTTON
    ========================================================================== */
 .confirm {
   width: 100%;
-  margin-top: 1.5rem;
-  padding: 12px;
+  margin-top: 0.5rem;
+  padding: 14px 16px;
   border-radius: 12px;
   border: none;
-  background: #2563eb; /* Azul sólido brillante de alta conversión */
-  color: #ffffff; /* Texto obligatoriamente blanco */
+  background: #2563eb;
+  color: #ffffff;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .confirm:hover {
-  background: #1d4ed8; /* Oscurece al pasar el cursor */
+  background: #1d4ed8;
   box-shadow: 0 6px 14px rgba(29, 78, 216, 0.3);
   transform: translateY(-1px);
 }
@@ -216,8 +264,33 @@ h1{
 }
 
 /* ==========================================================================
-   📱 MEDIA QUERIES (Ajustes Mobile Modo Claro)
+   MEDIA QUERIES (Ajustes Mobile Modo Claro)
    ========================================================================== */
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 14px 12px 32px;
+    gap: 12px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .header .input {
+    width: 100%;
+  }
+
+  .checkboxGroup {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
 @media (max-width: 480px) {
   .cartForm {
     max-width: 95%;
@@ -249,13 +322,13 @@ h1{
   }
 
   .confirm {
-    padding: 11px;
+    padding: 12px;
     font-size: 0.95rem;
   }
 }
 
 /* ==========================================================================
-   🎬 ANIMATIONS
+   ANIMATIONS
    ========================================================================== */
 @keyframes fadeIn {
   from { opacity: 0; }

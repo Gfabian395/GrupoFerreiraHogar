@@ -1,5 +1,5 @@
 /* ==========================================================================
-   💳 PAYMENT WRAPPER & CARD
+   PAYMENT WRAPPER & CARD
    ========================================================================== */
 .paymentWrapper {
   position: relative;
@@ -7,13 +7,13 @@
   justify-content: center;
   align-items: flex-start;
   padding: 2rem 1rem;
-  background-color: #f8fafc; /* Fondo ligeramente más claro y limpio */
+  background-color: #f8fafc;
   min-height: 100vh;
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, sans-serif; /* Tipografía moderna por defecto */
+  font-family: system-ui, -apple-system, sans-serif;
 }
 
-/* Fondo oscuro con blur que se activa automáticamente cuando el formulario está abierto */
+/* Fondo oscuro con blur que se activa cuando el formulario de pago está abierto */
 .paymentWrapper:has(.addPagoRow)::before {
   content: '';
   position: fixed;
@@ -32,19 +32,21 @@
   border: 1px solid #f1f5f9;
   width: 100%;
   max-width: 950px;
-  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.05), 0 10px 15px -5px rgba(15, 23, 42, 0.02);
+  box-shadow:
+    0 20px 40px -10px rgba(15, 23, 42, 0.05),
+    0 10px 15px -5px rgba(15, 23, 42, 0.02);
   box-sizing: border-box;
 }
 
 /* ==========================================================================
-   👤 CLIENT HEADER & IDENTITY
+   CLIENT HEADER & IDENTITY
    ========================================================================== */
 .clientHeader {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 1.25rem;
   align-items: center;
-  border-bottom: 2px dashed #e2e8f0; /* Borde punteado más moderno */
+  border-bottom: 2px dashed #e2e8f0;
   padding-bottom: 1.5rem;
 }
 
@@ -82,8 +84,25 @@
   color: #94a3b8;
 }
 
+.identity select {
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.identity select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
 /* ==========================================================================
-   🚦 STATUS BADGES
+   STATUS BADGES
    ========================================================================== */
 .status {
   font-size: 0.75rem;
@@ -109,23 +128,23 @@
 }
 
 /* ==========================================================================
-   📦 SALE WRAPPER & INFO CARD (Separación Notoria)
+   SALE WRAPPER & INFO CARD
    ========================================================================== */
 .saleWrapper {
   position: relative;
   display: grid;
   gap: 1.5rem;
   padding: 2rem;
-  margin-bottom: 3.5rem; /* Separación extrema entre compras */
+  margin-bottom: 3.5rem;
   border-radius: 1.25rem;
   border: 1px solid #e2e8f0;
-  border-left: 8px solid #3b82f6; /* Borde más grueso y brillante */
+  border-left: 8px solid #3b82f6;
   background-color: #ffffff;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
-/* Conector visual entre tarjetas de compra (Efecto Timeline) */
 .saleWrapper:not(:last-child)::after {
   content: '';
   position: absolute;
@@ -134,7 +153,7 @@
   width: 4px;
   height: 3.5rem;
   background-image: linear-gradient(to bottom, #cbd5e1 50%, transparent 50%);
-  background-size: 4px 14px; /* Línea punteada */
+  background-size: 4px 14px;
   opacity: 0.6;
 }
 
@@ -155,6 +174,11 @@
 .saleInfoCard {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+}
+
+.saleSection {
+  min-width: 0;
 }
 
 .saleSection h4 {
@@ -173,7 +197,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  word-break: break-word;
 }
 
 .badge {
@@ -194,17 +219,21 @@
   padding: 0.25rem 0.75rem;
   border-radius: 0.375rem;
   border: 1px solid #bfdbfe;
+  word-break: break-all;
 }
 
 /* Deuda por compra individual */
-.saleDebtPending, .saleDebtPaid {
+.saleDebtPending,
+.saleDebtPaid {
   margin-top: 16px;
   padding: 16px 20px;
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   transition: transform 0.2s ease;
+  box-sizing: border-box;
 }
 
 .saleDebtPending {
@@ -223,6 +252,7 @@
   font-weight: 800;
   font-size: 1.25rem;
   color: #dc2626;
+  white-space: nowrap;
 }
 
 .saleDebtPaid {
@@ -241,15 +271,17 @@
   font-weight: 800;
   font-size: 1.25rem;
   color: #15803d;
+  white-space: nowrap;
 }
 
 /* ==========================================================================
-   📊 PAYMENTS (Tabla de control de Cuotas)
+   PAYMENTS (Tabla de control de cuotas)
    ========================================================================== */
 .payments {
   display: grid;
   gap: 1.25rem;
   margin-top: 0.5rem;
+  min-width: 0;
 }
 
 .payments header {
@@ -278,7 +310,6 @@
   transition: all 0.2s ease;
 }
 
-/* ESTRUCTURA DE LA TABLA */
 .table {
   display: grid;
   border-radius: 0.75rem;
@@ -289,7 +320,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   padding: 1rem;
   font-size: 0.875rem;
   align-items: center;
@@ -298,6 +329,7 @@
   color: #334155;
   background-color: #ffffff;
   transition: background-color 0.2s ease;
+  word-break: break-word;
 }
 
 .row:last-child {
@@ -320,7 +352,7 @@
 }
 
 /* ==========================================================================
-   ➕ ADD PAYMENT ROW
+   ADD PAYMENT MODAL / ROW
    ========================================================================== */
 .addPagoRow {
   position: fixed;
@@ -338,6 +370,7 @@
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
   display: grid;
   grid-template-columns: 1fr;
+  box-sizing: border-box;
 }
 
 .addPagoRow input,
@@ -361,8 +394,8 @@
 }
 
 .addPagoRow button {
-  padding: 0.6rem 0.75rem;
-  font-size: 0.8rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.82rem;
   font-weight: 700;
   border-radius: 0.5rem;
   border: none;
@@ -380,7 +413,7 @@
 }
 
 /* ==========================================================================
-   ✅ PAID SUMMARY
+   PAID SUMMARY
    ========================================================================== */
 .paidSummary {
   margin-top: 2rem;
@@ -388,6 +421,7 @@
   background: linear-gradient(to bottom right, #f8fafc, #f1f5f9);
   border-radius: 1.25rem;
   border: 1px solid #e2e8f0;
+  box-sizing: border-box;
 }
 
 .paidSummary h4 {
@@ -399,7 +433,7 @@
 
 .paidItemsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 0.75rem;
 }
 
@@ -414,11 +448,11 @@
   transition: all 0.2s ease;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 /* ==========================================================================
-   💰 DEUDA TOTAL ACUMULADA
+   DEUDA TOTAL ACUMULADA
    ========================================================================== */
 .totalDebt {
   margin-top: 2rem;
@@ -436,14 +470,19 @@
   letter-spacing: -0.02em;
 }
 
-/* Animaciones */
 @keyframes flash {
-  0% { background-color: #dcfce7; box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.2); }
-  100% { background-color: transparent; box-shadow: 0 0 0 0 transparent; }
+  0% {
+    background-color: #dcfce7;
+    box-shadow: 0 0 0 6px rgba(22, 163, 74, 0.2);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 /* ==========================================================================
-   📱 MEDIA QUERIES (Ajustes Mobile / Tableta)
+   RESPONSIVE SMARTPHONES Y TABLETS
    ========================================================================== */
 @media (max-width: 768px) {
   .row.head {
@@ -453,35 +492,43 @@
   .table .row:not(.addPagoRow) {
     grid-template-columns: 1fr;
     gap: 0.5rem;
-    padding: 1.25rem;
+    padding: 1.15rem;
     border-bottom: 4px solid #f1f5f9;
   }
 
-  .table .row span::before {
+  .table .row:not(.addPagoRow) > span::before {
     font-weight: 700;
     color: #64748b;
     display: inline-block;
-    width: 90px;
+    min-width: 85px;
+    margin-right: 6px;
     text-transform: uppercase;
     font-size: 0.7rem;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
 
-  .table .row:not(.addPagoRow) span:nth-child(1)::before { content: "Cuota: "; }
-  .table .row:not(.addPagoRow) span:nth-child(2)::before { content: "Fecha: "; }
-  .table .row:not(.addPagoRow) span:nth-child(3)::before { content: "Monto: "; }
-  .table .row:not(.addPagoRow) span:nth-child(4)::before { content: "Método: "; }
-  .table .row:not(.addPagoRow) span:nth-child(5)::before { content: "Estado: "; }
-  .table .row:not(.addPagoRow) span:nth-child(6)::before { content: "Firma: "; }
+  .table .row:not(.addPagoRow) > span:nth-child(1)::before { content: "Cuota: "; }
+  .table .row:not(.addPagoRow) > span:nth-child(2)::before { content: "Fecha: "; }
+  .table .row:not(.addPagoRow) > span:nth-child(3)::before { content: "Monto: "; }
+  .table .row:not(.addPagoRow) > span:nth-child(4)::before { content: "Método: "; }
+  .table .row:not(.addPagoRow) > span:nth-child(5)::before { content: "Estado: "; }
+  .table .row:not(.addPagoRow) > span:nth-child(6)::before { content: "Firma: "; }
+
+  .saleDebtPending,
+  .saleDebtPaid {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+
+  .paidItemsGrid {
+    grid-template-columns: 1fr;
+  }
 
   .addPagoRow {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
+    width: 92%;
     max-width: 420px;
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
     gap: 0.8rem;
     padding: 1.25rem;
   }
@@ -489,23 +536,38 @@
 
 @media (max-width: 480px) {
   .paymentWrapper {
-    padding: 1rem 0.5rem;
+    padding: 0.75rem 0.4rem;
   }
 
   .paymentCard {
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 0.9rem;
     border-radius: 1rem;
+    gap: 1.4rem;
+  }
+
+  .identity h3 {
+    font-size: 1.15rem;
   }
 
   .saleWrapper {
-    padding: 1.25rem;
-    margin-bottom: 2.5rem;
+    padding: 1.1rem;
+    margin-bottom: 2.25rem;
+    border-left-width: 5px;
   }
 
   .saleWrapper:not(:last-child)::after {
-    left: 1.25rem;
-    height: 2.5rem;
-    bottom: -2.5rem;
+    left: 1.1rem;
+    height: 2.25rem;
+    bottom: -2.25rem;
+  }
+
+  .saleSection h4 {
+    font-size: 1.05rem;
+  }
+
+  .saleSection p {
+    font-size: 0.84rem;
+    gap: 0.4rem;
   }
 
   .clientHeader {
@@ -516,5 +578,9 @@
 
   .totalDebt {
     text-align: center;
+  }
+
+  .totalDebt h3 {
+    font-size: 1.35rem;
   }
 }

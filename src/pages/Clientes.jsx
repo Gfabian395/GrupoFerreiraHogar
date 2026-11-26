@@ -1,45 +1,199 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { collection, getDocs, addDoc, updateDoc, doc } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
-import { useNavigate } from "react-router-dom";
 import AddClient from "../components/AddClient";
 import CardClient from "../components/CardClient";
 import styles from "../styles/Clientes.module.css";
 
-// ===============================
-// CONSTANTES GLOBALES (Fuera del render)
-// ===============================
-const MESES_ES = {
-  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
-  julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11
+// ==========================================
+// CONSTANTES DE CLASIFICACIÓN MANUAL + BLOQUEADOS
+// ==========================================
+export const CLASIFICACIONES = [
+  { id: "todos", label: "TODOS" },
+  { id: "sin clasificar", label: "SIN CLASIFICAR" },
+  { id: "excelente", label: "EXCELENTE" },
+  { id: "pagador", label: "PAGADOR" },
+  { id: "nuevo", label: "NUEVO" },
+  { id: "duro", label: "DURO" },
+  { id: "bloqueado", label: "BLOQUEADOS" },
+];
+
+export const FILTROS_TABLA_PAGO_MES = [
+  { id: "todos", label: "TODOS" },
+  { id: "pagados_mes", label: "PAGADOS ESTE MES" },
+  { id: "no_pagados_mes", label: "NO PAGADOS ESTE MES" },
+];
+
+export const CLASES_MANUALES = [
+  "sin clasificar",
+  "excelente",
+  "pagador",
+  "nuevo",
+  "duro",
+];
+
+export const normalizarClasificacion = (valor) => {
+  if (!valor) return "sin clasificar";
+  const limpia = String(valor).toLowerCase().trim();
+  return CLASES_MANUALES.includes(limpia) ? limpia : "sin clasificar";
 };
 
-const parsearFechaSegura = (fechaObj) => {
-  if (!fechaObj) return null;
-  if (fechaObj.toDate) return fechaObj.toDate();
-  if (fechaObj instanceof Date) return fechaObj;
+const esClienteBloqueado = (cliente) =>
+  String(cliente?.estado || "").toLowerCase().trim() === "bloqueado";
 
+// ==========================================
+// HELPERS DE FECHAS Y VENTAS
+// ==========================================
+const MESES_ES = {
+  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+  julio: 6, agosto: 7, septiembre: 8, octubre: 9, noviembre: 10, diciembre: 11,
+};
+
+const parsearFechaCruda = (fechaObj) => {
+  if (!fechaObj) return null;
+  if (typeof fechaObj === "object" && typeof fechaObj.toDate === "function") {
+    const d = fechaObj.toDate();
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (fechaObj instanceof Date) {
+    return isNaN(fechaObj.getTime()) ? null : fechaObj;
+  }
+  if (typeof fechaObj === "number") {
+    const d = new Date(fechaObj);
+    return isNaN(d.getTime()) ? null : d;
+  }
   if (typeof fechaObj === "string") {
-    const limpio = fechaObj.toLowerCase().replace(/de\s/g, "").trim();
+    const str = fechaObj.trim();
+    if (!str) return null;
+
+    const matchIso = str.match(/^(\d{1,4})-(\d{2})-(\d{2})/);
+    if (matchIso) {
+      const anio = Number(matchIso[1]);
+      const mes = Number(matchIso[2]) - 1;
+      const dia = Number(matchIso[3]);
+      return new Date(anio, mes, dia);
+    }
+
+    const limpio = str.toLowerCase().replace(/de\s/g, "").trim();
     const partes = limpio.split(/\s+/);
     if (partes.length === 3 && MESES_ES[partes[1]] !== undefined) {
       return new Date(Number(partes[2]), MESES_ES[partes[1]], Number(partes[0]));
     }
-    const d = new Date(fechaObj);
+
+    const d = new Date(str);
     if (!isNaN(d.getTime())) return d;
   }
   return null;
 };
 
-// ===============================
-// 🔍 VERIFICAR SI PAGÓ EN EL MES ACTUAL
-// ===============================
+const parsearFechaVentaSegura = (venta) => {
+  const fechaPrincipal = parsearFechaCruda(venta?.fecha);
+  const fechaCreacion = parsearFechaCruda(venta?.createdAt);
+
+  if (fechaPrincipal && fechaPrincipal.getFullYear() >= 1950) {
+    return fechaPrincipal;
+  }
+  if (fechaCreacion && fechaCreacion.getFullYear() >= 1950) {
+    return fechaCreacion;
+  }
+  return fechaPrincipal;
+};
+
+const parsearMontoSeguro = (val) => {
+  if (typeof val === "number") return Number.isFinite(val) ? val : 0;
+  if (typeof val === "string") {
+    const limpio = val.replace(/\s+/g, "").replace(",", ".");
+    const num = Number(limpio);
+    return Number.isFinite(num) ? num : 0;
+  }
+  return 0;
+};
+
+const obtenerTotalVenta = (venta) => {
+  const descuento = parsearMontoSeguro(venta.descuento);
+  const cuotas = Number(venta.cuotas || 0);
+  const valorCuota = parsearMontoSeguro(venta.valorCuota);
+  const totalDirecto = parsearMontoSeguro(venta.total || venta.totalCredito);
+
+  if (totalDirecto > 0) {
+    return Math.max(totalDirecto - descuento, 0);
+  }
+  if (cuotas > 0 && valorCuota > 0) {
+    return Math.max(valorCuota * cuotas - descuento, 0);
+  }
+  return 0;
+};
+
+const calcularTotalPagadoVenta = (venta) => {
+  const pagosLista = Array.isArray(venta.pagos) ? venta.pagos : [];
+
+  const sumaPagosArray = pagosLista.reduce((sum, p) => {
+    const rawMonto = p.montoBase ?? p.monto ?? 0;
+    return sum + parsearMontoSeguro(rawMonto);
+  }, 0);
+
+  if (sumaPagosArray > 0) {
+    return sumaPagosArray;
+  }
+
+  return parsearMontoSeguro(venta.pago?.montoPagado);
+};
+
+const obtenerCuotasPagadas = (venta) => {
+  const totalCuotas = Number(venta.cuotas || 0);
+  const valorCuota = parsearMontoSeguro(venta.valorCuota);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  const totalVenta = obtenerTotalVenta(venta);
+
+  if (totalVenta > 0 && Math.round(totalPagado) >= Math.round(totalVenta)) {
+    return totalCuotas > 0 ? totalCuotas : 1;
+  }
+
+  if (totalCuotas <= 0 || valorCuota <= 0) return 0;
+  return Math.min(Math.floor(totalPagado / valorCuota), totalCuotas);
+};
+
+const estaPagado = (venta) => {
+  const totalVenta = obtenerTotalVenta(venta);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  const totalCuotas = Number(venta.cuotas || 0);
+  const cuotasPagadas = obtenerCuotasPagadas(venta);
+
+  const pagosArray = Array.isArray(venta.pagos) ? venta.pagos : [];
+  const tienePagosRegistrados =
+    pagosArray.length > 0 || parsearMontoSeguro(venta.pago?.montoPagado) > 0;
+
+  if (
+    totalVenta > 0 &&
+    tienePagosRegistrados &&
+    Math.round(totalPagado) >= Math.round(totalVenta)
+  ) {
+    return true;
+  }
+
+  if (totalCuotas > 0 && cuotasPagadas >= totalCuotas && totalPagado > 0) {
+    return true;
+  }
+
+  return false;
+};
+
+const calcularSaldoVenta = (venta) => {
+  if (estaPagado(venta)) return 0;
+  const totalVenta = obtenerTotalVenta(venta);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  return Math.max(totalVenta - totalPagado, 0);
+};
+
 const pagoEnMesActual = (venta, hoy) => {
   const mesActual = hoy.getMonth();
   const anioActual = hoy.getFullYear();
 
-  if (venta.pago?.primerCuotaPaga || Number(venta.pago?.montoPagado || 0) > 0) {
-    const fechaInicial = parsearFechaSegura(venta.fecha);
+  if (
+    venta.pago?.primerCuotaPaga ||
+    parsearMontoSeguro(venta.pago?.montoPagado) > 0
+  ) {
+    const fechaInicial = parsearFechaVentaSegura(venta);
     if (
       fechaInicial &&
       fechaInicial.getMonth() === mesActual &&
@@ -50,7 +204,7 @@ const pagoEnMesActual = (venta, hoy) => {
   }
 
   return (venta.pagos || []).some((p) => {
-    const fechaPago = parsearFechaSegura(p.fecha);
+    const fechaPago = parsearFechaCruda(p.fecha);
     return (
       fechaPago &&
       fechaPago.getMonth() === mesActual &&
@@ -59,197 +213,50 @@ const pagoEnMesActual = (venta, hoy) => {
   });
 };
 
-const obtenerTotalVenta = (venta) => {
-  const descuento = Number(venta.descuento || 0);
-  const totalDirecto = Number(venta.total || venta.totalCredito || 0);
-  if (totalDirecto > 0) return Math.max(totalDirecto - descuento, 0);
+const resolverQuincena = (cliente, venta, fechaVencimiento) => {
+  const preferencia = (
+    cliente.quincenaPago ||
+    venta.quincenaPago ||
+    ""
+  )
+    .toString()
+    .toLowerCase();
 
-  const valorCuota = Number(venta.valorCuota || 0);
-  const cuotas = Number(venta.cuotas || 0);
-  return Math.max(valorCuota * cuotas - descuento, 0);
-};
-
-const calcularTotalPagadoVenta = (venta) => {
-  const pagoInicial = Number(venta.pago?.montoPagado || 0);
-  const pagosPosteriores = (venta.pagos || []).reduce((sum, p) => {
-    const montoLimpio = typeof p.monto === "string" ? p.monto.replace(",", ".") : p.monto;
-    return sum + Number(montoLimpio || 0);
-  }, 0);
-  return pagoInicial + pagosPosteriores;
-};
-
-const estaPagado = (venta) => {
-  const totalPagado = calcularTotalPagadoVenta(venta);
-  const totalCredito = obtenerTotalVenta(venta);
-  const saldoFinanciado = venta.pago?.saldoFinanciado;
-  if (typeof saldoFinanciado === "number" && saldoFinanciado > 0) {
-    return false;
+  if (preferencia === "primera" || preferencia === "1" || preferencia === "1ra") {
+    return "primera";
   }
-  if (venta.pago?.pagoParcial === true && Math.round(totalPagado) < Math.round(totalCredito)) {
-    return false;
-  }
-  return Math.round(totalPagado) >= Math.round(totalCredito);
-};
-
-const calcularSaldoVenta = (venta) => {
-  if (estaPagado(venta)) return 0;
-  const totalVenta = obtenerTotalVenta(venta);
-  const totalPagado = calcularTotalPagadoVenta(venta);
-  return Math.max(totalVenta - totalPagado, 0);
-};
-
-// ===============================
-// CALCULAR SCORE DEL CLIENTE (0 a 100)
-// ===============================
-const calcularScoreCliente = (cliente, ventasDelCliente, hoy) => {
-  if (cliente.estado === "Bloqueado") {
-    return {
-      puntos: 0,
-      leyenda: "Bloqueado",
-      detalle: "Cliente bloqueado del sistema."
-    };
+  if (preferencia === "segunda" || preferencia === "2" || preferencia === "2da") {
+    return "segunda";
   }
 
-  if (!ventasDelCliente.length) {
-    return {
-      puntos: 50,
-      leyenda: "Sin historial",
-      detalle: "Cliente nuevo sin compras registradas."
-    };
-  }
-
-  const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
-
-  let techoPuntaje = 55;
-  if (terminadas >= 10) techoPuntaje = 100;
-  else if (terminadas >= 5) techoPuntaje = 88;
-  else if (terminadas >= 3) techoPuntaje = 78;
-  else if (terminadas >= 2) techoPuntaje = 68;
-  else if (terminadas === 1) techoPuntaje = 62;
-
-  let totalCuotasEvaluadas = 0;
-  let diasAtrasoAcumulados = 0;
-  let penalizacionActivaGrave = 0;
-  let maximoAtrasoActual = 0;
-
-  ventasDelCliente.forEach((venta) => {
-    if (estaPagado(venta)) return;
-
-    const fechaVentaReal = parsearFechaSegura(venta.fecha);
-    if (!fechaVentaReal) return;
-
-    const pagos = venta.pagos || [];
-    let cuotasPagadasEnVenta = 0;
-
-    pagos.forEach((pago, indice) => {
-      totalCuotasEvaluadas++;
-      cuotasPagadasEnVenta++;
-      const fechaVencimientoCuota = new Date(fechaVentaReal);
-      fechaVencimientoCuota.setMonth(fechaVencimientoCuota.getMonth() + indice);
-
-      const fechaPagoReal = parsearFechaSegura(pago.fecha);
-      if (fechaPagoReal) {
-        const diasDiferencia = Math.floor((fechaPagoReal - fechaVencimientoCuota) / (1000 * 60 * 60 * 24));
-        if (diasDiferencia > 7) {
-          diasAtrasoAcumulados += (diasDiferencia - 7);
-        }
-      }
-    });
-
-    if (cuotasPagadasEnVenta < (venta.cuotas || 0)) {
-      const proxVenc = new Date(fechaVentaReal);
-      proxVenc.setMonth(proxVenc.getMonth() + cuotasPagadasEnVenta);
-
-      const diasAtrasoActual = Math.floor((hoy - proxVenc) / (1000 * 60 * 60 * 24));
-
-      if (diasAtrasoActual > 7) {
-        const diasExcedidos = diasAtrasoActual - 7;
-        if (diasExcedidos > maximoAtrasoActual) {
-          maximoAtrasoActual = diasExcedidos;
-        }
-
-        if (diasExcedidos > 60) {
-          penalizacionActivaGrave += 15;
-        } else if (diasExcedidos > 30) {
-          penalizacionActivaGrave += 10;
-        } else {
-          penalizacionActivaGrave += diasExcedidos * 0.2;
-        }
-      }
-    }
-  });
-
-  const promedioAtraso = totalCuotasEvaluadas > 0 ? diasAtrasoAcumulados / totalCuotasEvaluadas : 0;
-  const restaPorHistorial = promedioAtraso * 0.8;
-
-  let scoreFinal = techoPuntaje - restaPorHistorial - penalizacionActivaGrave;
-  scoreFinal = Math.max(0, Math.min(100, scoreFinal));
-
-  let leyenda = "Excelente";
-  if (scoreFinal >= 85) leyenda = "Excelente";
-  else if (scoreFinal >= 65) leyenda = "Bueno";
-  else if (scoreFinal >= 45) leyenda = "Regular";
-  else leyenda = "Mal pagador";
-
-  if (terminadas >= 3 && leyenda === "Mal pagador" && maximoAtrasoActual < 90) {
-    leyenda = "Regular";
-    scoreFinal = Math.max(50, scoreFinal);
-  }
-
-  let detalle = "Paga dentro de los términos pactados.";
-  if (leyenda === "Excelente") {
-    detalle = "Historial impecable. Muy buen comportamiento de pago.";
-  } else if (leyenda === "Bueno") {
-    detalle = `Buen cliente (${terminadas} compras pagadas). Registra atrasos mínimos.`;
-  } else if (leyenda === "Regular") {
-    if (terminadas === 1) {
-      detalle = "Cliente nuevo con una sola compra terminada a término. En proceso de evaluación.";
-    } else if (terminadas === 0) {
-      detalle = "Cliente nuevo pagando sus primeras cuotas activas.";
-    } else if (terminadas >= 3 && maximoAtrasoActual > 0) {
-      detalle = `Cliente fiel (${terminadas} pagadas), revisando atraso activo de ${maximoAtrasoActual} días.`;
-    } else {
-      detalle = "Registra demoras frecuentes en los vencimientos de sus cuotas.";
-    }
-  } else {
-    if (maximoAtrasoActual > 0) {
-      detalle = `Atraso activo crítico de ${maximoAtrasoActual} días con pocas compras completadas.`;
-    } else {
-      detalle = "Historial de pagos muy irregular fuera de término.";
-    }
-  }
-
-  return { puntos: Math.round(scoreFinal), leyenda, detalle };
+  const dia = fechaVencimiento ? fechaVencimiento.getDate() : 1;
+  return dia <= 15 ? "primera" : "segunda";
 };
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
-  const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [clientToEdit, setClientToEdit] = useState(null);
   const [ventas, setVentas] = useState([]);
   const [usuarios, setUsuarios] = useState({});
-  const navigate = useNavigate();
+
+  const [search, setSearch] = useState("");
+  const [chipActivo, setChipActivo] = useState("todos");
+  const [filtroTablaPagoMes, setFiltroTablaPagoMes] = useState("todos"); // 👈 SOLO PARA LA TABLA
   const [filtroVendedor, setFiltroVendedor] = useState("");
-  const [filtroColor, setFiltroColor] = useState("");
+  const [filtroQuincena, setFiltroQuincena] = useState("");
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clientToEdit, setClientToEdit] = useState(null);
 
   const [limiteVisibles, setLimiteVisibles] = useState(12);
   const loaderRef = useRef(null);
 
-  const obtenerFechaHoy = () => {
-    const hoy = new Date();
-    const anio = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, "0");
-    const dia = String(hoy.getDate()).padStart(2, "0");
-    return `${anio}-${mes}-${dia}`;
-  };
-
-  const [fechaDesde, setFechaDesde] = useState(obtenerFechaHoy);
-  const [fechaHasta, setFechaHasta] = useState(obtenerFechaHoy);
-
   const [clientesReclamadosHoy, setClientesReclamadosHoy] = useState(() => {
-    const stored = localStorage.getItem("clientesReclamadosHoy");
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem("clientesReclamadosHoy");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {
@@ -263,7 +270,7 @@ export default function Clientes() {
     const ahora = new Date();
     const proximoReinicio = new Date();
     proximoReinicio.setHours(24, 0, 0, 0);
-    const timeout = proximoReinicio - ahora;
+    const timeout = Math.max(proximoReinicio - ahora, 1000);
 
     const timer = setTimeout(() => {
       localStorage.removeItem("clientesReclamadosHoy");
@@ -281,16 +288,27 @@ export default function Clientes() {
       })
     );
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [snapClientes, snapVentas, snapUsuarios] = await Promise.all([
         getDocs(collection(db, "clientes")),
         getDocs(collection(db, "ventas")),
-        getDocs(collection(db, "usuarios"))
+        getDocs(collection(db, "usuarios")),
       ]);
 
-      const dataClientes = snapClientes.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const dataVentas = snapVentas.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const dataClientes = snapClientes.docs.map((d) => {
+        const raw = d.data();
+        return {
+          id: d.id,
+          ...raw,
+          clasificacion: normalizarClasificacion(raw.clasificacion),
+        };
+      });
+
+      const dataVentas = snapVentas.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      }));
 
       const mapUsuarios = {};
       snapUsuarios.docs.forEach((d) => {
@@ -307,31 +325,51 @@ export default function Clientes() {
     } catch (error) {
       console.error("Error al obtener datos:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
+
+  const handleCambiarClasificacion = useCallback(
+    async (clienteId, nuevaClasificacion) => {
+      const claseValida = normalizarClasificacion(nuevaClasificacion);
+      try {
+        await updateDoc(doc(db, "clientes", clienteId), {
+          clasificacion: claseValida,
+        });
+
+        setClientes((prev) =>
+          prev.map((c) =>
+            c.id === clienteId ? { ...c, clasificacion: claseValida } : c
+          )
+        );
+      } catch (error) {
+        console.error("Error al actualizar clasificación:", error);
+        alert("No se pudo actualizar la clasificación del cliente.");
+      }
+    },
+    []
+  );
 
   const ventasPorClienteMap = useMemo(() => {
     const mapa = {};
     ventas.forEach((v) => {
-      if (!v.clienteId) return;
-      if (!mapa[v.clienteId]) mapa[v.clienteId] = [];
-      mapa[v.clienteId].push(v);
+      const claveCliente = v.clienteId || v.idCliente;
+      if (!claveCliente) return;
+      if (!mapa[claveCliente]) mapa[claveCliente] = [];
+      mapa[claveCliente].push(v);
     });
     return mapa;
   }, [ventas]);
 
   const clientesConCalculos = useMemo(() => {
-    const hoy = new Date();
     return clientes.map((c) => {
       const ventasDelCliente = ventasPorClienteMap[c.id] || [];
       const total = ventasDelCliente.length;
       const terminadas = ventasDelCliente.filter((v) => estaPagado(v)).length;
       const activas = total - terminadas;
       const ventaActiva = ventasDelCliente.find((v) => !estaPagado(v));
-      const scorePagos = calcularScoreCliente(c, ventasDelCliente, hoy);
       const deudaTotal = ventasDelCliente.reduce(
         (acc, v) => acc + calcularSaldoVenta(v),
         0
@@ -339,6 +377,7 @@ export default function Clientes() {
 
       return {
         ...c,
+        clasificacion: normalizarClasificacion(c.clasificacion),
         ventasDelCliente,
         comprasPagadas: terminadas,
         comprasTotales: total,
@@ -346,61 +385,85 @@ export default function Clientes() {
         comprasTerminadas: terminadas,
         idVenta: ventaActiva ? ventaActiva.id : null,
         deudaTotal,
-        score: scorePagos,
       };
     });
   }, [clientes, ventasPorClienteMap]);
 
-  const clientesVencidos = useMemo(() => {
+  const contadoresClasificacion = useMemo(() => {
+    const conteo = {
+      todos: clientesConCalculos.length,
+      "sin clasificar": 0,
+      excelente: 0,
+      pagador: 0,
+      nuevo: 0,
+      duro: 0,
+      bloqueado: 0,
+    };
+
+    clientesConCalculos.forEach((c) => {
+      const clase = normalizarClasificacion(c.clasificacion);
+      conteo[clase] = (conteo[clase] || 0) + 1;
+      if (esClienteBloqueado(c)) {
+        conteo.bloqueado += 1;
+      }
+    });
+
+    return conteo;
+  }, [clientesConCalculos]);
+
+  // Cobros del mes por quincena: excluye bloqueados y ventas pagadas
+  const cobrosDelMes = useMemo(() => {
     if (!ventas.length) return [];
     const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const anioActual = hoy.getFullYear();
 
-    const resultado = clientesConCalculos.map((cliente) => {
-      if (cliente.estado === "Bloqueado") return null;
+    const itemsCobro = [];
 
-      const ventasCliente = cliente.ventasDelCliente.filter((v) => !estaPagado(v));
-      if (!ventasCliente.length) return null;
+    clientesConCalculos.forEach((cliente) => {
+      if (esClienteBloqueado(cliente)) {
+        return;
+      }
 
-      let mayorAtraso = 0;
-      let ventaMasAtrasada = null;
-      let cuotasPagadasVenta = 0;
-      let proximoVencimientoCalculado = null;
-      let fechaVentaSeleccionada = null;
+      const claseCliente = normalizarClasificacion(cliente.clasificacion);
+      const ventasPendientes = cliente.ventasDelCliente.filter((v) => !estaPagado(v));
 
-      ventasCliente.forEach((venta) => {
-        const fechaBase = parsearFechaSegura(venta.fecha);
+      ventasPendientes.forEach((venta) => {
+        const fechaBase = parsearFechaVentaSegura(venta);
         if (!fechaBase) return;
 
-        const cuotasPagadas = venta.pagos?.length || 0;
+        const cuotasPagadas = obtenerCuotasPagadas(venta);
         const proximoVenc = new Date(fechaBase);
         proximoVenc.setMonth(proximoVenc.getMonth() + cuotasPagadas);
 
-        const diferenciaDias = Math.floor((hoy - proximoVenc) / (1000 * 60 * 60 * 24));
-        const atrasoReal = diferenciaDias > 0 ? diferenciaDias : 0;
+        const venceEsteMes =
+          proximoVenc.getMonth() === mesActual &&
+          proximoVenc.getFullYear() === anioActual;
+        const estaAtrasado = proximoVenc < hoy;
 
-        if (atrasoReal >= mayorAtraso) {
-          mayorAtraso = atrasoReal;
-          ventaMasAtrasada = venta;
-          cuotasPagadasVenta = cuotasPagadas;
-          proximoVencimientoCalculado = proximoVenc;
-          fechaVentaSeleccionada = fechaBase;
-        }
-      });
+        if (!venceEsteMes && !estaAtrasado) return;
 
-      if (ventaMasAtrasada && proximoVencimientoCalculado) {
-        const yaPagoEsteMes = pagoEnMesActual(ventaMasAtrasada, hoy);
+        const diferenciaDias = Math.floor(
+          (hoy - proximoVenc) / (1000 * 60 * 60 * 24)
+        );
+        const diasAtraso = diferenciaDias > 0 ? diferenciaDias : 0;
 
         const nombresProductos =
-          ventaMasAtrasada.productos?.map((p) => p.name || p.nombre || p.descripcion || p.titulo).join(", ") ||
-          ventaMasAtrasada.producto ||
+          venta.productos
+            ?.map((p) => p.name || p.nombre || p.descripcion || p.titulo)
+            .filter(Boolean)
+            .join(", ") ||
+          venta.producto ||
           "—";
 
         const claveVendedorRaw = (
-          ventaMasAtrasada.vendedorReal ||
-          ventaMasAtrasada.cargadoPor ||
-          ventaMasAtrasada.vendedor ||
+          venta.vendedorReal ||
+          venta.cargadoPor ||
+          venta.vendedor ||
           ""
-        ).toString().trim();
+        )
+          .toString()
+          .trim();
 
         let nombreVendedor = "—";
         const claveLower = claveVendedorRaw.toLowerCase();
@@ -410,123 +473,195 @@ export default function Clientes() {
             nombreVendedor = usuarios[claveVendedorRaw];
           } else if (usuarios[claveLower]) {
             nombreVendedor = usuarios[claveLower];
-          } else if (claveVendedorRaw.includes("@") && usuarios[claveVendedorRaw.toLowerCase()]) {
-            nombreVendedor = usuarios[claveVendedorRaw.toLowerCase()];
-          } else {
+          } else if (claveVendedorRaw.includes("@")) {
             const parteMail = claveVendedorRaw.split("@")[0];
-            nombreVendedor = parteMail.charAt(0).toUpperCase() + parteMail.slice(1);
+            nombreVendedor =
+              parteMail.charAt(0).toUpperCase() + parteMail.slice(1);
+          } else {
+            nombreVendedor = claveVendedorRaw;
           }
         }
 
-        return {
-          ...cliente,
-          diasAtraso: mayorAtraso,
-          producto: nombresProductos,
-          cuotaDebe: cuotasPagadasVenta + 1,
-          valorCuota: ventaMasAtrasada.valorCuota || 0,
-          proximoVencimiento: proximoVencimientoCalculado,
-          vendedor: nombreVendedor,
-          fechaCompra: fechaVentaSeleccionada,
-          pagoEsteMes: yaPagoEsteMes,
-        };
-      }
+        const quincena = resolverQuincena(cliente, venta, proximoVenc);
+        const totalCuotasNum = Number(venta.cuotas || 0);
+        const cuotaDebeNum =
+          totalCuotasNum > 0
+            ? Math.min(cuotasPagadas + 1, totalCuotasNum)
+            : cuotasPagadas + 1;
 
-      return null;
+        itemsCobro.push({
+          idFila: `${cliente.id}-${venta.id}`,
+          clienteId: cliente.id,
+          nombre: cliente.nombre || "Sin nombre",
+          dni: cliente.dni || "—",
+          clasificacion: claseCliente,
+          producto: nombresProductos,
+          vendedor: nombreVendedor,
+          proximoVencimiento: proximoVenc,
+          cuotaDebe: cuotaDebeNum,
+          totalCuotas: totalCuotasNum,
+          valorCuota: parsearMontoSeguro(venta.valorCuota) || calcularSaldoVenta(venta),
+          diasAtraso,
+          pagoEsteMes: pagoEnMesActual(venta, hoy),
+          quincena,
+        });
+      });
     });
 
-    return resultado.filter(Boolean).sort((a, b) => b.diasAtraso - a.diasAtraso);
+    return itemsCobro.sort((a, b) => {
+      if (a.proximoVencimiento && b.proximoVencimiento) {
+        return a.proximoVencimiento - b.proximoVencimiento;
+      }
+      return b.diasAtraso - a.diasAtraso;
+    });
   }, [clientesConCalculos, ventas, usuarios]);
 
+  const cumpleChipClasificacion = useCallback(
+    (item) => {
+      if (chipActivo === "todos") return true;
+      if (chipActivo === "bloqueado") return esClienteBloqueado(item);
+      return normalizarClasificacion(item.clasificacion) === chipActivo;
+    },
+    [chipActivo]
+  );
+
+  // Base de la tabla filtrada por búsqueda, chip de clase, vendedor y quincena
+  // (para calcular los contadores internos de PAGADOS ESTE MES / NO PAGADOS ESTE MES)
+  const cobrosBaseTabla = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
+    return cobrosDelMes.filter((item) => {
+      const pasaBusqueda =
+        !q ||
+        (item.nombre || "").toLowerCase().includes(q) ||
+        String(item.dni || "").toLowerCase().includes(q) ||
+        (item.producto || "").toLowerCase().includes(q);
+
+      const pasaChip = cumpleChipClasificacion(item);
+      const pasaVendedor = !filtroVendedor || item.vendedor === filtroVendedor;
+      const pasaQuincena = !filtroQuincena || item.quincena === filtroQuincena;
+
+      return pasaBusqueda && pasaChip && pasaVendedor && pasaQuincena;
+    });
+  }, [cobrosDelMes, search, cumpleChipClasificacion, filtroVendedor, filtroQuincena]);
+
+  const contadoresTablaPagoMes = useMemo(() => {
+    let pagados = 0;
+    let noPagados = 0;
+
+    cobrosBaseTabla.forEach((item) => {
+      if (item.pagoEsteMes) pagados += 1;
+      else noPagados += 1;
+    });
+
+    return {
+      todos: cobrosBaseTabla.length,
+      pagados_mes: pagados,
+      no_pagados_mes: noPagados,
+    };
+  }, [cobrosBaseTabla]);
+
+  // Cobros finales mostrados en la tabla (aplicando filtro interno PAGADOS / NO PAGADOS ESTE MES)
+  const cobrosFiltrados = useMemo(() => {
+    return cobrosBaseTabla.filter((item) => {
+      if (filtroTablaPagoMes === "pagados_mes") return item.pagoEsteMes;
+      if (filtroTablaPagoMes === "no_pagados_mes") return !item.pagoEsteMes;
+      return true;
+    });
+  }, [cobrosBaseTabla, filtroTablaPagoMes]);
+
+  const cobrosPrimeraQuincena = useMemo(
+    () => cobrosFiltrados.filter((c) => c.quincena === "primera"),
+    [cobrosFiltrados]
+  );
+
+  const cobrosSegundaQuincena = useMemo(
+    () => cobrosFiltrados.filter((c) => c.quincena === "segunda"),
+    [cobrosFiltrados]
+  );
+
+  // Grilla inferior de clientes: NO depende de filtroTablaPagoMes
   const clientesFiltrados = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return clientesConCalculos.filter((c) => {
-      const nombre = (c.nombre || "").toLowerCase();
-      const dni = String(c.dni || "").toLowerCase();
-      const direccion = (c.direccion || "").toLowerCase();
+    return clientesConCalculos.filter((cli) => {
+      const pasaBusqueda =
+        !q ||
+        (cli.nombre || "").toLowerCase().includes(q) ||
+        String(cli.dni || "").toLowerCase().includes(q) ||
+        (cli.direccion || "").toLowerCase().includes(q);
 
-      const cumpleBusq = !q || nombre.includes(q) || dni.includes(q) || direccion.includes(q);
+      const pasaChip = cumpleChipClasificacion(cli);
 
-      let cumpleColor = true;
-      if (filtroColor === "bloqueado") {
-        cumpleColor = c.estado === "Bloqueado";
-      } else if (filtroColor === "verde") {
-        cumpleColor = c.score.leyenda === "Excelente" || c.score.leyenda === "Bueno";
-      } else if (filtroColor === "amarillo") {
-        cumpleColor = c.score.leyenda === "Regular" || c.score.leyenda === "Sin historial";
-      } else if (filtroColor === "rojo") {
-        cumpleColor = c.score.leyenda === "Mal pagador" || c.estado === "Bloqueado";
+      if (!filtroVendedor) {
+        return pasaBusqueda && pasaChip;
       }
 
-      return cumpleBusq && cumpleColor;
-    });
-  }, [clientesConCalculos, search, filtroColor]);
+      const vendedoresDelCliente = new Set();
+      (cli.ventasDelCliente || []).forEach((v) => {
+        const raw = (v.vendedorReal || v.cargadoPor || v.vendedor || "")
+          .toString()
+          .trim();
+        const resuelto = usuarios[raw] || usuarios[raw.toLowerCase()] || raw;
+        if (resuelto) vendedoresDelCliente.add(resuelto);
+      });
 
-  const clientesPaginados = useMemo(() => {
-    return clientesFiltrados.slice(0, limiteVisibles);
-  }, [clientesFiltrados, limiteVisibles]);
+      return pasaBusqueda && pasaChip && vendedoresDelCliente.has(filtroVendedor);
+    });
+  }, [clientesConCalculos, search, cumpleChipClasificacion, filtroVendedor, usuarios]);
+
+  const clientesPaginados = useMemo(
+    () => clientesFiltrados.slice(0, limiteVisibles),
+    [clientesFiltrados, limiteVisibles]
+  );
 
   useEffect(() => {
     const currentLoader = loaderRef.current;
     if (!currentLoader) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      const target = entries[0];
-      if (target.isIntersecting) {
-        setLimiteVisibles((prev) => prev + 12);
-      }
-    }, { threshold: 0.1 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setLimiteVisibles((prev) => prev + 12);
+        }
+      },
+      { threshold: 0.1 }
+    );
 
     observer.observe(currentLoader);
-
-    return () => {
-      if (currentLoader) observer.unobserve(currentLoader);
-    };
+    return () => observer.unobserve(currentLoader);
   }, [clientesFiltrados.length]);
 
-  const abrirClienteEnNuevaPestana = useCallback((clienteId) => {
-    const finDelDia = new Date();
-    finDelDia.setHours(23, 59, 59, 999);
+  const abrirClienteEnNuevaPestana = useCallback(
+    (clienteId) => {
+      const finDelDia = new Date();
+      finDelDia.setHours(23, 59, 59, 999);
 
-    const current = [...clientesReclamadosHoy];
-    if (!current.includes(clienteId)) {
-      current.push(clienteId);
-      localStorage.setItem("clientesReclamadosHoy", JSON.stringify(current));
-      setClientesReclamadosHoy(current);
-    }
+      const current = [...clientesReclamadosHoy];
+      if (!current.includes(clienteId)) {
+        current.push(clienteId);
+        localStorage.setItem("clientesReclamadosHoy", JSON.stringify(current));
+        setClientesReclamadosHoy(current);
+      }
+      localStorage.setItem("expiraVisita", String(finDelDia.getTime()));
 
-    localStorage.setItem("expiraVisita", finDelDia.getTime());
-
-    const url = `${window.location.origin}/clientes/${clienteId}`;
-    const nuevaVentana = window.open(url, "_blank", "noopener,noreferrer");
-
-    if (!nuevaVentana || nuevaVentana.closed || typeof nuevaVentana.closed === "undefined") {
-      const link = document.createElement("a");
-      link.href = url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  }, [clientesReclamadosHoy]);
-
-  const handleDoubleClickCliente = useCallback((clienteId) => {
-    abrirClienteEnNuevaPestana(clienteId);
-  }, [abrirClienteEnNuevaPestana]);
-
-  const handleContextMenuCliente = useCallback((e, clienteId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    abrirClienteEnNuevaPestana(clienteId);
-  }, [abrirClienteEnNuevaPestana]);
+      const url = `${window.location.origin}/clientes/${clienteId}`;
+      window.open(url, "_blank", "noopener,noreferrer");
+    },
+    [clientesReclamadosHoy]
+  );
 
   const handleSaveClient = async (data) => {
     try {
-      if (data.id) {
-        await updateDoc(doc(db, "clientes", data.id), data);
+      const payload = {
+        ...data,
+        clasificacion: normalizarClasificacion(data.clasificacion),
+      };
+
+      if (payload.id) {
+        await updateDoc(doc(db, "clientes", payload.id), payload);
       } else {
-        await addDoc(collection(db, "clientes"), data);
+        await addDoc(collection(db, "clientes"), payload);
       }
 
       setIsModalOpen(false);
@@ -535,6 +670,80 @@ export default function Clientes() {
     } catch (error) {
       console.error("Error al guardar cliente:", error);
     }
+  };
+
+  const renderFilasQuincena = (lista) => {
+    if (!lista.length) {
+      return (
+        <tr>
+          <td colSpan={6} style={{ textAlign: "center", padding: "16px", color: "#64748b" }}>
+            Sin cobros en esta quincena con el filtro actual.
+          </td>
+        </tr>
+      );
+    }
+
+    return lista.map((c) => (
+      <tr key={c.idFila} className={styles.vencidosRow}>
+        <td>
+          {clientesReclamadosHoy.includes(c.clienteId) ? (
+            <span className={styles.checked}>✅</span>
+          ) : null}
+        </td>
+        <td
+          className={styles.clickableCell}
+          onDoubleClick={() => abrirClienteEnNuevaPestana(c.clienteId)}
+        >
+          <strong>{c.nombre}</strong>
+          <div style={{ fontSize: "11px", color: "#64748b" }}>
+            DNI {c.dni} · {c.producto}
+          </div>
+          {c.pagoEsteMes && (
+            <span
+              style={{
+                marginTop: "4px",
+                backgroundColor: "#dcfce7",
+                color: "#166534",
+                padding: "2px 6px",
+                borderRadius: "10px",
+                fontSize: "10px",
+                fontWeight: "600",
+                display: "inline-block",
+              }}
+            >
+              ✅ Pago en el mes
+            </span>
+          )}
+        </td>
+        <td>
+          <span className={styles.chipBadge}>{c.clasificacion.toUpperCase()}</span>
+        </td>
+        <td>
+          {c.proximoVencimiento
+            ? c.proximoVencimiento.toLocaleDateString("es-AR", {
+                day: "2-digit",
+                month: "2-digit",
+              })
+            : "—"}
+        </td>
+        <td>
+          #{c.cuotaDebe}
+          {c.totalCuotas > 0 ? `/${c.totalCuotas}` : ""} · $
+          {Number(c.valorCuota || 0).toLocaleString("es-AR")}
+        </td>
+        <td
+          className={`${styles.diasCell} ${
+            c.diasAtraso > 60
+              ? styles.red
+              : c.diasAtraso > 30
+              ? styles.orange
+              : styles.yellow
+          }`}
+        >
+          {c.diasAtraso}d
+        </td>
+      </tr>
+    ));
   };
 
   return (
@@ -562,8 +771,31 @@ export default function Clientes() {
         </button>
       </div>
 
+      {/* FILTER CHIPS GENERALES (CLASIFICACIÓN + BLOQUEADOS) */}
+      <div className={styles.chipsBar} role="tablist" aria-label="Clasificación de clientes">
+        {CLASIFICACIONES.map((chip) => {
+          const activo = chipActivo === chip.id;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => {
+                setChipActivo(chip.id);
+                setLimiteVisibles(12);
+              }}
+              className={`${styles.filterChip} ${activo ? styles.chipActive : ""}`}
+            >
+              <span>{chip.label}</span>
+              <span className={styles.chipCount}>
+                {contadoresClasificacion[chip.id] ?? 0}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className={styles.filterContainer}>
-        <label>Filtrar por vendedor: </label>
+        <label>Vendedor: </label>
         <select
           value={filtroVendedor}
           onChange={(e) => {
@@ -572,142 +804,146 @@ export default function Clientes() {
           }}
         >
           <option value="">Todos</option>
-          {Array.from(new Set(clientesVencidos.map(c => c.vendedor))).map((v, i) => (
-            <option key={i} value={v}>
-              {v}
-            </option>
-          ))}
+          {Array.from(new Set(cobrosDelMes.map((c) => c.vendedor))).map(
+            (v, i) => (
+              <option key={i} value={v}>
+                {v}
+              </option>
+            )
+          )}
         </select>
 
-        <label style={{ marginLeft: "20px" }}>Filtrar por color: </label>
+        <label style={{ marginLeft: "16px" }}>Quincena: </label>
         <select
-          value={filtroColor}
-          onChange={(e) => {
-            setFiltroColor(e.target.value);
-            setLimiteVisibles(12);
-          }}
+          value={filtroQuincena}
+          onChange={(e) => setFiltroQuincena(e.target.value)}
         >
-          <option value="">Todos</option>
-          <option value="verde">Verdes (Buenos/Excelentes)</option>
-          <option value="amarillo">Amarillos (Regulares)</option>
-          <option value="rojo">Rojos (Bloqueados / Mal pagador)</option>
+          <option value="">Ambas quincenas</option>
+          <option value="primera">1ra Quincena (1 - 15)</option>
+          <option value="segunda">2da Quincena (15 - 30/31)</option>
         </select>
 
-        <label style={{ marginLeft: "20px" }}>Desde: </label>
-        <input
-          type="date"
-          value={fechaDesde}
-          onChange={(e) => setFechaDesde(e.target.value)}
-          className={styles.searchInput}
-        />
-
-        <label style={{ marginLeft: "10px" }}>Hasta: </label>
-        <input
-          type="date"
-          value={fechaHasta}
-          onChange={(e) => setFechaHasta(e.target.value)}
-          className={styles.searchInput}
-        />
-
-        <button
-          onClick={() => { setFechaDesde(""); setFechaHasta(""); }}
-          className={styles.btnVerTodos}
-          style={{ marginLeft: "10px" }}
-        >
-          Ver Todos
-        </button>
+        {(filtroVendedor || filtroQuincena || chipActivo !== "todos" || search) && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setChipActivo("todos");
+              setFiltroVendedor("");
+              setFiltroQuincena("");
+              setLimiteVisibles(12);
+            }}
+            className={styles.btnVerTodos}
+            style={{ marginLeft: "12px" }}
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
-      {clientesVencidos.length > 0 && (
-        <div className={styles.vencidosContainer}>
-          <h3 className={styles.vencidosTitle}>
-            Clientes con atraso / cobros en fecha
+      {/* TABLA DE PENDIENTES A COBRAR (CON CHIPS INTERNOS DE PAGO ESTE MES) */}
+      <section className={styles.vencidosContainer}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+            marginBottom: "14px",
+          }}
+        >
+          <h3 className={styles.vencidosTitle} style={{ margin: 0 }}>
+            Cobros del Mes por Quincena ({cobrosFiltrados.length})
           </h3>
 
-          <table className={styles.vencidosTable}>
-            <thead>
-              <tr>
-                <th className={styles.checkColumn}>✅</th>
-                <th>Nombre</th>
-                <th>DNI</th>
-                <th className={styles.productColumn}>Producto</th>
-                <th>Vendedor</th>
-                <th>Próx. Venc.</th>
-                <th>Cuota</th>
-                <th>Valor</th>
-                <th>Días</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {clientesVencidos
-                .filter(c => {
-                  const pasaVendedor = !filtroVendedor || c.vendedor === filtroVendedor;
-
-                  let pasaRangoFecha = true;
-                  if (c.proximoVencimiento) {
-                    const fechaVenc = new Date(c.proximoVencimiento);
-                    fechaVenc.setHours(0, 0, 0, 0);
-
-                    if (fechaDesde) {
-                      const dDesde = new Date(fechaDesde + "T00:00:00");
-                      if (fechaVenc < dDesde) pasaRangoFecha = false;
-                    }
-                    if (fechaHasta) {
-                      const dHasta = new Date(fechaHasta + "T23:59:59");
-                      if (fechaVenc > dHasta) pasaRangoFecha = false;
-                    }
-                  } else if (fechaDesde || fechaHasta) {
-                    pasaRangoFecha = false;
-                  }
-
-                  return pasaVendedor && pasaRangoFecha;
-                })
-                .map((c) => (
-                  <tr key={c.id} className={styles.vencidosRow}>
-                    <td>
-                      {clientesReclamadosHoy.includes(c.id) ? (
-                        <span className={styles.checked}>✅</span>
-                      ) : null}
-                    </td>
-                    <td className={styles.clickableCell} onDoubleClick={() => handleDoubleClickCliente(c.id)}>
-                      {c.nombre}
-                      {c.pagoEsteMes && (
-                        <span style={{
-                          marginLeft: "8px",
-                          backgroundColor: "#dcfce7",
-                          color: "#166534",
-                          padding: "2px 8px",
-                          borderRadius: "12px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          display: "inline-block",
-                          border: "1px solid #bbf7d0"
-                        }}>
-                          ✅ Mes pagado
-                        </span>
-                      )}
-                    </td>
-                    <td className={styles.clickableCell} onDoubleClick={() => handleDoubleClickCliente(c.id)}>{c.dni}</td>
-                    <td className={styles.productColumn}>{c.producto}</td>
-                    <td>{c.vendedor}</td>
-                    <td>{c.proximoVencimiento && new Date(c.proximoVencimiento).toLocaleDateString("es-AR")}</td>
-                    <td>#{c.cuotaDebe}</td>
-                    <td>${Number(c.valorCuota || 0).toLocaleString("es-AR")}</td>
-                    <td className={`${styles.diasCell} ${c.diasAtraso > 60 ? styles.red : c.diasAtraso > 45 ? styles.orange : styles.yellow}`}>{c.diasAtraso}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+          <div
+            className={styles.chipsBar}
+            style={{ margin: 0 }}
+            role="tablist"
+            aria-label="Filtrar tabla por estado de pago este mes"
+          >
+            {FILTROS_TABLA_PAGO_MES.map((chip) => {
+              const activo = filtroTablaPagoMes === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setFiltroTablaPagoMes(chip.id)}
+                  className={`${styles.filterChip} ${activo ? styles.chipActive : ""}`}
+                >
+                  <span>{chip.label}</span>
+                  <span className={styles.chipCount}>
+                    {contadoresTablaPagoMes[chip.id] ?? 0}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
 
+        <div className={styles.quincenasGrid}>
+          <div className={styles.quincenaBox}>
+            <h4 className={styles.quincenaHeader}>
+              1ra Quincena (1 - 15) · {cobrosPrimeraQuincena.length}
+            </h4>
+            <div
+              className={styles.tableScrollWrapper}
+              style={{ maxHeight: "460px", overflowY: "auto" }}
+            >
+              <table className={styles.vencidosTable}>
+                <thead>
+                  <tr>
+                    <th className={styles.checkColumn}>✅</th>
+                    <th>Cliente</th>
+                    <th>Clase</th>
+                    <th>Venc.</th>
+                    <th>Cuota / Valor</th>
+                    <th>Atraso</th>
+                  </tr>
+                </thead>
+                <tbody>{renderFilasQuincena(cobrosPrimeraQuincena)}</tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className={styles.quincenaBox}>
+            <h4 className={styles.quincenaHeader}>
+              2da Quincena (15 - 30/31) · {cobrosSegundaQuincena.length}
+            </h4>
+            <div
+              className={styles.tableScrollWrapper}
+              style={{ maxHeight: "460px", overflowY: "auto" }}
+            >
+              <table className={styles.vencidosTable}>
+                <thead>
+                  <tr>
+                    <th className={styles.checkColumn}>✅</th>
+                    <th>Cliente</th>
+                    <th>Clase</th>
+                    <th>Venc.</th>
+                    <th>Cuota / Valor</th>
+                    <th>Atraso</th>
+                  </tr>
+                </thead>
+                <tbody>{renderFilasQuincena(cobrosSegundaQuincena)}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* GRILLA INFERIOR DE TODOS LOS CLIENTES */}
       <div className={styles.grid}>
         {clientesPaginados.length > 0 ? (
           clientesPaginados.map((cli) => (
             <div
               key={cli.id}
-              onContextMenu={(e) => handleContextMenuCliente(e, cli.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                abrirClienteEnNuevaPestana(cli.id);
+              }}
               onAuxClick={(e) => {
                 if (e.button === 1) {
                   e.preventDefault();
@@ -718,6 +954,7 @@ export default function Clientes() {
               <CardClient
                 cliente={cli}
                 resaltado={clientesReclamadosHoy.includes(cli.id)}
+                onCambiarClasificacion={handleCambiarClasificacion}
                 onEdit={(c) => {
                   setClientToEdit(c);
                   setIsModalOpen(true);
@@ -727,15 +964,18 @@ export default function Clientes() {
             </div>
           ))
         ) : (
-          <p className={styles.empty}>
-            No se encontraron clientes
-          </p>
+          <p className={styles.empty}>No se encontraron clientes</p>
         )}
       </div>
 
-      <div ref={loaderRef} style={{ height: "40px", margin: "20px 0", textAlign: "center" }}>
+      <div
+        ref={loaderRef}
+        style={{ height: "40px", margin: "20px 0", textAlign: "center" }}
+      >
         {limiteVisibles < clientesFiltrados.length && (
-          <span style={{ color: "#666", fontSize: "14px" }}>Cargando más clientes...</span>
+          <span style={{ color: "#666", fontSize: "14px" }}>
+            Cargando más clientes...
+          </span>
         )}
       </div>
 

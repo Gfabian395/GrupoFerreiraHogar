@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom"; // <-- AGREGADO useLocation
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   collection,
   getDocs,
@@ -10,11 +10,9 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase/firebaseConfig";
 import { useCart } from "../context/CartContext";
+import { normalizarClasificacion } from "../pages/Clientes";
 import styles from "../styles/Ventas.module.css";
 
-/* ===============================
-   CONFIG CUOTAS
-=============================== */
 const configuracionCuotas = [
   { cuotas: 2, interes: 30 },
   { cuotas: 3, interes: 50 },
@@ -28,15 +26,22 @@ const configuracionCuotas = [
 
 const redondearMil = (v) => Math.ceil(Number(v) / 1000) * 1000;
 
+const obtenerQuincenaPorFecha = (fechaStr) => {
+  if (!fechaStr) return "primera";
+  const partes = String(fechaStr).split("-");
+  const dia = partes.length === 3 ? Number(partes[2]) : new Date(fechaStr).getDate();
+  return dia <= 15 ? "primera" : "segunda";
+};
+
 export default function Ventas() {
   const navigate = useNavigate();
-  const location = useLocation(); // <-- PARA LEER DATOS DEL ROUTER
+  const location = useLocation();
   const { items, clearCart } = useCart();
 
-  /* ===============================
-     ESTADOS
-  =============================== */
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  const [quincenaPago, setQuincenaPago] = useState(() =>
+    obtenerQuincenaPorFecha(new Date().toISOString().split("T")[0])
+  );
 
   const [clientes, setClientes] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -46,29 +51,35 @@ export default function Ventas() {
   const [clienteSeleccionado, setClienteSeleccionado] = useState("");
 
   const [cuotas, setCuotas] = useState(1);
-
   const [tipoEntrega, setTipoEntrega] = useState("sucursal");
   const [choferId, setChoferId] = useState("");
 
   const [ventaDeOtro, setVentaDeOtro] = useState(false);
   const [vendedorReal, setVendedorReal] = useState("");
 
-  // ESTADOS DE DESCUENTO Y PAGO (Leemos si vino del carrito)
-  const [descuento, setDescuento] = useState(location.state?.descuentoPreCargado || "");
+  const [descuento, setDescuento] = useState(
+    location.state?.descuentoPreCargado || ""
+  );
   const [primerCuotaPaga, setPrimerCuotaPaga] = useState(false);
   const [pagoParcial, setPagoParcial] = useState(false);
   const [montoPagoParcial, setMontoPagoParcial] = useState("");
 
-  /* ===============================
-     FETCH DATA
-  =============================== */
   useEffect(() => {
     const fetchData = async () => {
       const clientesSnap = await getDocs(collection(db, "clientes"));
-      setClientes(clientesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setClientes(
+        clientesSnap.docs.map((d) => {
+          const raw = d.data();
+          return {
+            id: d.id,
+            ...raw,
+            clasificacion: normalizarClasificacion(raw.clasificacion),
+          };
+        })
+      );
 
       const usuariosSnap = await getDocs(collection(db, "usuarios"));
-      setUsuarios(usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setUsuarios(usuariosSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
       const user = auth.currentUser;
       if (user) {
@@ -79,75 +90,75 @@ export default function Ventas() {
     fetchData();
   }, []);
 
-  /* ===============================
-     FILTROS
-  =============================== */
-  const clientesFiltrados = clientes.filter((c) =>
-    `${c.nombre} ${c.dni}`.toLowerCase().includes(busqueda.toLowerCase())
+  const clientesFiltrados = useMemo(
+    () =>
+      clientes.filter((c) =>
+        `${c.nombre || ""} ${c.dni || ""}`
+          .toLowerCase()
+          .includes(busqueda.toLowerCase())
+      ),
+    [clientes, busqueda]
   );
 
-  const choferes = usuarios.filter(
-    (u) => u.activo && u.roles?.chofer
+  const choferes = useMemo(
+    () => usuarios.filter((u) => u.activo && u.roles?.chofer),
+    [usuarios]
   );
 
-  const vendedores = usuarios.filter(
-    (u) => u.activo && u.roles?.vendedor
+  const vendedores = useMemo(
+    () => usuarios.filter((u) => u.activo && u.roles?.vendedor),
+    [usuarios]
   );
 
-  /* ===============================
-     TOTALES Y DESCUENTOS
-  =============================== */
-  const subtotal = items.reduce((acc, i) => acc + i.price * i.qty, 0);
+  const subtotal = items.reduce(
+    (acc, i) => acc + Number(i.price || 0) * Number(i.qty || 1),
+    0
+  );
   const descuentoAplicado = Number(descuento) || 0;
   const total = Math.max(0, subtotal - descuentoAplicado);
-  
-  // SALDO BASE: Descuenta el pago parcial si está activo para que las cuotas calculen sobre el remanente real
-  const montoParcialNum = Number(montoPagoParcial) || 0;
-  const saldoBase = Math.max(0, total - (pagoParcial ? montoParcialNum : 0));
 
-  /* ===============================
-     CUOTAS
-  =============================== */
+  const montoParcialNum = Number(montoPagoParcial) || 0;
+  const saldoBase = Math.max(
+    0,
+    total - (pagoParcial ? montoParcialNum : 0)
+  );
+
   const cuotasOpciones = useMemo(() => {
     if (!saldoBase) return [{ cuotas: 1, valor: 0 }];
 
     const monto = saldoBase;
-
-    const cuotasFiltradas = configuracionCuotas.filter(({ cuotas }) => {
-      if (monto < 30000) return cuotas <= 2;
-      if (monto < 80000) return cuotas <= 3;
-      if (monto < 150000) return cuotas <= 6;
-      if (monto < 250000) return cuotas <= 9;
-      if (monto < 350000) return cuotas <= 12;
-      if (monto < 500000) return cuotas <= 18;
+    const cuotasFiltradas = configuracionCuotas.filter(({ cuotas: c }) => {
+      if (monto < 30000) return c <= 2;
+      if (monto < 80000) return c <= 3;
+      if (monto < 150000) return c <= 6;
+      if (monto < 250000) return c <= 9;
+      if (monto < 350000) return c <= 12;
+      if (monto < 500000) return c <= 18;
       return true;
     });
 
     return [{ cuotas: 1, valor: monto }].concat(
-      cuotasFiltradas.map(({ cuotas, interes }) => {
+      cuotasFiltradas.map(({ cuotas: c, interes }) => {
         const conInteres = monto * (1 + interes / 100);
         return {
-          cuotas,
-          valor: redondearMil(conInteres / cuotas),
+          cuotas: c,
+          valor: redondearMil(conInteres / c),
         };
       })
     );
   }, [saldoBase]);
 
   const valorCuota =
-    cuotasOpciones.find(c => c.cuotas === cuotas)?.valor || 0;
+    cuotasOpciones.find((c) => c.cuotas === cuotas)?.valor || 0;
 
   const montoPagado = primerCuotaPaga
     ? valorCuota
     : pagoParcial
-      ? montoParcialNum
-      : 0;
+    ? montoParcialNum
+    : 0;
 
   const saldoFinanciado = Math.max(total - montoPagado, 0);
 
-  /* ===============================
-     CONFIRMAR
-  =============================== */
   const confirmarVenta = async () => {
     if (!clienteSeleccionado) return alert("Seleccioná un cliente");
     if (!items.length) return alert("El carrito está vacío");
@@ -155,17 +166,22 @@ export default function Ventas() {
       return alert("Seleccioná un chofer");
     if (ventaDeOtro && !vendedorReal)
       return alert("Seleccioná el vendedor real");
+    if (!auth.currentUser) return alert("Usuario no autenticado");
 
+    const clienteObj = clientes.find((c) => c.id === clienteSeleccionado);
     const ventaRef = doc(collection(db, "ventas"));
+    const clienteRef = doc(db, "clientes", clienteSeleccionado);
 
     const venta = {
       id: ventaRef.id,
       fecha,
+      quincenaPago,
       clienteId: clienteSeleccionado,
+      clienteClasificacion: normalizarClasificacion(clienteObj?.clasificacion),
       productos: items,
-      subtotal, // <-- Guardamos el subtotal original
-      descuento: descuentoAplicado, // <-- Guardamos el descuento
-      total, // <-- Guardamos el total post-descuento
+      subtotal,
+      descuento: descuentoAplicado,
+      total,
       cuotas,
       valorCuota,
       pago: {
@@ -186,24 +202,25 @@ export default function Ventas() {
       await runTransaction(db, async (transaction) => {
         const productosLeidos = [];
 
-        // ===============================
-        // 1️⃣ LECTURAS
-        // ===============================
         for (const item of items) {
-          
-          // ===============================
-          // SI ES COMBO
-          // ===============================
           if (item.type === "combo") {
-            const comboRef = doc(db, "categorias", item.categoriaId, "productos", item.id);
+            const comboRef = doc(
+              db,
+              "categorias",
+              item.categoriaId,
+              "productos",
+              item.id
+            );
             const comboSnap = await transaction.get(comboRef);
-            
-            if (!comboSnap.exists()) throw new Error("Combo inexistente en la base de datos");
+            if (!comboSnap.exists()) {
+              throw new Error("Combo inexistente en la base de datos");
+            }
 
             const seleccionesCarrito = item.comboItems || [];
-            
-            if (seleccionesCarrito.length === 0) {
-              throw new Error(`El combo ${item.name} no tiene productos válidos en el carrito.`);
+            if (!seleccionesCarrito.length) {
+              throw new Error(
+                `El combo ${item.name} no tiene productos válidos en el carrito.`
+              );
             }
 
             for (const cartComboItem of seleccionesCarrito) {
@@ -214,27 +231,39 @@ export default function Ventas() {
                 "productos",
                 cartComboItem.productId
               );
-
               const snap = await transaction.get(productoRef);
-              if (!snap.exists()) throw new Error(`Producto ${cartComboItem.name} del combo no existe`);
+              if (!snap.exists()) {
+                throw new Error(
+                  `Producto ${cartComboItem.name} del combo no existe`
+                );
+              }
 
               productosLeidos.push({
                 item: {
                   ...cartComboItem,
-                  qty: (cartComboItem.unitsToDiscount || cartComboItem.quantity || 1) * item.qty,
+                  qty:
+                    (cartComboItem.unitsToDiscount ||
+                      cartComboItem.quantity ||
+                      1) * item.qty,
                 },
                 ref: productoRef,
                 data: snap.data(),
               });
             }
           } else {
-            // ===============================
-            // PRODUCTO NORMAL
-            // ===============================
-            const productoRef = doc(db, "categorias", item.categoriaId, "productos", item.id);
+            const productoRef = doc(
+              db,
+              "categorias",
+              item.categoriaId,
+              "productos",
+              item.id
+            );
             const snap = await transaction.get(productoRef);
-            
-            if (!snap.exists()) throw new Error(`El producto ${item.name} ya no existe en la base de datos`);
+            if (!snap.exists()) {
+              throw new Error(
+                `El producto ${item.name} ya no existe en la base de datos`
+              );
+            }
 
             productosLeidos.push({
               item,
@@ -244,14 +273,15 @@ export default function Ventas() {
           }
         }
 
-        // ===============================
-        // 2️⃣ DESCONTAR STOCK Y VALIDAR CRÉDITO
-        // ===============================
         const vendedorId = ventaDeOtro ? vendedorReal : auth.currentUser.uid;
         const vendedorRef = doc(db, "usuarios", vendedorId);
         const vendedorSnap = await transaction.get(vendedorRef);
 
-        if (!vendedorSnap.exists()) throw new Error("Vendedor no encontrado");
+        if (!vendedorSnap.exists()) {
+          throw new Error("Vendedor no encontrado");
+        }
+
+        const clienteSnap = await transaction.get(clienteRef);
 
         const vendedorData = vendedorSnap.data();
         const topeTotal = 5000000;
@@ -260,18 +290,17 @@ export default function Ventas() {
         let topeUsado = vendedorData.topeUsado || 0;
         const mesCredito = vendedorData.mesCredito || null;
 
-        // Reset automático mensual
         if (mesCredito !== mesActual) {
           topeUsado = 0;
         }
 
-        let riesgo = 0;
         const costoTotal = productosLeidos.reduce((acc, p) => {
-          const qty = p.item.qty || 0;
+          const qty = Number(p.item.qty || 0);
           const costo = Number(p.data.purchasePrice || 0);
           return acc + costo * qty;
         }, 0);
 
+        let riesgo = 0;
         if (primerCuotaPaga) {
           riesgo = 0;
         } else if (pagoParcial) {
@@ -282,14 +311,11 @@ export default function Ventas() {
 
         const disponible = topeTotal - topeUsado;
         if (riesgo > disponible) {
-          throw new Error("El vendedor no tiene crédito disponible suficiente");
+          throw new Error(
+            "El vendedor no tiene crédito disponible suficiente"
+          );
         }
 
-        // ===============================
-        // 3️⃣ WRITES (ACTUALIZACIONES)
-        // ===============================
-
-        // 🔻 DESCONTAR STOCK
         for (const { item, ref, data } of productosLeidos) {
           const variantesDB = Array.isArray(data.variantes)
             ? data.variantes
@@ -299,45 +325,59 @@ export default function Ventas() {
             const attrDb = String(v.attr || "").trim();
             const attrItem = String(item.variant || "").trim();
 
-            // Si el item tiene variante, validamos si coincide con el attr principal 
-            // o si coincide con el modelo/color secundario guardado en la variante
             if (item.variant) {
               const coincideAttr = attrDb === attrItem;
-              const coincideModelo = String(v.modelo || "").trim() === attrItem;
+              const coincideModelo =
+                String(v.modelo || "").trim() === attrItem;
               if (!coincideAttr && !coincideModelo) return v;
             }
 
             const nuevoStock = { ...v.stock };
             const sucursal = item.branch;
 
-            if (!sucursal) 
-              throw new Error(`El producto "${item.name}" no tiene una sucursal asignada.`);
-            
-            if (nuevoStock[sucursal] === undefined)
-              throw new Error(`La sucursal "${sucursal}" no está cargada en el producto "${item.name}".`);
+            if (!sucursal) {
+              throw new Error(
+                `El producto "${item.name}" no tiene una sucursal asignada.`
+              );
+            }
+            if (nuevoStock[sucursal] === undefined) {
+              throw new Error(
+                `La sucursal "${sucursal}" no está cargada en el producto "${item.name}".`
+              );
+            }
 
             const stockActual = Number(nuevoStock[sucursal] || 0);
             const cantidadPedida = Number(item.qty || 0);
 
-            if (stockActual < cantidadPedida)
-              throw new Error(`Stock insuficiente de "${item.name}" en la sucursal "${sucursal}". Pedidos: ${cantidadPedida}, Disponibles: ${stockActual}`);
+            if (stockActual < cantidadPedida) {
+              throw new Error(
+                `Stock insuficiente de "${item.name}" en la sucursal "${sucursal}". Pedidos: ${cantidadPedida}, Disponibles: ${stockActual}`
+              );
+            }
 
-            // Descontamos las unidades correctamente de esta variante
             nuevoStock[sucursal] = stockActual - cantidadPedida;
-
             return { ...v, stock: nuevoStock };
           });
 
           transaction.update(ref, { variantes: variantesActualizadas });
         }
 
-        // 🔻 ACTUALIZAR CRÉDITO
         transaction.update(vendedorRef, {
           topeUsado: topeUsado + riesgo,
           mesCredito: mesActual,
         });
 
-        // 🔻 REGISTRAR VENTA
+        // Asegura que el cliente tenga 'sin clasificar' si no tenía clasificación previa
+        if (clienteSnap.exists()) {
+          const datosCliente = clienteSnap.data();
+          if (!datosCliente.clasificacion) {
+            transaction.update(clienteRef, {
+              clasificacion: "sin clasificar",
+              quincenaPago,
+            });
+          }
+        }
+
         transaction.set(ventaRef, venta);
       });
 
@@ -350,9 +390,6 @@ export default function Ventas() {
     }
   };
 
-  /* ===============================
-     RENDER
-  =============================== */
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
@@ -362,11 +399,14 @@ export default function Ventas() {
           type="date"
           className={styles.input}
           value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
+          onChange={(e) => {
+            const nuevaFecha = e.target.value;
+            setFecha(nuevaFecha);
+            setQuincenaPago(obtenerQuincenaPorFecha(nuevaFecha));
+          }}
         />
       </header>
 
-      {/* CLIENTE */}
       <div className={styles.card}>
         <h2>Cliente</h2>
         <input
@@ -378,18 +418,38 @@ export default function Ventas() {
         <select
           className={styles.select}
           value={clienteSeleccionado}
-          onChange={(e) => setClienteSeleccionado(e.target.value)}
+          onChange={(e) => {
+            const idSel = e.target.value;
+            setClienteSeleccionado(idSel);
+            const cli = clientes.find((c) => c.id === idSel);
+            if (cli?.quincenaPago) {
+              setQuincenaPago(cli.quincenaPago);
+            }
+          }}
         >
           <option value="">-- Seleccionar --</option>
-          {clientesFiltrados.map(c => (
+          {clientesFiltrados.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.nombre} DNI {c.dni}
+              {c.nombre} DNI {c.dni} ({normalizarClasificacion(c.clasificacion).toUpperCase()})
             </option>
           ))}
         </select>
+
+        <div style={{ marginTop: "12px" }}>
+          <label style={{ display: "block", marginBottom: "5px" }}>
+            Quincena habitual de cobro:
+          </label>
+          <select
+            className={styles.select}
+            value={quincenaPago}
+            onChange={(e) => setQuincenaPago(e.target.value)}
+          >
+            <option value="primera">1ra Quincena (1 - 15)</option>
+            <option value="segunda">2da Quincena (15 - 30/31)</option>
+          </select>
+        </div>
       </div>
 
-      {/* ENTREGA */}
       <div className={styles.card}>
         <h2>Entrega</h2>
 
@@ -420,14 +480,15 @@ export default function Ventas() {
             onChange={(e) => setChoferId(e.target.value)}
           >
             <option value="">-- Chofer --</option>
-            {choferes.map(c => (
-              <option key={c.id} value={c.id}>{c.nombre}</option>
+            {choferes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
             ))}
           </select>
         )}
       </div>
 
-      {/* VENTA DE OTRO */}
       <div className={styles.card}>
         <h2>Vendedor</h2>
 
@@ -449,7 +510,7 @@ export default function Ventas() {
             onChange={(e) => setVendedorReal(e.target.value)}
           >
             <option value="">-- Vendedor --</option>
-            {vendedores.map(v => (
+            {vendedores.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.nombre}
               </option>
@@ -458,14 +519,13 @@ export default function Ventas() {
         )}
       </div>
 
-      {/* DESCUENTO Y RESUMEN */}
       <div className={styles.card}>
         <h2>Resumen</h2>
-        
+
         <div style={{ marginBottom: "15px" }}>
           <strong>Subtotal: </strong> ${subtotal.toLocaleString("es-AR")}
         </div>
-        
+
         <div style={{ marginBottom: "15px" }}>
           <label style={{ display: "block", marginBottom: "5px" }}>
             Descuento ($ ARS):
@@ -479,13 +539,12 @@ export default function Ventas() {
             onChange={(e) => setDescuento(e.target.value)}
           />
         </div>
-        
+
         <div style={{ fontSize: "1.2em" }}>
           <strong>Total final: </strong> ${total.toLocaleString("es-AR")}
         </div>
       </div>
 
-      {/* PAGOS */}
       <div className={styles.card}>
         <h2>Pago</h2>
 
@@ -530,7 +589,7 @@ export default function Ventas() {
           value={cuotas}
           onChange={(e) => setCuotas(Number(e.target.value))}
         >
-          {cuotasOpciones.map(c => (
+          {cuotasOpciones.map((c) => (
             <option key={c.cuotas} value={c.cuotas}>
               {c.cuotas} x ${c.valor.toLocaleString("es-AR")}
             </option>
@@ -538,7 +597,11 @@ export default function Ventas() {
         </select>
       </div>
 
-      <button className={styles.confirm} onClick={confirmarVenta}>
+      <button
+        type="button"
+        className={styles.confirm}
+        onClick={confirmarVenta}
+      >
         Confirmar Venta (${total.toLocaleString("es-AR")})
       </button>
     </section>
