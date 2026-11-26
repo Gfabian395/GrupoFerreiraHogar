@@ -94,8 +94,16 @@ const obtenerTotalVenta = (venta) => {
   const descuento = parsearMontoSeguro(venta.descuento);
   const valorCuota = parsearMontoSeguro(venta.valorCuota);
   const cuotas = Number(venta.cuotas || 0);
-  const totalDirecto = parsearMontoSeguro(venta.total || venta.totalCredito);
+  const totalCreditoExplicito = parsearMontoSeguro(venta.totalCredito);
 
+  if (totalCreditoExplicito > 0) {
+    return Math.max(totalCreditoExplicito - descuento, 0);
+  }
+  if (cuotas > 1 && valorCuota > 0) {
+    return Math.max(valorCuota * cuotas - descuento, 0);
+  }
+
+  const totalDirecto = parsearMontoSeguro(venta.total);
   if (totalDirecto > 0) {
     return Math.max(totalDirecto - descuento, 0);
   }
