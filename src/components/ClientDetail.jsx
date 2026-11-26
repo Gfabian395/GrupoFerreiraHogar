@@ -1,6 +1,15 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {   doc,   getDoc,   collection,   query,   where,   getDocs,   updateDoc,   arrayUnion, } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  arrayUnion,
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebase/firebaseConfig";
 import {
@@ -12,6 +21,16 @@ import { Loader } from "./Loader";
 
 const TELEFONO_JEFE_O_GRUPO = "54911XXXXXXXX";
 
+const parsearMontoSeguro = (val) => {
+  if (typeof val === "number") return Number.isFinite(val) ? val : 0;
+  if (typeof val === "string") {
+    const limpio = val.replace(/\s+/g, "").replace(",", ".");
+    const num = Number(limpio);
+    return Number.isFinite(num) ? num : 0;
+  }
+  return 0;
+};
+
 const formatearFecha = (fecha) => {
   if (!fecha) return "—";
   let date;
@@ -21,7 +40,7 @@ const formatearFecha = (fecha) => {
   } else if (typeof fecha === "string") {
     if (fecha.includes("-")) {
       const [year, month, day] = fecha.split("-");
-      date = new Date(year, Number(month) - 1, Number(day));
+      date = new Date(Number(year), Number(month) - 1, Number(day));
     } else {
       date = new Date(fecha);
     }
@@ -47,7 +66,7 @@ const obtenerMilisegundosFecha = (fecha) => {
   }
   if (typeof fecha === "string" && fecha.includes("-")) {
     const [year, month, day] = fecha.split("-");
-    return new Date(year, Number(month) - 1, Number(day)).getTime();
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
   }
   const parsed = new Date(fecha).getTime();
   return isNaN(parsed) ? 0 : parsed;
@@ -72,47 +91,78 @@ const obtenerFechaHoyInput = () => {
 };
 
 const obtenerTotalVenta = (venta) => {
-  const descuento = Number(venta.descuento || 0);
-  const valorCuota = Number(venta.valorCuota || 0);
+  const descuento = parsearMontoSeguro(venta.descuento);
+  const valorCuota = parsearMontoSeguro(venta.valorCuota);
   const cuotas = Number(venta.cuotas || 0);
+  const totalDirecto = parsearMontoSeguro(venta.total || venta.totalCredito);
 
+  if (totalDirecto > 0) {
+    return Math.max(totalDirecto - descuento, 0);
+  }
   if (cuotas > 0 && valorCuota > 0) {
     return Math.max(valorCuota * cuotas - descuento, 0);
   }
-
-  const totalDirecto = Number(venta.total || venta.totalCredito || 0);
-  if (totalDirecto > 0) return Math.max(totalDirecto - descuento, 0);
-
-  return Math.max(valorCuota * cuotas - descuento, 0);
+  return 0;
 };
 
+// Suma todos los pagos reales (anticipo/pago inicial + pagos parciales o de cuotas)
 const calcularTotalPagadoVenta = (venta) => {
-  const pagosCuotas = (venta.pagos || []).reduce((sum, p) => {
-    if (p.esPagoInicial) return sum;
+  const pagosLista = Array.isArray(venta.pagos) ? venta.pagos : [];
+  const sumaArray = pagosLista.reduce((sum, p) => {
     const rawMonto = p.montoBase ?? p.monto ?? 0;
-    const montoLimpio =
-      typeof rawMonto === "string" ? rawMonto.replace(",", ".") : rawMonto;
-    return sum + Number(montoLimpio || 0);
+    return sum + parsearMontoSeguro(rawMonto);
   }, 0);
-  return pagosCuotas;
+
+  if (sumaArray > 0) {
+    return sumaArray;
+  }
+
+  return parsearMontoSeguro(venta.pago?.montoPagado);
 };
 
 const obtenerCuotasPagadas = (venta) => {
   const totalCuotas = Number(venta.cuotas) || 0;
-  const valorCuota = Number(venta.valorCuota) || 0;
+  const valorCuota = parsearMontoSeguro(venta.valorCuota);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  const totalVenta = obtenerTotalVenta(venta);
+
+  if (totalVenta > 0 && Math.round(totalPagado) >= Math.round(totalVenta)) {
+    return totalCuotas > 0 ? totalCuotas : 1;
+  }
   if (totalCuotas <= 0 || valorCuota <= 0) return 0;
 
-  const totalPagado = calcularTotalPagadoVenta(venta);
   return Math.min(Math.floor(totalPagado / valorCuota), totalCuotas);
 };
 
 const obtenerSaldoPendienteBase = (venta) => {
   const totalVenta = obtenerTotalVenta(venta);
   const totalPagado = calcularTotalPagadoVenta(venta);
+  if (totalVenta > 0 && Math.round(totalPagado) >= Math.round(totalVenta)) {
+    return 0;
+  }
   return Math.max(totalVenta - totalPagado, 0);
 };
 
+const estaPagado = (venta) => {
+  const totalVenta = obtenerTotalVenta(venta);
+  const totalPagado = calcularTotalPagadoVenta(venta);
+  const saldo = obtenerSaldoPendienteBase(venta);
+
+  if (saldo <= 0 && totalVenta > 0 && totalPagado > 0) {
+    return true;
+  }
+  const totalCuotas = Number(venta.cuotas || 0);
+  if (totalCuotas > 0 && obtenerCuotasPagadas(venta) >= totalCuotas && totalPagado > 0) {
+    return true;
+  }
+  return false;
+};
+
 const calcularRecargoAtraso = (venta) => {
+  if (estaPagado(venta)) {
+    return { diasAtraso: 0, porcentajeRecargo: 0, montoRecargo: 0 };
+  }
+
   const fechaInicio = venta.fecha?.toDate
     ? venta.fecha.toDate()
     : new Date(venta.fecha);
@@ -139,7 +189,7 @@ const calcularRecargoAtraso = (venta) => {
 
   const bloquesAdicionales = Math.floor((diasAtraso - 30) / 10);
   const porcentajeRecargo = Math.min(10 + bloquesAdicionales * 10, 200);
-  const valorCuota = Number(venta.valorCuota || 0);
+  const valorCuota = parsearMontoSeguro(venta.valorCuota);
   const montoRecargo = Math.round((valorCuota * porcentajeRecargo) / 100);
 
   return { diasAtraso, porcentajeRecargo, montoRecargo };
@@ -153,7 +203,7 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
   }));
 
   const pagosNormalizados = [];
-  const montoPagoAntiguo = Number(venta.pago?.montoPagado || 0);
+  const montoPagoAntiguo = parsearMontoSeguro(venta.pago?.montoPagado);
   const tienePagoInicial = montoPagoAntiguo > 0;
 
   if (tienePagoInicial) {
@@ -173,11 +223,7 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
 
   if (Array.isArray(venta.pagos)) {
     venta.pagos.forEach((pago) => {
-      const montoActual = Number(
-        typeof pago.monto === "string"
-          ? pago.monto.replace(",", ".")
-          : pago.monto ?? 0
-      );
+      const montoActual = parsearMontoSeguro(pago.monto);
       const metodoLower = String(pago.metodo || "").toLowerCase();
 
       const esElMismoPagoInicial =
@@ -194,13 +240,14 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
             pagosNormalizados.filter((x) => !x.esPagoInicial).length + 1,
           fecha: pago.fecha ?? "—",
           monto: montoActual,
-          montoBase: Number(pago.montoBase ?? montoActual),
-          montoRecargoAtraso: Number(pago.montoRecargoAtraso ?? 0),
-          montoRecargoMetodo: Number(pago.montoRecargoMetodo ?? 0),
+          montoBase: parsearMontoSeguro(pago.montoBase ?? montoActual),
+          montoRecargoAtraso: parsearMontoSeguro(pago.montoRecargoAtraso),
+          montoRecargoMetodo: parsearMontoSeguro(pago.montoRecargoMetodo),
           metodo: pago.metodo ?? "—",
           estado: pago.estado ?? "Pagado",
           firma: pago.firma ?? pago.usuario ?? "—",
-          esPagoInicial: false,
+          esPagoInicial:
+            pago.esPagoInicial === true || metodoLower.includes("anticipo"),
         });
       }
     });
@@ -356,7 +403,7 @@ export default function ClientDetail() {
       uid: usuarioActual.uid || "",
     };
 
-    const montoBaseInput = Number(nuevoPago.monto);
+    const montoBaseInput = parsearMontoSeguro(nuevoPago.monto);
     const metodoSeleccionado = nuevoPago.metodo;
     const metodosConRecargo = [
       "Transferencia",
@@ -408,17 +455,6 @@ export default function ClientDetail() {
       console.error(error);
       alert("No se pudo guardar el pago");
     }
-  };
-
-  const estaPagado = (venta) => {
-    const saldoPendiente = obtenerSaldoPendienteBase(venta);
-    if (saldoPendiente > 0) return false;
-
-    const totalCuotas = Number(venta.cuotas || 0);
-    if (totalCuotas > 0 && obtenerCuotasPagadas(venta) < totalCuotas) {
-      return false;
-    }
-    return true;
   };
 
   const ventasAtrasadasIds = useMemo(() => {
@@ -477,7 +513,7 @@ export default function ClientDetail() {
     const totalCuotas = Math.max(Number(venta.cuotas || 0), 1);
     const cuotasPagadas = obtenerCuotasPagadas(venta);
     const numeroCuota = Math.min(cuotasPagadas + 1, totalCuotas);
-    const valorCuota = Number(venta.valorCuota || 0);
+    const valorCuota = parsearMontoSeguro(venta.valorCuota);
     const { diasAtraso, porcentajeRecargo, montoRecargo } =
       calcularRecargoAtraso(venta);
 
@@ -531,16 +567,8 @@ export default function ClientDetail() {
     const productosTexto = venta.productos
       ?.map((p) => `* ${p.nombre} x${p.cantidad}`)
       .join("\n");
-    const valorCuota = Number(venta.valorCuota || 0);
-    const todosLosPagos = (venta.pagos || []).filter((p) => !p.esPagoInicial);
+    const valorCuota = parsearMontoSeguro(venta.valorCuota);
     const totalPagadoHistorico = calcularTotalPagadoVenta(venta);
-    const ultimoPago =
-      todosLosPagos.length > 0
-        ? todosLosPagos[todosLosPagos.length - 1]
-        : null;
-    const montoUltimoPago = ultimoPago
-      ? Number(ultimoPago.monto || 0)
-      : Number(venta.pago?.montoPagado || 0);
 
     const mensaje = `COMPROBANTE DE COMPRA
 
@@ -557,7 +585,6 @@ ${productosTexto}
 Cantidad de cuotas: ${venta.cuotas}
 Valor de la cuota: $${valorCuota.toLocaleString("es-AR")}
 Total pagado histórico: $${totalPagadoHistorico.toLocaleString("es-AR")}
-Último registro: $${montoUltimoPago.toLocaleString("es-AR")}
 
 Gracias por su compra.`;
 
@@ -571,10 +598,10 @@ Gracias por su compra.`;
     const productosTexto = venta.productos
       ?.map(
         (p) =>
-          `• ${p.nombre} (x${p.cantidad}, $${Number(p.precio).toLocaleString("es-AR")})`
+          `• ${p.nombre} (x${p.cantidad}, $${parsearMontoSeguro(p.precio).toLocaleString("es-AR")})`
       )
       .join("\n");
-    const valorCuota = Number(venta.valorCuota || 0);
+    const valorCuota = parsearMontoSeguro(venta.valorCuota);
 
     const mensaje = `🧾 *COMPROBANTE DE VENTA*
 
@@ -614,9 +641,9 @@ ${productosTexto}
     const telefono = telefonoRaw.startsWith("54")
       ? telefonoRaw
       : `54${telefonoRaw}`;
-    const montoBaseVal = Number(pago.montoBase || pago.monto || 0);
-    const recargoMetodoVal = Number(pago.montoRecargoMetodo || 0);
-    const recargoAtrasoVal = Number(pago.montoRecargoAtraso || 0);
+    const montoBaseVal = parsearMontoSeguro(pago.montoBase ?? pago.monto);
+    const recargoMetodoVal = parsearMontoSeguro(pago.montoRecargoMetodo);
+    const recargoAtrasoVal = parsearMontoSeguro(pago.montoRecargoAtraso);
 
     let textoRecargosWhatsApp = "";
     if (recargoAtrasoVal > 0) {
@@ -634,7 +661,7 @@ DNI: ${cliente.dni}
 Venta ID: ${venta.id}
 Fecha de pago: ${formatearFecha(pago.fecha)}
 Monto base: $${montoBaseVal.toLocaleString("es-AR")}${textoRecargosWhatsApp}
-Monto total abonado: $${Number(pago.monto).toLocaleString("es-AR")}
+Monto total abonado: $${parsearMontoSeguro(pago.monto).toLocaleString("es-AR")}
 Método de pago: ${pago.metodo || "—"}
 
 Cobrado por: ${getFirmaTexto(pago.firma, usuariosMap)}
@@ -648,23 +675,20 @@ Gracias por su pago.`;
   };
 
   const renderTablePagos = (venta, permitirAgregar) => {
-    const valorCuotaSeguro = Number(venta.valorCuota) || 1;
+    const valorCuotaSeguro = parsearMontoSeguro(venta.valorCuota) || 1;
     const totalCuotas = Number(venta.cuotas) || 0;
     let acumuladoPagos = 0;
     let contadorCuotasReal = 0;
 
     const pagosConCuota = (venta.pagos || []).map((pago, i) => {
+      const montoBase = parsearMontoSeguro(pago.montoBase ?? pago.monto);
+
       if (pago.esPagoInicial) {
+        acumuladoPagos += montoBase;
         return { ...pago, indexReal: 0, labelCuota: "Anticipo" };
       }
 
       contadorCuotasReal += 1;
-      const montoBase = Number(
-        typeof (pago.montoBase ?? pago.monto) === "string"
-          ? (pago.montoBase ?? pago.monto).replace(",", ".")
-          : pago.montoBase ?? pago.monto ?? 0
-      );
-
       const cuotaInicio = Math.min(
         Math.floor(acumuladoPagos / valorCuotaSeguro) + 1,
         Math.max(totalCuotas, 1)
@@ -745,10 +769,10 @@ Gracias por su pago.`;
           </div>
 
           {pagosConCuota.map((pago, i) => {
-            const montoBaseVal = Number(pago.montoBase || pago.monto || 0);
-            const recargoAtrasoVal = Number(pago.montoRecargoAtraso || 0);
-            const recargoMetodoVal = Number(pago.montoRecargoMetodo || 0);
-            const montoTotalVal = Number(pago.monto || 0);
+            const montoBaseVal = parsearMontoSeguro(pago.montoBase ?? pago.monto);
+            const recargoAtrasoVal = parsearMontoSeguro(pago.montoRecargoAtraso);
+            const recargoMetodoVal = parsearMontoSeguro(pago.montoRecargoMetodo);
+            const montoTotalVal = parsearMontoSeguro(pago.monto);
 
             return (
               <div
@@ -895,15 +919,26 @@ Gracias por su pago.`;
               {cliente.direccion} · {cliente.entreCalles}
             </span>
 
-            {/* CLASIFICACIÓN MANUAL EDITABLE EN EL DETALLE */}
-            <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <label htmlFor="detalle-clasificacion" style={{ fontSize: "13px", fontWeight: 600 }}>
+            <div
+              style={{
+                marginTop: "8px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <label
+                htmlFor="detalle-clasificacion"
+                style={{ fontSize: "13px", fontWeight: 600 }}
+              >
                 Clasificación:
               </label>
               <select
                 id="detalle-clasificacion"
                 value={normalizarClasificacion(cliente.clasificacion)}
-                onChange={(e) => handleActualizarClasificacionDetalle(e.target.value)}
+                onChange={(e) =>
+                  handleActualizarClasificacionDetalle(e.target.value)
+                }
               >
                 {CLASES_MANUALES.map((clase) => (
                   <option key={clase} value={clase}>
@@ -1002,14 +1037,14 @@ Gracias por su pago.`;
                         {venta.productos
                           ?.map(
                             (p) =>
-                              `${p.nombre} (x${p.cantidad}, $${Number(
+                              `${p.nombre} (x${p.cantidad}, $${parsearMontoSeguro(
                                 p.precio
                               ).toLocaleString("es-AR")})`
                           )
                           .join(", ")}
                       </p>
 
-                      {venta.descuento > 0 && (
+                      {parsearMontoSeguro(venta.descuento) > 0 && (
                         <div
                           style={{
                             background: "#dcfce7",
@@ -1025,7 +1060,9 @@ Gracias por su pago.`;
                           }}
                         >
                           🎉 Descuento aplicado: $
-                          {venta.descuento.toLocaleString("es-AR")}
+                          {parsearMontoSeguro(venta.descuento).toLocaleString(
+                            "es-AR"
+                          )}
                         </div>
                       )}
 
@@ -1039,7 +1076,9 @@ Gracias por su pago.`;
                       </p>
                       <p>
                         <span className={styles.badge}>Valor por cuota</span>
-                        {venta.valorCuota?.toLocaleString("es-AR")}
+                        {parsearMontoSeguro(
+                          venta.valorCuota
+                        )?.toLocaleString("es-AR")}
                       </p>
                       <p>
                         <span className={styles.badge}>Cantidad de cuotas</span>
@@ -1387,7 +1426,7 @@ Gracias por su pago.`;
                                   {venta.productos
                                     ?.map(
                                       (p) =>
-                                        `${p.nombre} (x${p.cantidad}, $${Number(
+                                        `${p.nombre} (x${p.cantidad}, $${parsearMontoSeguro(
                                           p.precio
                                         ).toLocaleString("es-AR")})`
                                     )
@@ -1407,7 +1446,9 @@ Gracias por su pago.`;
                                   <span className={styles.badge}>
                                     Valor por cuota
                                   </span>
-                                  {venta.valorCuota?.toLocaleString("es-AR")}
+                                  {parsearMontoSeguro(
+                                    venta.valorCuota
+                                  )?.toLocaleString("es-AR")}
                                 </p>
                                 <p>
                                   <span className={styles.badge}>
@@ -1415,6 +1456,21 @@ Gracias por su pago.`;
                                   </span>
                                   {venta.cuotas}
                                 </p>
+
+                                <div
+                                  className={
+                                    saldoReal <= 0
+                                      ? styles.saleDebtPaid
+                                      : styles.saleDebtPending
+                                  }
+                                >
+                                  <span>Deuda de esta compra:</span>
+                                  <strong>
+                                    {saldoReal <= 0
+                                      ? "$0 (Pagada)"
+                                      : `$${saldoReal.toLocaleString("es-AR")}`}
+                                  </strong>
+                                </div>
                               </div>
                             </section>
 
