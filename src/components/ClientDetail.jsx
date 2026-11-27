@@ -92,8 +92,8 @@ const obtenerFechaHoyInput = () => {
 
 const obtenerTotalVenta = (venta) => {
   const descuento = parsearMontoSeguro(venta.descuento);
-  const valorCuota = parsearMontoSeguro(venta.valorCuota);
   const cuotas = Number(venta.cuotas || 0);
+  const valorCuota = parsearMontoSeguro(venta.valorCuota);
   const totalCreditoExplicito = parsearMontoSeguro(venta.totalCredito);
 
   if (totalCreditoExplicito > 0) {
@@ -115,17 +115,33 @@ const obtenerTotalVenta = (venta) => {
 
 // Suma todos los pagos reales (anticipo/pago inicial + pagos parciales o de cuotas)
 const calcularTotalPagadoVenta = (venta) => {
+  const pagoInicial = parsearMontoSeguro(venta.pago?.montoPagado);
   const pagosLista = Array.isArray(venta.pagos) ? venta.pagos : [];
-  const sumaArray = pagosLista.reduce((sum, p) => {
+
+  let yaContoInicialEnArray = false;
+
+  const sumaPagosArray = pagosLista.reduce((sum, p) => {
+    const metodoLower = String(p.metodo || "").toLowerCase();
     const rawMonto = p.montoBase ?? p.monto ?? 0;
-    return sum + parsearMontoSeguro(rawMonto);
+    const montoNum = parsearMontoSeguro(rawMonto);
+
+    const esPagoInicial =
+      p.esPagoInicial === true ||
+      metodoLower.includes("pago inicial") ||
+      metodoLower.includes("anticipo") ||
+      (pagoInicial > 0 &&
+        !yaContoInicialEnArray &&
+        p.numero === 0 &&
+        Math.abs(pagoInicial - montoNum) < 1);
+
+    if (esPagoInicial) {
+      yaContoInicialEnArray = true;
+    }
+
+    return sum + montoNum;
   }, 0);
 
-  if (sumaArray > 0) {
-    return sumaArray;
-  }
-
-  return parsearMontoSeguro(venta.pago?.montoPagado);
+  return (yaContoInicialEnArray ? 0 : pagoInicial) + sumaPagosArray;
 };
 
 const obtenerCuotasPagadas = (venta) => {
@@ -167,7 +183,8 @@ const estaPagado = (venta) => {
 };
 
 const calcularRecargoAtraso = (venta) => {
-  if (estaPagado(venta)) {
+  const saldoPendiente = obtenerSaldoPendienteBase(venta);
+  if (estaPagado(venta) || saldoPendiente <= 0) {
     return { diasAtraso: 0, porcentajeRecargo: 0, montoRecargo: 0 };
   }
 
@@ -197,8 +214,11 @@ const calcularRecargoAtraso = (venta) => {
 
   const bloquesAdicionales = Math.floor((diasAtraso - 30) / 10);
   const porcentajeRecargo = Math.min(10 + bloquesAdicionales * 10, 200);
-  const valorCuota = parsearMontoSeguro(venta.valorCuota);
-  const montoRecargo = Math.round((valorCuota * porcentajeRecargo) / 100);
+  const baseCalculoRecargo = Math.min(
+    parsearMontoSeguro(venta.valorCuota) || saldoPendiente,
+    saldoPendiente
+  );
+  const montoRecargo = Math.round((baseCalculoRecargo * porcentajeRecargo) / 100);
 
   return { diasAtraso, porcentajeRecargo, montoRecargo };
 };
@@ -213,21 +233,7 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
   const pagosNormalizados = [];
   const montoPagoAntiguo = parsearMontoSeguro(venta.pago?.montoPagado);
   const tienePagoInicial = montoPagoAntiguo > 0;
-
-  if (tienePagoInicial) {
-    pagosNormalizados.push({
-      numero: 0,
-      fecha: venta.fecha || venta.createdAt || "—",
-      monto: montoPagoAntiguo,
-      montoBase: montoPagoAntiguo,
-      montoRecargoAtraso: 0,
-      montoRecargoMetodo: 0,
-      metodo: "Anticipo (Pago inicial)",
-      estado: "Pagado",
-      firma: venta.cargadoPor || "Sistema",
-      esPagoInicial: true,
-    });
-  }
+  let yaIncluyoPagoInicialEnArray = false;
 
   if (Array.isArray(venta.pagos)) {
     venta.pagos.forEach((pago) => {
@@ -241,23 +247,42 @@ const normalizarVenta = (venta, usuariosMap = {}) => {
           metodoLower.includes("anticipo") ||
           (pago.numero === 0 && Math.abs(montoPagoAntiguo - montoActual) < 1));
 
-      if (!esElMismoPagoInicial) {
-        pagosNormalizados.push({
-          numero:
-            pago.numero ??
-            pagosNormalizados.filter((x) => !x.esPagoInicial).length + 1,
-          fecha: pago.fecha ?? "—",
-          monto: montoActual,
-          montoBase: parsearMontoSeguro(pago.montoBase ?? montoActual),
-          montoRecargoAtraso: parsearMontoSeguro(pago.montoRecargoAtraso),
-          montoRecargoMetodo: parsearMontoSeguro(pago.montoRecargoMetodo),
-          metodo: pago.metodo ?? "—",
-          estado: pago.estado ?? "Pagado",
-          firma: pago.firma ?? pago.usuario ?? "—",
-          esPagoInicial:
-            pago.esPagoInicial === true || metodoLower.includes("anticipo"),
-        });
+      if (esElMismoPagoInicial) {
+        yaIncluyoPagoInicialEnArray = true;
       }
+
+      pagosNormalizados.push({
+        numero:
+          pago.numero ??
+          pagosNormalizados.filter((x) => !x.esPagoInicial).length + 1,
+        fecha: pago.fecha ?? venta.fecha ?? "—",
+        monto: montoActual,
+        montoBase: parsearMontoSeguro(pago.montoBase ?? montoActual),
+        montoRecargoAtraso: parsearMontoSeguro(pago.montoRecargoAtraso),
+        montoRecargoMetodo: parsearMontoSeguro(pago.montoRecargoMetodo),
+        metodo: pago.metodo ?? "—",
+        estado: pago.estado ?? "Pagado",
+        firma: pago.firma ?? pago.usuario ?? "—",
+        esPagoInicial:
+          esElMismoPagoInicial ||
+          pago.esPagoInicial === true ||
+          metodoLower.includes("anticipo"),
+      });
+    });
+  }
+
+  if (tienePagoInicial && !yaIncluyoPagoInicialEnArray) {
+    pagosNormalizados.unshift({
+      numero: 0,
+      fecha: venta.fecha || venta.createdAt || "—",
+      monto: montoPagoAntiguo,
+      montoBase: montoPagoAntiguo,
+      montoRecargoAtraso: 0,
+      montoRecargoMetodo: 0,
+      metodo: "Anticipo (Pago inicial)",
+      estado: "Pagado",
+      firma: venta.cargadoPor || "Sistema",
+      esPagoInicial: true,
     });
   }
 
