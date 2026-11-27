@@ -1505,6 +1505,47 @@ Gracias por su pago.`;
                                   </strong>
                                 </div>
                               </div>
+
+                              <div
+                                style={{
+                                  marginTop: "10px",
+                                  display: "flex",
+                                  gap: "10px",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => reenviarComprobante(venta)}
+                                  style={{
+                                    background: "#1976d2",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 14px",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontWeight: "500",
+                                  }}
+                                >
+                                  📩 Reenviar comprobante al cliente
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => enviarComprobanteAlJefe(venta)}
+                                  style={{
+                                    background: "#25D366",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "8px 14px",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  📲 Enviar comprobante al Grupo Ventas
+                                </button>
+                              </div>
                             </section>
 
                             {renderTablePagos(venta, saldoReal > 0)}
