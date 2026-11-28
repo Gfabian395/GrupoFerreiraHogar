@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "../styles/Carrito.module.css";
 import { useCart } from "../context/CartContext";
@@ -8,8 +8,18 @@ export default function Carrito() {
   const { items, updateQty, removeItem } = useCart();
   const [loading, setLoading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [isPrintingPresupuesto, setIsPrintingPresupuesto] = useState(false);
+  const [presupuestoPreviewUrl, setPresupuestoPreviewUrl] = useState(null);
   const [descuento, setDescuento] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    return () => {
+      if (presupuestoPreviewUrl) {
+        URL.revokeObjectURL(presupuestoPreviewUrl);
+      }
+    };
+  }, [presupuestoPreviewUrl]);
 
   const totalItems = items.reduce((acc, i) => acc + i.qty, 0);
 
@@ -24,9 +34,11 @@ export default function Carrito() {
   const total = Math.max(0, subtotal - descuentoAplicado);
 
   const formatARS = (valor) =>
-    new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(
-      Math.ceil(Number(valor) / 1000) * 1000
-    );
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0,
+    }).format(Math.ceil(Number(valor) / 1000) * 1000);
 
   // CÁLCULO DE CUOTAS BASADO EN EL TOTAL DEL CARRITO
   const configuracionCuotas = [
@@ -59,43 +71,38 @@ export default function Carrito() {
     const width = 500;
     const padding = 25;
 
-    // Cálculo dinámico de altura requerida según cantidad de items y cuotas
     let currentY = padding;
-    currentY += 40; // Encabezado Presupuesto
-    currentY += 25; // Fecha
-    currentY += 20; // Separador
-    currentY += items.length * 48; // Items
-    currentY += 20; // Separador
-    currentY += 28; // Subtotal
-    if (descuentoAplicado > 0) currentY += 28; // Descuento
-    currentY += 36; // Total
+    currentY += 40;
+    currentY += 25;
+    currentY += 20;
+    currentY += items.length * 48;
+    currentY += 20;
+    currentY += 28;
+    if (descuentoAplicado > 0) currentY += 28;
+    currentY += 36;
 
-    // Espacio para la sección de cuotas
     if (cuotas.length > 0) {
       currentY += 35 + cuotas.length * 32;
     }
 
-    currentY += 40; // Pie de página / aviso
+    currentY += 40;
     currentY += padding;
 
     const canvas = document.createElement("canvas");
-    canvas.width = width * 2; // Alta resolución (Retina)
+    canvas.width = width * 2;
     canvas.height = currentY * 2;
     const ctx = canvas.getContext("2d");
     ctx.scale(2, 2);
 
-    // Fondo Blanco
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, currentY);
 
-    // Borde general
     ctx.strokeStyle = "#cbd5e1";
     ctx.lineWidth = 1;
     ctx.strokeRect(1, 1, width - 2, currentY - 2);
 
     let y = padding + 15;
 
-    // 1. ENCABEZADO
     ctx.fillStyle = "#0f2b48";
     ctx.font = "bold 22px 'Segoe UI', sans-serif";
     ctx.fillText("PRESUPUESTO DE COMPRA", padding, y);
@@ -115,31 +122,34 @@ export default function Carrito() {
 
     y += 25;
 
-    // 2. LISTADO DE PRODUCTOS
     items.forEach((item) => {
-      // Nombre del producto
       ctx.fillStyle = "#0f172a";
       ctx.font = "bold 14px 'Segoe UI', sans-serif";
       ctx.fillText(item.name, padding, y);
 
-      // Subtotal por item alineado a la derecha
       const itemSubtotalText = formatARS(item.price * item.qty);
       ctx.fillStyle = "#1e293b";
       ctx.font = "bold 14px 'Segoe UI', sans-serif";
-      ctx.fillText(itemSubtotalText, width - padding - ctx.measureText(itemSubtotalText).width, y);
+      ctx.fillText(
+        itemSubtotalText,
+        width - padding - ctx.measureText(itemSubtotalText).width,
+        y
+      );
 
       y += 18;
 
-      // Variante y detalle de cantidad x precio
       ctx.fillStyle = "#64748b";
       ctx.font = "12px sans-serif";
       const varianteTexto = item.variant ? `Variante: ${item.variant} | ` : "";
-      ctx.fillText(`${varianteTexto}${item.qty} u. x ${formatARS(item.price)}`, padding, y);
+      ctx.fillText(
+        `${varianteTexto}${item.qty} u. x ${formatARS(item.price)}`,
+        padding,
+        y
+      );
 
       y += 30;
     });
 
-    // Separador pre-totales
     ctx.strokeStyle = "#e2e8f0";
     ctx.beginPath();
     ctx.moveTo(padding, y);
@@ -148,8 +158,6 @@ export default function Carrito() {
 
     y += 22;
 
-    // 3. DESGLOSE DE TOTALES
-    // Subtotal
     ctx.fillStyle = "#475569";
     ctx.font = "14px sans-serif";
     ctx.fillText("Subtotal", padding, y);
@@ -157,9 +165,12 @@ export default function Carrito() {
     const subtotalText = formatARS(subtotal);
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 14px sans-serif";
-    ctx.fillText(subtotalText, width - padding - ctx.measureText(subtotalText).width, y);
+    ctx.fillText(
+      subtotalText,
+      width - padding - ctx.measureText(subtotalText).width,
+      y
+    );
 
-    // Descuento (si corresponde)
     if (descuentoAplicado > 0) {
       y += 26;
       ctx.fillStyle = "#dc2626";
@@ -168,23 +179,29 @@ export default function Carrito() {
 
       const descuentoText = `-${formatARS(descuentoAplicado)}`;
       ctx.font = "bold 14px sans-serif";
-      ctx.fillText(descuentoText, width - padding - ctx.measureText(descuentoText).width, y);
+      ctx.fillText(
+        descuentoText,
+        width - padding - ctx.measureText(descuentoText).width,
+        y
+      );
     }
 
     y += 32;
 
-    // Total Final Contado
     ctx.fillStyle = "#16a34a";
     ctx.font = "bold 18px 'Segoe UI', sans-serif";
     ctx.fillText("TOTAL CONTADO", padding, y);
 
     const totalText = formatARS(total);
     ctx.font = "bold 20px 'Segoe UI', sans-serif";
-    ctx.fillText(totalText, width - padding - ctx.measureText(totalText).width, y);
+    ctx.fillText(
+      totalText,
+      width - padding - ctx.measureText(totalText).width,
+      y
+    );
 
     y += 30;
 
-    // 4. SECCIÓN CUOTAS DISPONIBLES
     if (cuotas.length > 0) {
       ctx.fillStyle = "#2563eb";
       ctx.font = "bold 13px sans-serif";
@@ -207,7 +224,6 @@ export default function Carrito() {
       y += 10;
     }
 
-    // 5. AVISO DE VALIDEZ EN PIE
     ctx.fillStyle = "#f0f9ff";
     ctx.fillRect(padding, y, width - padding * 2, 28);
     ctx.strokeStyle = "#bae6fd";
@@ -237,7 +253,9 @@ export default function Carrito() {
         return;
       }
 
-      const file = new File([blob], `presupuesto-carrito.png`, { type: "image/png" });
+      const file = new File([blob], `presupuesto-carrito.png`, {
+        type: "image/png",
+      });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -246,8 +264,12 @@ export default function Carrito() {
           files: [file],
         });
       } else if (navigator.clipboard && window.ClipboardItem) {
-        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-        alert("📋 ¡Imagen del presupuesto copiada al portapapeles!\n\nAbrí tu chat de WhatsApp y presioná Ctrl + V para enviarla.");
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        alert(
+          "📋 ¡Imagen del presupuesto copiada al portapapeles!\n\nAbrí tu chat de WhatsApp y presioná Ctrl + V para enviarla."
+        );
       } else {
         const link = document.createElement("a");
         link.download = `presupuesto-carrito.png`;
@@ -266,11 +288,185 @@ export default function Carrito() {
     }
   };
 
+  // Genera presupuesto térmico en blanco y negro para Fun Print con letras más grandes y márgenes chicos
+  const generatePresupuestoThermalImage = async () => {
+    const width = 384;
+    const scale = 2;
+    const padding = 6;
+
+    const totalTexto = formatARS(total);
+    const listaCuotas = cuotas.length > 0 ? cuotas : ["Consultar cuotas"];
+
+    const alturaEstimada =
+      padding +
+      30 + // encabezado
+      24 + // fecha
+      12 + // separador
+      items.length * 52 + // ítems con letra más grande
+      14 + // separador
+      (descuentoAplicado > 0 ? 50 : 26) + // subtotal / descuento
+      24 + // etiqueta TOTAL CONTADO
+      52 + // monto contado gigante (44px)
+      14 + // separador
+      28 + // encabezado CUOTAS
+      listaCuotas.length * 36 + // cuotas (22px)
+      padding +
+      10;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width * scale;
+    canvas.height = alturaEstimada * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, alturaEstimada);
+
+    let y = padding + 22;
+
+    ctx.fillStyle = "#000000";
+    ctx.font = "bold 24px Arial, sans-serif";
+    ctx.fillText("PRESUPUESTO ESPECIAL", padding, y);
+
+    y += 24;
+    ctx.font = "bold 17px Arial, sans-serif";
+    ctx.fillText(`Fecha: ${new Date().toLocaleDateString("es-AR")}`, padding, y);
+
+    y += 10;
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+
+    y += 22;
+
+    items.forEach((item) => {
+      ctx.font = "bold 19px Arial, sans-serif";
+      const nombreCorto =
+        item.name.length > 23 ? `${item.name.slice(0, 20)}...` : item.name;
+      ctx.fillText(`${item.qty}x ${nombreCorto}`, padding, y);
+
+      const subItem = formatARS(item.price * item.qty);
+      ctx.fillText(
+        subItem,
+        width - padding - ctx.measureText(subItem).width,
+        y
+      );
+
+      y += 21;
+      ctx.font = "bold 16px Arial, sans-serif";
+      const detalle = item.variant
+        ? `${item.variant} (${formatARS(item.price)} c/u)`
+        : `${formatARS(item.price)} c/u`;
+      ctx.fillText(detalle, padding, y);
+
+      y += 27;
+    });
+
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+
+    y += 20;
+    ctx.font = "bold 17px Arial, sans-serif";
+    if (descuentoAplicado > 0) {
+      ctx.fillText(`Subtotal: ${formatARS(subtotal)}`, padding, y);
+      y += 22;
+      ctx.fillText(`Descuento: -${formatARS(descuentoAplicado)}`, padding, y);
+      y += 24;
+    } else {
+      ctx.fillText(`Subtotal: ${formatARS(subtotal)}`, padding, y);
+      y += 24;
+    }
+
+    ctx.font = "bold 19px Arial, sans-serif";
+    ctx.fillText("TOTAL CONTADO:", padding, y);
+
+    y += 42;
+    ctx.font = "bold 44px Arial, sans-serif";
+    ctx.fillText(totalTexto, padding, y);
+
+    y += 14;
+    ctx.beginPath();
+    ctx.moveTo(padding, y);
+    ctx.lineTo(width - padding, y);
+    ctx.stroke();
+
+    y += 24;
+    ctx.font = "bold 20px Arial, sans-serif";
+    ctx.fillText("CUOTAS:", padding, y);
+
+    y += 30;
+    ctx.font = "bold 22px Arial, sans-serif";
+    listaCuotas.forEach((cuotaTexto) => {
+      ctx.fillText(`• ${cuotaTexto}`, padding, y);
+      y += 35;
+    });
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+    });
+  };
+
+  // Compartir presupuesto especial hacia Fun Print sin descargar
+  const handlePrintPresupuesto = async () => {
+    if (items.length === 0 || isPrintingPresupuesto) return;
+    setIsPrintingPresupuesto(true);
+
+    try {
+      const blob = await generatePresupuestoThermalImage();
+      if (!blob) {
+        alert("No se pudo generar el presupuesto para imprimir.");
+        return;
+      }
+
+      const file = new File([blob], "presupuesto-especial.png", {
+        type: "image/png",
+      });
+
+      const canShareFile =
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [file] });
+
+      if (canShareFile && typeof navigator.share === "function") {
+        await navigator.share({
+          files: [file],
+          title: "Presupuesto especial",
+        });
+      } else {
+        if (presupuestoPreviewUrl) {
+          URL.revokeObjectURL(presupuestoPreviewUrl);
+        }
+        const previewUrl = URL.createObjectURL(blob);
+        setPresupuestoPreviewUrl(previewUrl);
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Error al compartir presupuesto para Fun Print:", error);
+        alert("Ocurrió un error al compartir el presupuesto.");
+      }
+    } finally {
+      setIsPrintingPresupuesto(false);
+    }
+  };
+
+  const closePresupuestoPreview = () => {
+    if (presupuestoPreviewUrl) {
+      URL.revokeObjectURL(presupuestoPreviewUrl);
+      setPresupuestoPreviewUrl(null);
+    }
+  };
+
   const handlePagarCarrito = async () => {
     if (items.length === 0) return;
 
     if (total <= 0) {
-      alert("El total es $0. Mercado Pago no permite pagos gratuitos. Usá 'Finalizar compra' para registrarlo en el sistema.");
+      alert(
+        "El total es $0. Mercado Pago no permite pagos gratuitos. Usá 'Finalizar compra' para registrarlo en el sistema."
+      );
       return;
     }
 
@@ -394,10 +590,10 @@ export default function Carrito() {
 
           <div className={styles.row}>
             <span>Descuento ($)</span>
-            <input 
-              type="number" 
+            <input
+              type="number"
               min="0"
-              className={styles.input} 
+              className={styles.input}
               style={{ width: "90px", padding: "4px", textAlign: "right" }}
               value={descuento}
               onChange={(e) => setDescuento(e.target.value)}
@@ -424,7 +620,11 @@ export default function Carrito() {
           <button
             className={styles.checkout}
             disabled={items.length === 0}
-            onClick={() => navigate("/ventas", { state: { descuentoPreCargado: descuento } })}
+            onClick={() =>
+              navigate("/ventas", {
+                state: { descuentoPreCargado: descuento },
+              })
+            }
           >
             Finalizar compra
           </button>
@@ -443,15 +643,116 @@ export default function Carrito() {
               fontWeight: "bold",
               cursor: items.length === 0 || isSharing ? "not-allowed" : "pointer",
               opacity: items.length === 0 || isSharing ? 0.6 : 1,
-              width: "100%"
+              width: "100%",
             }}
             disabled={items.length === 0 || isSharing}
             onClick={handleSharePresupuesto}
           >
             📄 {isSharing ? "Generando..." : "Compartir Presupuesto"}
           </button>
+
+          {/* BOTÓN IMPRIMIR PRESUPUESTO ESPECIAL PARA FUN PRINT */}
+          <button
+            type="button"
+            className={styles.printPresupuesto}
+            style={{
+              marginTop: "10px",
+              padding: "10px",
+              background: "linear-gradient(135deg, #fbcfe8 0%, #f9a8d4 100%)",
+              color: "#831843",
+              border: "1px solid #f472b6",
+              borderRadius: "6px",
+              fontWeight: "700",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              cursor:
+                items.length === 0 || isPrintingPresupuesto
+                  ? "not-allowed"
+                  : "pointer",
+              opacity: items.length === 0 || isPrintingPresupuesto ? 0.6 : 1,
+              width: "100%",
+            }}
+            disabled={items.length === 0 || isPrintingPresupuesto}
+            onClick={handlePrintPresupuesto}
+          >
+            <i className="bx bxs-cat" style={{ fontSize: "1.2rem" }}></i>
+            {isPrintingPresupuesto
+              ? "Preparando..."
+              : "Imprimir presupuesto"}
+          </button>
         </aside>
       </div>
+
+      {presupuestoPreviewUrl && (
+        <div
+          onClick={closePresupuestoPreview}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "#ffffff",
+              color: "#0f172a",
+              borderRadius: 12,
+              padding: 16,
+              maxWidth: 420,
+              width: "100%",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              textAlign: "center",
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 10px",
+                fontSize: "0.9rem",
+                fontWeight: 600,
+              }}
+            >
+              Mantené apretada la imagen y tocá &ldquo;Compartir imagen&rdquo;
+              para enviarla a Fun Print
+            </p>
+            <img
+              src={presupuestoPreviewUrl}
+              alt="Presupuesto especial"
+              style={{
+                width: "100%",
+                height: "auto",
+                border: "1px solid #cbd5e1",
+                borderRadius: 6,
+                marginBottom: 12,
+              }}
+            />
+            <button
+              type="button"
+              onClick={closePresupuestoPreview}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 8,
+                border: "none",
+                backgroundColor: "#0f172a",
+                color: "#ffffff",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
